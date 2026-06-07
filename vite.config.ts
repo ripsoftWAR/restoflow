@@ -10,28 +10,28 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, './src'),
       },
     },
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
+    },
     server: {
+      port: 5173,
       proxy: {
         '/api': {
-          target: 'http://localhost:3000', // Pastikan ini sesuai dengan PORT backend Anda
+          target: 'http://localhost:8080', // Sesuaikan dengan port di server/index.ts Anda
           changeOrigin: true,
           secure: false,
         },
       },
-      // Pengaturan HMR (Hot Module Replacement)
       hmr: !isHmrDisabled,
-      
-      // Pengaturan Watcher untuk mencegah error "Request Aborted"
       watch: isHmrDisabled ? null : {
-        // MENGABAIKAN file database agar server tidak restart otomatis saat data bertambah
         ignored: [
           '**/database.db', 
           '**/database.db-journal', 
           '**/database.db-wal',
-          '**/db/database.db',
           '**/node_modules/**',
           '**/dist/**'
         ],
