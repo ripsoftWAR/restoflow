@@ -1,0 +1,6 @@
+{
+  "name": "RestoFlow - Restaurant Inventory & Operations",
+  "description": "Sistem manajemen stok inventory realtime dan POS kasir restoran dengan AI OCR Receipt Scanner terintegrasi, unit conversion otomatis, dan Bill of Materials (BOM) resep modular.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
