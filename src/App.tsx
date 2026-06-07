@@ -13,7 +13,8 @@ import MovementLogs from './components/MovementLogs';
 import AIChatAssistant from './components/AIChatAssistant';
 
 import { Ingredient, DashboardStats, RecipeWithDetails, Sale, MovementLog, AuthSession } from './types';
-
+// Ambil URL Railway dari Environment Variable Vercel
+const API_URL = (import.meta as any).env.VITE_API_URL || '';
 const formatIDR = (num: number) =>
   new Intl.NumberFormat('id-ID', {
     style: 'currency', currency: 'IDR',
