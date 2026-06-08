@@ -13,8 +13,20 @@ import MovementLogs from './components/MovementLogs';
 import AIChatAssistant from './components/AIChatAssistant';
 
 import { Ingredient, DashboardStats, RecipeWithDetails, Sale, MovementLog, AuthSession } from './types';
-// Ambil URL Railway dari Environment Variable Vercel
-const API_URL = (import.meta as any).env.VITE_API_URL || '';
+// Ambil URL backend Railway dari environment variable Vercel / Railway
+const rawApiUrl = (import.meta as any).env.VITE_API_URL || '';
+const API_URL = rawApiUrl ? rawApiUrl.replace(/\/$/, '') : '';
+const normalizeApiUrl = (url: string) => {
+  if (!url) return '';
+  if (/^https?:\/\//.test(url)) return url.replace(/\/$/, '');
+  return `https://${url.replace(/\/$/, '')}`;
+};
+const resolveApiUrl = (url: string) => {
+  if (url.startsWith('http')) return url;
+  const safeApiUrl = API_URL ? normalizeApiUrl(API_URL) : '';
+  return safeApiUrl ? `${safeApiUrl}${url}` : url;
+};
+console.log("DEBUG: Alamat API saat ini adalah:", API_URL);
 const formatIDR = (num: number) =>
   new Intl.NumberFormat('id-ID', {
     style: 'currency', currency: 'IDR',
@@ -53,7 +65,7 @@ export default function App() {
   };
 
   const apiFetch = async (url: string, options: RequestInit = {}) => {
-    return fetch(url, {
+    return fetch(resolveApiUrl(url), {
       ...options,
       headers: {
         ...(options.headers || {}),
@@ -146,7 +158,7 @@ export default function App() {
   const handleLogin = async (username: string, password: string, shift_id: number) => {
     setAuthError(null);
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, shift_id }),
@@ -175,13 +187,13 @@ export default function App() {
     }
   };
   // Baris 171 (Sekitar sini di kode Anda)
-  const handleRegister = async (username: string, password: string, role: string) => {
+  const handleRegister = async (username: string, password: string, role: string, restaurant_name: string) => {
     setAuthError(null);
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await apiFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, role }),
+        body: JSON.stringify({ restaurant_name, username, password, role }),
       });
 
       // Ambil data respon satu kali saja
@@ -218,7 +230,7 @@ export default function App() {
   }, [authSession, rolePrimaryTabs.length, roleSecondaryTabs.length]);
 
   const AuthPanel = () => {
-    const [form, setForm] = useState({ username: '', password: '', role: 'Staff', shiftId: 1 });
+    const [form, setForm] = useState({ username: '', password: '', role: 'Staff', shiftId: 1, restaurant_name: '' });
     const [submitting, setSubmitting] = useState(false);
 
     if (authMode === 'landing') {
@@ -253,7 +265,7 @@ export default function App() {
             if (authMode === 'login') {
               await handleLogin(form.username, form.password, form.shiftId);
             } else {
-              await handleRegister(form.username, form.password, form.role);
+              await handleRegister(form.username, form.password, form.role, form.restaurant_name);
             }
 
             setSubmitting(false);
@@ -266,11 +278,14 @@ export default function App() {
                 <option value={2}>Shift 2 (16:00 - 24:00)</option>
               </select>
             ) : (
-              <select className="w-full rounded-2xl border p-4 bg-white" onChange={e => setForm({ ...form, role: e.target.value })}>
-                <option value="Staff">Staff</option>
-                <option value="Kasir">Kasir</option>
-                <option value="Pemilik">Pemilik</option>
-              </select>
+              <>
+                <input placeholder="Nama Restoran" className="w-full rounded-2xl border p-4" value={form.restaurant_name} onChange={e => setForm({ ...form, restaurant_name: e.target.value })} required />
+                <select className="w-full rounded-2xl border p-4 bg-white" onChange={e => setForm({ ...form, role: e.target.value })}>
+                  <option value="Staff">Staff</option>
+                  <option value="Kasir">Kasir</option>
+                  <option value="Pemilik">Pemilik</option>
+                </select>
+              </>
             )}
             {authError && <div className="text-rose-600 text-sm">{authError}</div>}
             <button type="submit" disabled={submitting} className="w-full rounded-2xl bg-blue-600 p-4 text-white font-bold">

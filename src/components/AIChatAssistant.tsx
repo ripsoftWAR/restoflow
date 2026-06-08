@@ -34,7 +34,7 @@ export default function AIChatAssistant({ ingredients, recipes, onRefreshData, e
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      text: 'Halo! Saya **AI Koki & Asisten RestoFlow**. Saya terintegrasi penuh dengan database SQLite Anda.\n\nSaya bisa membantu Anda:\n1. 📈 **Mengisi sediaan** (misal: *"Tolong tambah stock Wortel sebanyak 2 kg"*)\n2. 🍳 **Membuat Resep Baru** (misal: *"Buat resep Jus Wortel Segar dengan bahan Wortel 200 gram dan Gula 15 gram"*)\n3. 📊 **Analisis Operasional** (misal: *"Bahan apa saja yang kritis?"* atau *"Beri rekomendasi menu penutup baru"*)\n\nSilakan pilih template proaktif di bawah atau ketik perintah Anda!'
+      text: 'Halo! Saya **AI Koki & Asisten RestoFlow**. Saya terintegrasi penuh dengan database PostgreSQL restoran Anda.\n\nSaya bisa membantu Anda:\n1. 📈 **Mengisi sediaan** (misal: *"Tolong tambah stock Wortel sebanyak 2 kg"*)\n2. 🍳 **Membuat Resep Baru** (misal: *"Buat resep Jus Wortel Segar dengan bahan Wortel 200 gram dan Gula 15 gram"*)\n3. 📊 **Analisis Operasional** (misal: *"Bahan apa saja yang kritis?"* atau *"Beri rekomendasi menu penutup baru"*)\n\nSilakan pilih template proaktif di bawah atau ketik perintah Anda!'
     }
   ]);
   const [inputValue, setInputValue] = useState('');
@@ -112,7 +112,17 @@ export default function AIChatAssistant({ ingredients, recipes, onRefreshData, e
     }
   }, [messages, loading, isOpen]);
 
+  const rawApiBaseUrl = ((import.meta as any).env.VITE_API_URL || '').replace(/\/$/, '');
+  const normalizeApiBaseUrl = (url: string) => {
+    if (!url) return '';
+    if (/^https?:\/\//.test(url)) return url.replace(/\/$/, '');
+    return `https://${url.replace(/\/$/, '')}`;
+  };
+  const apiBaseUrl = normalizeApiBaseUrl(rawApiBaseUrl);
+  const resolveApiUrl = (url: string) => url.startsWith('http') ? url : (apiBaseUrl ? `${apiBaseUrl}${url}` : url);
+
   const handleSendMessage = async (textToSend: string) => {
+    const authToken = typeof window !== 'undefined' ? localStorage.getItem('restoflow_session_id') : null;
     if (!textToSend.trim() || loading) return;
 
     const userMsg: Message = { role: 'user', text: textToSend };
@@ -121,10 +131,11 @@ export default function AIChatAssistant({ ingredients, recipes, onRefreshData, e
     setLoading(true);
 
     try {
-      const response = await fetch('/api/gemini/chat', {
+      const response = await fetch(resolveApiUrl('/api/gemini/chat'), {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
         },
         body: JSON.stringify({
           message: textToSend,

@@ -20,8 +20,9 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // 1. MIDDLEWARE
+const frontendOrigin = process.env.APP_URL || process.env.FRONTEND_URL || '*';
 app.use(cors({
-  origin: '*', // Nantinya ganti dengan URL Vercel spesifik Anda
+  origin: frontendOrigin,
   credentials: true
 }));
 app.use(express.json({ limit: '15mb' }));

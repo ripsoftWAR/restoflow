@@ -21,7 +21,7 @@ export default defineConfig(() => {
       port: 5173,
       proxy: {
         '/api': {
-          target: 'http://localhost:8080', // Sesuaikan dengan port di server/index.ts Anda
+          target: 'http://127.0.0.1:8080', // Sesuaikan dengan port di server/index.ts Anda
           changeOrigin: true,
           secure: false,
         },

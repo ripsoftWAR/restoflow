@@ -4,12 +4,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Koneksi ke Supabase
+const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || process.env.SUPABASE_URL;
+if (!connectionString) {
+  throw new Error('Missing database connection string. Set DATABASE_URL or SUPABASE_DB_URL in .env');
+}
+
+const useSsl = process.env.DATABASE_SSL === 'true'
+  || connectionString.includes('sslmode=require')
+  || connectionString.includes('.supabase.co');
+
 const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  connectionString,
+  ssl: useSsl ? { rejectUnauthorized: false } : undefined
 });
 
 /**
