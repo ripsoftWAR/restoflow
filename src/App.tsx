@@ -14,8 +14,8 @@ import MobileLayout   from './components/layout/MobileLayout';
 import TabletLayout   from './components/layout/TabletLayout';
 import DesktopLayout  from './components/layout/DesktopLayout';
 
-import { useAppData } from '../hooks/useAppData';
-import { NavItem }    from './types';
+import { useAppData } from '../src/hooks/useAppData';
+import { NavItem }    from '../src/types';
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'home',      icon: LayoutDashboard, label: 'Dashboard' },

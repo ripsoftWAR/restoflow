@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { makeApiFetch, resolveApiUrl } from '../utils/api';
-import { Ingredient, DashboardStats, RecipeWithDetails, Sale, MovementLog, AuthSession } from '../src/types';
+import { Ingredient, DashboardStats, RecipeWithDetails, Sale, MovementLog, AuthSession } from '../types';
 
 export function useAppData() {
   const [stats,       setStats]       = useState<DashboardStats | null>(null);

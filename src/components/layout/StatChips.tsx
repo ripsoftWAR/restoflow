@@ -1,6 +1,6 @@
 import { Wallet, Clock } from 'lucide-react';
 import { DashboardStats } from '../../types';
-import { formatIDR } from '../../../utils/api';
+import { formatIDR } from '../../utils/api';
 
 interface Props {
   stats: DashboardStats | null;

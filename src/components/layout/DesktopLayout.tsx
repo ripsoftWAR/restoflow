@@ -1,6 +1,6 @@
 import { Zap, Settings, MessageSquareMore, LayoutDashboard, Layers, Utensils, ShoppingCart, Scan, ListOrdered } from 'lucide-react';
 import { DashboardStats, NavItem } from '../../types';
-import { formatIDR } from '../../../utils/api';
+import { formatIDR } from '../../utils/api';
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'home',      icon: LayoutDashboard, label: 'Dashboard' },
