@@ -2,8 +2,31 @@ import { Router, Request, Response } from 'express';
 import db from '../db/database';
 import { findMappedIngredient, convertToUnit } from '../utils/conversion';
 import { requireAuth } from '../utils/authMiddleware';
+import { hasColumn } from '../utils/dbHelpers';
 
 const router = Router();
+
+const buildIngredientInsertQuery = async (restaurantId: number, name: string, category: string | null, supplier: string, stock: number, baseUnit: string, minStock: number, unitPrice: number) => {
+  const hasCategory = await hasColumn('ingredients', 'category');
+  const columns = ['restaurant_id', 'name', 'supplier', 'stock', 'base_unit', 'min_stock', 'unit_price'];
+  const values: any[] = [restaurantId, name, supplier, stock, baseUnit, minStock, unitPrice];
+  if (hasCategory) {
+    columns.splice(2, 0, 'category');
+    values.splice(2, 0, category || 'Bahan Pokok');
+  }
+  const placeholders = values.map((_, index) => `$${index + 1}`);
+  return {
+    text: `INSERT INTO ingredients (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING id`,
+    values,
+  };
+};
+
+const selectIngredientsForRestaurant = async (restaurantId: number) => {
+  const hasCategory = await hasColumn('ingredients', 'category');
+  const columns = ['id', 'name', 'stock', 'base_unit', 'min_stock', 'supplier', 'unit_price'];
+  if (hasCategory) columns.splice(1, 0, 'category');
+  return db.query(`SELECT ${columns.join(', ')} FROM ingredients WHERE restaurant_id = $1`, [restaurantId]);
+};
 
 // POST /api/gemini/chat
 router.post('/', requireAuth, async (req: Request, res: Response) => {
@@ -22,7 +45,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 
   try {
     // Tambahkan WHERE restaurant_id = $1 di setiap query
-    const ingRes = await db.query('SELECT id, name, category, stock, base_unit, min_stock, supplier, unit_price FROM ingredients WHERE restaurant_id = $1', [restaurantId]);
+    const ingRes = await selectIngredientsForRestaurant(restaurantId);
     ingredientsList = ingRes.rows;
 
     const recRes = await db.query(`
@@ -286,12 +309,17 @@ INGAT: Tanpa action tag = tidak ada yang terjadi di database!`;
             const converted = convertToUnit(amount, unit, baseUnit);
             const pricePerBaseUnit = unit_price ? (unit_price / converted) : 0;
 
-            const insertRes = await db.query(
-              `INSERT INTO ingredients (restaurant_id, name, category, supplier, stock, base_unit, min_stock, unit_price) 
-               VALUES ($1, $2, 'Bahan Pokok', 'AI Chat Auto-Provision', 0, $3, 0, $4) RETURNING id`,
-              [restaurantId, ingredient_name, baseUnit, pricePerBaseUnit]
+            const insertQuery = await buildIngredientInsertQuery(
+              restaurantId,
+              ingredient_name,
+              'Bahan Pokok',
+              'AI Chat Auto-Provision',
+              0,
+              baseUnit,
+              0,
+              pricePerBaseUnit
             );
-            
+            const insertRes = await db.query(insertQuery.text, insertQuery.values);
             const newId = insertRes.rows[0].id;
             await db.query('UPDATE ingredients SET stock = $1 WHERE id = $2', [converted, newId]);
             
@@ -318,11 +346,17 @@ INGAT: Tanpa action tag = tidak ada yang terjadi di database!`;
           for (const item of items) {
             let mappedId = findMappedIngredient(item.ingredient_name, ingredientsList);
             if (!mappedId) {
-              const insertIng = await db.query(
-                `INSERT INTO ingredients (restaurant_id, name, category, supplier, stock, base_unit, min_stock, unit_price) 
-                 VALUES ($1, $2, 'Bahan Pokok', 'AI Chat', 0, 'gram', 0, 0) RETURNING id`,
-                [restaurantId, item.ingredient_name]
+              const insertQuery = await buildIngredientInsertQuery(
+                restaurantId,
+                item.ingredient_name,
+                'Bahan Pokok',
+                'AI Chat',
+                0,
+                'gram',
+                0,
+                0
               );
+              const insertIng = await db.query(insertQuery.text, insertQuery.values);
               mappedId = insertIng.rows[0].id;
             }
             await db.query(

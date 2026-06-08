@@ -109,6 +109,7 @@ export default function Inventory({
   const [adjValue, setAdjValue] = useState('');
   const [adjUnit, setAdjUnit] = useState<'base' | 'bulk'>('base');
   const [adjNotes, setAdjNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ── Derived ──
   const existingCats = Array.from(new Set(ingredients.map(i => i.category))).filter(Boolean);
@@ -148,17 +149,24 @@ export default function Inventory({
     e.preventDefault();
     const cat = newCustomCat ? newCustomCatName : newCategory;
     if (!newName.trim() || !cat.trim() || !newSupplier.trim()) return;
-    await onAddIngredient({
-      name: newName, category: cat, supplier: newSupplier,
-      stock: parseFloat(newStock) || 0,
-      base_unit: newUnit,
-      min_stock: parseFloat(newMin) || 0,
-      unit_price: parseFloat(newPrice) || 0,
-    });
-    setNewName(''); setNewSupplier(''); setNewStock('0');
-    setNewMin('0'); setNewPrice('0');
-    setNewCustomCat(false); setNewCustomCatName('');
-    setShowAddModal(false);
+    setIsSubmitting(true);
+    try {
+      await onAddIngredient({
+        name: newName, category: cat, supplier: newSupplier,
+        stock: parseFloat(newStock) || 0,
+        base_unit: newUnit,
+        min_stock: parseFloat(newMin) || 0,
+        unit_price: parseFloat(newPrice) || 0,
+      });
+      setNewName(''); setNewSupplier(''); setNewStock('0');
+      setNewMin('0'); setNewPrice('0');
+      setNewCustomCat(false); setNewCustomCatName('');
+      setShowAddModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEdit = async (e: React.FormEvent) => {
@@ -166,12 +174,19 @@ export default function Inventory({
     if (!selected) return;
     const cat = editCustomCat ? editCustomCatName : editCategory;
     if (!cat.trim()) return;
-    await onEditIngredient(selected.id, {
-      name: editName, category: cat, supplier: editSupplier,
-      min_stock: parseFloat(editMin) || 0,
-      unit_price: parseFloat(editPrice) || 0,
-    });
-    setShowEditModal(false);
+    setIsSubmitting(true);
+    try {
+      await onEditIngredient(selected.id, {
+        name: editName, category: cat, supplier: editSupplier,
+        min_stock: parseFloat(editMin) || 0,
+        unit_price: parseFloat(editPrice) || 0,
+      });
+      setShowEditModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAdjust = async (e: React.FormEvent) => {
@@ -180,8 +195,15 @@ export default function Inventory({
     let val = parseFloat(adjValue);
     if (isNaN(val)) return;
     if (adjUnit === 'bulk' && selected.base_unit !== 'pcs') val *= 1000;
-    await onAdjustStock(selected.id, val, adjNotes);
-    setShowAdjustModal(false);
+    setIsSubmitting(true);
+    try {
+      await onAdjustStock(selected.id, val, adjNotes);
+      setShowAdjustModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ─── Category select helper ───────────────────────────────────────────────
@@ -194,16 +216,17 @@ export default function Inventory({
 
   const handleDelete = async () => {
     if (!selected) return;
+    setIsSubmitting(true);
     setShowDeleteLoading(true);
     setDeleteError(null);
     try {
       await onDeleteIngredient(selected.id);
       setShowDeleteModal(false);
     } catch (err: any) {
-      // Menangkap pesan error dari backend (misal: foreign key constraint)
       setDeleteError(err.message || 'Gagal menghapus. Bahan mungkin masih digunakan dalam resep.');
     } finally {
       setShowDeleteLoading(false);
+      setIsSubmitting(false);
     }
   };
   const CatSelect = ({
@@ -239,20 +262,27 @@ export default function Inventory({
 
   // ─── Form action buttons ──────────────────────────────────────────────────
   const FormActions = ({
-    onCancel, submitLabel,
-  }: { onCancel: () => void; submitLabel: string }) => (
+    onCancel, submitLabel, loading,
+  }: { onCancel: () => void; submitLabel: string; loading: boolean }) => (
     <div className="flex gap-2 pt-1">
       <button
         type="button" onClick={onCancel}
-        className="flex-1 py-2 border border-slate-200 text-slate-500 rounded-xl text-[12px] font-semibold hover:bg-slate-50 transition-colors"
+        disabled={loading}
+        className="flex-1 py-2 border border-slate-200 text-slate-500 rounded-xl text-[12px] font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Batal
       </button>
       <button
         type="submit"
-        className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-[12px] font-semibold hover:bg-blue-700 transition-colors"
+        disabled={loading}
+        className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-[12px] font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
-        {submitLabel}
+        {loading ? (
+          <>
+            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Memproses...
+          </>
+        ) : submitLabel}
       </button>
     </div>
   );
@@ -607,7 +637,7 @@ export default function Inventory({
               </p>
             </Field>
 
-            <FormActions onCancel={() => setShowAddModal(false)} submitLabel="Simpan Bahan" />
+            <FormActions onCancel={() => setShowAddModal(false)} submitLabel="Simpan Bahan" loading={isSubmitting} />
           </form>
         </Modal>
       )}
@@ -656,7 +686,7 @@ export default function Inventory({
               = Rp {formatIDR(pricePerBulk(parseFloat(editPrice) || 0, selected.base_unit))} per {bulkLabel(selected.base_unit)}
             </p>
 
-            <FormActions onCancel={() => setShowEditModal(false)} submitLabel="Simpan Perubahan" />
+            <FormActions onCancel={() => setShowEditModal(false)} submitLabel="Simpan Perubahan" loading={isSubmitting} />
           </form>
         </Modal>
       )}
@@ -723,7 +753,7 @@ export default function Inventory({
               />
             </Field>
 
-            <FormActions onCancel={() => setShowAdjustModal(false)} submitLabel="Konfirmasi Opname" />
+            <FormActions onCancel={() => setShowAdjustModal(false)} submitLabel="Konfirmasi Opname" loading={isSubmitting} />
           </form>
         </Modal>
       )}

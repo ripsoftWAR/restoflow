@@ -18,20 +18,20 @@ export function useAppData() {
   const apiFetch = makeApiFetch(sessionId);
 
   // ─── Fetch all data ────────────────────────────────────────────────────────
-  const fetchAllData = async (session = authSession) => {
+  const fetchAllData = async (session = authSession, isSilent = false) => {
     if (!session) return;
     try {
-      setLoading(true);
+      if (!isSilent) setLoading(true);
       const api = makeApiFetch(sessionId);
 
-      const reqIngredients = api('/api/ingredients').then(r => r.json());
-      const reqRecipes     = api('/api/recipes').then(r => r.json());
-      const reqSales       = api('/api/sales').then(r => r.json());
-      const reqMovements   = api('/api/movements').then(r => r.json());
+      const reqIngredients = api('/api/ingredients').then((r: Response) => r.json());
+      const reqRecipes     = api('/api/recipes').then((r: Response) => r.json());
+      const reqSales       = api('/api/sales').then((r: Response) => r.json());
+      const reqMovements   = api('/api/movements').then((r: Response) => r.json());
 
       if (session.user.role === 'Pemilik') {
         const [st, ing, rec, sal, mov] = await Promise.all([
-          api('/api/dashboard/stats').then(r => r.json()),
+          api('/api/dashboard/stats').then((r: Response) => r.json()),
           reqIngredients, reqRecipes, reqSales, reqMovements,
         ]);
         setStats(st);
@@ -52,7 +52,7 @@ export function useAppData() {
     } catch (err) {
       console.error('Sync Error:', err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -131,14 +131,43 @@ export function useAppData() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      if (sessionId) {
+        await apiFetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+      }
+    } catch (err) {
+      console.warn('Logout request failed:', err);
+    } finally {
+      localStorage.removeItem('restoflow_session_id');
+      setSessionId(null);
+      setAuthSession(null);
+      setStats(null);
+      setIngredients([]);
+      setRecipes([]);
+      setSales([]);
+      setMovements([]);
+      setAuthMode('login');
+      setAuthChecked(true);
+      setLoading(false);
+    }
+  };
+
   // ─── Ingredient handlers ───────────────────────────────────────────────────
   const handleAddIngredient = async (payload: any) => {
     const res = await apiFetch('/api/ingredients', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Gagal menambahkan bahan.');
-    await fetchAllData();
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(data?.error || `Gagal menambahkan bahan. (${res.status})`);
+    }
+    await fetchAllData(authSession, true);
   };
 
   const handleEditIngredient = async (id: number, payload: any) => {
@@ -147,7 +176,7 @@ export function useAppData() {
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Gagal memperbarui bahan.');
-    await fetchAllData();
+    await fetchAllData(authSession, true);
   };
 
   const handleDeleteIngredient = async (id: number) => {
@@ -156,7 +185,7 @@ export function useAppData() {
       const err = await res.json().catch(() => null);
       throw new Error(err?.error || 'Gagal menghapus bahan.');
     }
-    await fetchAllData();
+    await fetchAllData(authSession, true);
   };
 
   const handleAdjustStock = async (id: number, finalStock: number, notes: string) => {
@@ -165,20 +194,20 @@ export function useAppData() {
       body: JSON.stringify({ adjustStockInBaseUnit: finalStock, notes }),
     });
     if (!res.ok) throw new Error('Gagal mengubah stok.');
-    await fetchAllData();
+    await fetchAllData(authSession, true);
   };
 
   // ─── Recipe handler ────────────────────────────────────────────────────────
   const handleAddOrUpdateRecipe = async (
     menuName: string, items: any[], category = 'Makanan',
-    spice_level_option = false, sugar_level_option = false, custom_options = ''
+    spice_level_option = false, sugar_level_option = false, custom_options = '', price = 0
   ) => {
     const res = await apiFetch('/api/recipes', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ menu_name: menuName, category, spice_level_option, sugar_level_option, custom_options, items }),
+      body: JSON.stringify({ menu_name: menuName, category, spice_level_option, sugar_level_option, custom_options, price, items }),
     });
     if (!res.ok) throw new Error('Gagal menyimpan resep.');
-    await fetchAllData();
+    await fetchAllData(authSession, true);
   };
 
   // ─── Sales handler ─────────────────────────────────────────────────────────
@@ -200,7 +229,7 @@ export function useAppData() {
       }),
     });
     if (!res.ok) throw new Error('Gagal mencatat penjualan.');
-    await fetchAllData();
+    await fetchAllData(authSession, true);
   };
 
   // ─── OCR handlers ──────────────────────────────────────────────────────────
@@ -225,7 +254,7 @@ export function useAppData() {
       const err = await res.json().catch(() => null);
       throw new Error(err?.error || 'Gagal mengkonfirmasi item struk.');
     }
-    await fetchAllData();
+    await fetchAllData(authSession, true);
   };
 
   return {
@@ -236,7 +265,7 @@ export function useAppData() {
     setAuthMode, setAuthError,
     // handlers
     fetchAllData,
-    handleLogin, handleRegister,
+    handleLogin, handleRegister, handleLogout,
     handleAddIngredient, handleEditIngredient, handleDeleteIngredient, handleAdjustStock,
     handleAddOrUpdateRecipe,
     handleTriggerSale,

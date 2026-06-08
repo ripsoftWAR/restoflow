@@ -82,8 +82,13 @@ export default function SalesSimulator({
 
   const cashInputRef = useRef<HTMLInputElement>(null);
 
-  const getDishPrice = (name: string): number =>
-    DISH_PRICES[name.toLowerCase().trim()] ?? 25000;
+  const getDishPrice = (name: string): number => {
+    const recipe = recipes.find(r => r.menu_name.toLowerCase().trim() === name.toLowerCase().trim());
+    if (recipe && typeof recipe.price === 'number') {
+      return recipe.price;
+    }
+    return DISH_PRICES[name.toLowerCase().trim()] ?? 25000;
+  };
 
   const getIngredientStock = (id: number): number =>
     ingredients.find(i => i.id === id)?.stock ?? 0;

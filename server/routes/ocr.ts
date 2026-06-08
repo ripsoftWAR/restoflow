@@ -2,8 +2,24 @@ import { Router } from 'express';
 import db from '../db/database';
 import { findMappedIngredient, convertToBaseUnit } from '../utils/conversion';
 import { requireAuth, requireRole } from '../utils/authMiddleware';
+import { hasColumn } from '../utils/dbHelpers';
 
 const router = Router();
+
+const buildIngredientInsertQuery = async (restaurantId: number, name: string, category: string, baseUnit: string, supplier: string) => {
+  const hasCategory = await hasColumn('ingredients', 'category');
+  const columns = ['restaurant_id', 'name', 'base_unit', 'supplier', 'stock', 'min_stock', 'unit_price'];
+  const values: any[] = [restaurantId, name, baseUnit, supplier, 0, 0, 0];
+  if (hasCategory) {
+    columns.splice(2, 0, 'category');
+    values.splice(2, 0, category);
+  }
+  const placeholders = values.map((_, idx) => `$${idx + 1}`);
+  return {
+    text: `INSERT INTO ingredients (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING id`,
+    values,
+  };
+};
 // Tambahkan requireAuth agar bisa mengambil restaurant_id
 router.use(requireAuth); 
 router.use(requireRole('Kasir', 'Pemilik'));
@@ -126,11 +142,14 @@ router.post('/confirm', async (req, res) => {
         const newBaseUnit = item.newIngBaseUnit || 'gram';
         const newSupplier = item.newIngSupplier || 'Struk Scanner';
 
-        const insertRes = await db.query(`
-          INSERT INTO ingredients (restaurant_id, name, category, base_unit, supplier, stock, min_stock, unit_price)
-          VALUES ($1, $2, $3, $4, $5, 0, 0) RETURNING id
-        `, [restaurantId, newName, newCategory, newBaseUnit, newSupplier]);
-        
+        const insertQuery = await buildIngredientInsertQuery(
+          restaurantId,
+          newName,
+          newCategory,
+          newBaseUnit,
+          newSupplier
+        );
+        const insertRes = await db.query(insertQuery.text, insertQuery.values);
         mappedIngredientId = insertRes.rows[0].id;
       }
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db/database';
 import { requireAuth, requireRole } from '../utils/authMiddleware';
+import { hasColumn } from '../utils/dbHelpers';
 
 const router = Router();
 // Tambahkan requireAuth sebagai middleware utama
@@ -27,25 +28,31 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const restaurantId = req.user!.restaurant_id;
   const { name, category, supplier, stock, base_unit, min_stock, unit_price } = req.body;
-  
-  try {
-    // PostgreSQL menggunakan RETURNING id untuk mendapatkan ID yang baru dibuat
-    const insertRes = await db.query(`
-      INSERT INTO ingredients (restaurant_id, name, category, supplier, stock, base_unit, min_stock, unit_price)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id
-    `, [restaurantId, name, category, supplier, stock, base_unit, min_stock, unit_price || 0]);
-    
-    const id = insertRes.rows[0].id;
 
-    if (Number(stock) > 0) {
-      await db.query(`
-        INSERT INTO movement_log (restaurant_id, ingredient_id, type, amount, balance, notes, unit_price, total_price)
-        VALUES ($1, $2, 'ADJUST', $3, $4, 'Pembuatan Master Ingredient Baru', $5, $6)
-      `, [restaurantId, id, stock, stock, unit_price || 0, Number(stock) * (unit_price || 0)]);
+  const normalizedStock = Number(stock) || 0;
+  const normalizedMinStock = Number(min_stock) || 0;
+  const normalizedPrice = Number(unit_price) || 0;
+  const normalizedUnit = typeof base_unit === 'string' ? base_unit : 'gram';
+
+  if (!name || !supplier || !normalizedUnit) {
+    return res.status(400).json({ error: 'Nama bahan, supplier, dan base_unit wajib diisi.' });
+  }
+
+  try {
+    const hasCategory = await hasColumn('ingredients', 'category');
+    const columns = ['restaurant_id', 'name', 'supplier', 'stock', 'base_unit', 'min_stock', 'unit_price'];
+    const values = [restaurantId, name, supplier, normalizedStock, normalizedUnit, normalizedMinStock, normalizedPrice];
+    if (hasCategory) {
+      columns.splice(2, 0, 'category');
+      values.splice(2, 0, category || 'Lainnya');
     }
 
-    res.status(201).json({ id, name, category, supplier, stock, base_unit, min_stock, unit_price: unit_price || 0 });
+    const insertRes = await db.query(
+      `INSERT INTO ingredients (${columns.join(', ')}) VALUES (${columns.map((_, idx) => `$${idx + 1}`).join(', ')}) RETURNING id`,
+      values
+    );
+    const insertedId = insertRes.rows[0].id;
+    res.status(201).json({ id: insertedId, name, category: hasCategory ? category || 'Lainnya' : undefined, supplier, stock: normalizedStock, base_unit: normalizedUnit, min_stock: normalizedMinStock, unit_price: normalizedPrice });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -57,12 +64,23 @@ router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { name, category, supplier, min_stock, unit_price } = req.body;
   try {
-    const result = await db.query(`
-      UPDATE ingredients 
-      SET name = $1, category = $2, supplier = $3, min_stock = $4, unit_price = $5
-      WHERE id = $6 AND restaurant_id = $7
+    const hasCategory = await hasColumn('ingredients', 'category');
+    const setClauses = ['name = $1', 'supplier = $2', 'min_stock = $3', 'unit_price = $4'];
+    const values: any[] = [name, supplier, min_stock, unit_price || 0];
+    if (hasCategory) {
+      setClauses.splice(1, 0, 'category = $2');
+      values.splice(1, 0, category || 'Lainnya');
+    }
+
+    values.push(id, restaurantId);
+    const query = `
+      UPDATE ingredients
+      SET ${setClauses.join(', ')}
+      WHERE id = $${values.length - 1} AND restaurant_id = $${values.length}
       RETURNING *
-    `, [name, category, supplier, min_stock, unit_price || 0, id, restaurantId]);
+    `;
+
+    const result = await db.query(query, values);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Bahan tidak ditemukan atau akses dilarang' });

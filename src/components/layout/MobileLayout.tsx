@@ -1,14 +1,15 @@
-import { Zap, MessageSquareMore } from 'lucide-react';
+import { Zap, MessageSquareMore, LogOut } from 'lucide-react';
 import { NavItem } from '../../types';
 
 interface Props {
   activeTab:       string;
   setActiveTab:    (tab: string) => void;
   rolePrimaryTabs: NavItem[];
+  onLogout:        () => void;
   children:        React.ReactNode;
 }
 
-export default function MobileLayout({ activeTab, setActiveTab, rolePrimaryTabs, children }: Props) {
+export default function MobileLayout({ activeTab, setActiveTab, rolePrimaryTabs, onLogout, children }: Props) {
   return (
     <div className="flex flex-col h-screen bg-[#F8FAFC] md:hidden">
       <header className="bg-white border-b border-slate-100 px-4 pt-3 pb-2.5 flex-shrink-0">
@@ -24,13 +25,19 @@ export default function MobileLayout({ activeTab, setActiveTab, rolePrimaryTabs,
               </p>
             </div>
           </div>
-          <button onClick={() => setActiveTab('ai')}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 text-white text-[11px] font-semibold shadow-lg shadow-blue-500/20 transition-all hover:brightness-110">
-            <span className="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center">
-              <MessageSquareMore size={14} className="text-white" />
-            </span>
-            AI Asisten
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setActiveTab('ai')}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 text-white text-[11px] font-semibold shadow-lg shadow-blue-500/20 transition-all hover:brightness-110">
+              <span className="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center">
+                <MessageSquareMore size={14} className="text-white" />
+              </span>
+              AI Asisten
+            </button>
+            <button onClick={onLogout}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-100 text-slate-700 text-[11px] font-semibold hover:bg-slate-200 transition-all">
+              <LogOut size={14} /> Keluar
+            </button>
+          </div>
         </div>
       </header>
 

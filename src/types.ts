@@ -40,6 +40,7 @@ export interface RecipeItem {
 export interface RecipeWithDetails {
   menu_name: string;
   category?: string;
+  price?: number;
   spice_level_option?: number;
   sugar_level_option?: number;
   custom_options?: string; 

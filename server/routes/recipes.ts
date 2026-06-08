@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db/database';
 import { requireAuth } from '../utils/authMiddleware';
+import { hasColumn } from '../utils/dbHelpers';
 
 const router = Router();
 // Tambahkan requireAuth agar kita bisa mengambil restaurant_id
@@ -29,6 +30,7 @@ router.get('/', async (req, res) => {
         grouped[item.menu_name] = {
           menu_name: item.menu_name,
           category: item.category || 'Makanan',
+          price: item.price ?? 0,
           spice_level_option: item.spice_level_option || 0,
           sugar_level_option: item.sugar_level_option || 0,
           custom_options: item.custom_options || '',
@@ -54,7 +56,8 @@ router.get('/', async (req, res) => {
 // POST create or replace recipe (BOM)
 router.post('/', async (req, res) => {
   const restaurantId = req.user!.restaurant_id;
-  const { menu_name, category, spice_level_option, sugar_level_option, custom_options, items } = req.body;
+  const { menu_name, category, spice_level_option, sugar_level_option, custom_options, price, items } = req.body;
+  const normalizedPrice = typeof price === 'number' ? price : Number(price) || 0;
 
   try {
     // Mulai Transaksi PostgreSQL
@@ -66,12 +69,12 @@ router.post('/', async (req, res) => {
       [menu_name, restaurantId]
     );
 
-    // 2. Insert item resep baru satu per satu
+    const hasPrice = await hasColumn('recipes', 'price');
+    const baseColumns = ['restaurant_id', 'menu_name', 'category', 'spice_level_option', 'sugar_level_option', 'custom_options', 'ingredient_id', 'amount'];
+
     for (const item of items) {
-      await db.query(`
-        INSERT INTO recipes (restaurant_id, menu_name, category, spice_level_option, sugar_level_option, custom_options, ingredient_id, amount)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [
+      const insertColumns = [...baseColumns];
+      const values: any[] = [
         restaurantId,
         menu_name,
         category || 'Makanan',
@@ -80,7 +83,18 @@ router.post('/', async (req, res) => {
         custom_options || '',
         item.ingredient_id,
         item.amount
-      ]);
+      ];
+
+      if (hasPrice) {
+        insertColumns.splice(5, 0, 'price');
+        values.splice(5, 0, normalizedPrice);
+      }
+
+      const placeholders = values.map((_, index) => `$${index + 1}`);
+      await db.query(
+        `INSERT INTO recipes (${insertColumns.join(', ')}) VALUES (${placeholders.join(', ')})`,
+        values
+      );
     }
 
     // Commit Transaksi

@@ -11,7 +11,8 @@ interface RecipeSystemProps {
     category?: string,
     spice_level_option?: boolean,
     sugar_level_option?: boolean,
-    custom_options?: string
+    custom_options?: string,
+    price?: number
   ) => Promise<void>;
 }
 
@@ -20,6 +21,7 @@ export default function RecipeSystem({ ingredients, recipes, onAddOrUpdateRecipe
   const [menuName, setMenuName] = useState('');
   const [recipeLines, setRecipeLines] = useState<{ ingredient_id: number; amount: number }[]>([]);
   const [menuCategory, setMenuCategory] = useState<string>('Makanan');
+  const [menuPrice, setMenuPrice] = useState('0');
   const [spiceLevelOption, setSpiceLevelOption] = useState(false);
   const [sugarLevelOption, setSugarLevelOption] = useState(false);
   const [customOptionsList, setCustomOptionsList] = useState<{ name: string; choices: string }[]>([]);
@@ -83,14 +85,20 @@ export default function RecipeSystem({ ingredients, recipes, onAddOrUpdateRecipe
 
     const validCustomOptions = customOptionsList.filter(o => o.name.trim() !== '');
     const serializedOptions = validCustomOptions.length > 0 ? JSON.stringify(validCustomOptions) : '';
+    const normalizedPrice = parseFloat(menuPrice);
+    if (isNaN(normalizedPrice) || normalizedPrice < 0) {
+      setError('Harga menu harus berupa angka positif.');
+      return;
+    }
 
     try {
-      await onAddOrUpdateRecipe(menuName, recipeLines, menuCategory, spiceLevelOption, sugarLevelOption, serializedOptions);
+      await onAddOrUpdateRecipe(menuName, recipeLines, menuCategory, spiceLevelOption, sugarLevelOption, serializedOptions, normalizedPrice);
       setSuccess(`✓ Menu "${menuName}" BOM successfully saved!`);
       // Reset
       setMenuName('');
       setRecipeLines([]);
       setMenuCategory('Makanan');
+      setMenuPrice('0');
       setSpiceLevelOption(false);
       setSugarLevelOption(false);
       setCustomOptionsList([]);
@@ -125,6 +133,7 @@ export default function RecipeSystem({ ingredients, recipes, onAddOrUpdateRecipe
             setMenuName('');
             setRecipeLines([{ ingredient_id: ingredients[0]?.id || 0, amount: 50 }]);
             setMenuCategory('Makanan');
+            setMenuPrice('0');
             setSpiceLevelOption(false);
             setSugarLevelOption(false);
             setCustomOptionsList([]);
@@ -203,22 +212,35 @@ export default function RecipeSystem({ ingredients, recipes, onAddOrUpdateRecipe
                   )}
                 </div>
 
-                <div className="border-t border-slate-100 pt-3 h-44 overflow-y-auto space-y-1.5 pr-1">
-                  {recipe.items.map((item: RecipeItem) => {
-                    const currentStock = getIngredientStock(item.ingredient_id);
-                    const isShort = currentStock < item.amount;
-                    return (
-                      <div key={item.id} className="flex justify-between items-center text-xs">
-                        <span className="text-slate-500 font-medium">{item.ingredient_name}</span>
-                        <div className="flex items-center gap-2 font-mono">
-                          <span className="text-slate-700 font-semibold">{item.amount} {item.base_unit}</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${isShort ? 'bg-rose-50 text-rose-500 font-bold' : 'bg-slate-100 text-slate-400'}`}>
-                            {isShort ? 'Short' : 'Ok'}
-                          </span>
+                <div className="border-t border-slate-100 pt-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">Harga jual per porsi</p>
+                      <p className="text-[11px] text-slate-500 font-mono">
+                        {typeof recipe.price === 'number' ? `Rp ${recipe.price.toLocaleString('id-ID')}` : 'Belum diisi'}
+                      </p>
+                    </div>
+                    <div className="text-[10px] px-2 py-1 rounded-full bg-slate-100 text-slate-500 uppercase font-bold">
+                      {recipe.price !== undefined ? 'Terpasang' : 'Tanpa harga'}
+                    </div>
+                  </div>
+                  <div className="h-44 overflow-y-auto space-y-1.5 pr-1">
+                    {recipe.items.map((item: RecipeItem) => {
+                      const currentStock = getIngredientStock(item.ingredient_id);
+                      const isShort = currentStock < item.amount;
+                      return (
+                        <div key={item.id} className="flex justify-between items-center text-xs">
+                          <span className="text-slate-500 font-medium">{item.ingredient_name}</span>
+                          <div className="flex items-center gap-2 font-mono">
+                            <span className="text-slate-700 font-semibold">{item.amount} {item.base_unit}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${isShort ? 'bg-rose-50 text-rose-500 font-bold' : 'bg-slate-100 text-slate-400'}`}>
+                              {isShort ? 'Short' : 'Ok'}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -233,6 +255,7 @@ export default function RecipeSystem({ ingredients, recipes, onAddOrUpdateRecipe
                     setMenuName(recipe.menu_name);
                     setRecipeLines(recipe.items.map(i => ({ ingredient_id: i.ingredient_id, amount: i.amount })));
                     setMenuCategory(recipe.category || 'Makanan');
+                    setMenuPrice(recipe.price?.toString() ?? '0');
                     setSpiceLevelOption(recipe.spice_level_option === 1);
                     setSugarLevelOption(recipe.sugar_level_option === 1);
                     
@@ -311,6 +334,22 @@ export default function RecipeSystem({ ingredients, recipes, onAddOrUpdateRecipe
                   </datalist>
                 </div>
                 
+                <div className="flex flex-col justify-end">
+                  <label className="block text-slate-600 text-[10px] font-bold uppercase tracking-wider mb-1">Harga Jual / Porsi</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rp</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={menuPrice}
+                      onChange={(e) => setMenuPrice(e.target.value)}
+                      className="w-full pl-9 pr-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold text-slate-700"
+                      placeholder="Harga jual per porsi"
+                    />
+                  </div>
+                  <span className="text-[9px] text-slate-400 block mt-1">Harga jual yang dipakai saat checkout.</span>
+                </div>
                 <div className="flex flex-col justify-end">
                   <label className="flex items-center gap-2 cursor-pointer py-1 text-xs font-medium text-slate-700">
                     <input

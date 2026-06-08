@@ -1,4 +1,4 @@
-import { Zap, Settings, MessageSquareMore, LayoutDashboard, Layers, Utensils, ShoppingCart, Scan, ListOrdered } from 'lucide-react';
+import { Zap, Settings, MessageSquareMore, LogOut, LayoutDashboard, Layers, Utensils, ShoppingCart, Scan, ListOrdered } from 'lucide-react';
 import { DashboardStats, NavItem } from '../../types';
 import { formatIDR } from '../../utils/api';
 
@@ -20,10 +20,11 @@ interface Props {
   stats:             DashboardStats | null;
   rolePrimaryTabs:   NavItem[];
   roleSecondaryTabs: NavItem[];
+  onLogout:          () => void;
   children:          React.ReactNode;
 }
 
-export default function DesktopLayout({ activeTab, setActiveTab, stats, rolePrimaryTabs, roleSecondaryTabs, children }: Props) {
+export default function DesktopLayout({ activeTab, setActiveTab, stats, rolePrimaryTabs, roleSecondaryTabs, onLogout, children }: Props) {
   const NavBtn = ({ id, icon: Icon, label }: NavItem) => (
     <button onClick={() => setActiveTab(id)}
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all
@@ -93,10 +94,16 @@ export default function DesktopLayout({ activeTab, setActiveTab, stats, rolePrim
               {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>
-          <button onClick={() => setActiveTab('ai')}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-semibold px-4 py-2 rounded-xl transition-all">
-            <MessageSquareMore size={15} /> AI Asisten
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setActiveTab('ai')}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-semibold px-4 py-2 rounded-xl transition-all">
+              <MessageSquareMore size={15} /> AI Asisten
+            </button>
+            <button onClick={onLogout}
+              className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[12px] font-semibold px-4 py-2 rounded-xl transition-all">
+              <LogOut size={15} /> Keluar
+            </button>
+          </div>
         </header>
         {children}
       </div>

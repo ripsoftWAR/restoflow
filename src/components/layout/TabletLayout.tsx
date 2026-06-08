@@ -2,6 +2,7 @@ import {
   Zap,
   Settings,
   MessageSquareMore,
+  LogOut,
   LayoutDashboard,
   Layers,
   Utensils,
@@ -28,6 +29,7 @@ interface Props {
   activeTab:    string;
   setActiveTab: (tab: string) => void;
   stats:        DashboardStats | null;
+  onLogout:     () => void;
   children:     React.ReactNode;
 }
 
@@ -39,7 +41,7 @@ const SideBtn = ({ id, icon: Icon, label, activeTab, setActiveTab }: NavItem & {
   </button>
 );
 
-export default function TabletLayout({ activeTab, setActiveTab, stats, children }: Props) {
+export default function TabletLayout({ activeTab, setActiveTab, stats, onLogout, children }: Props) {
   return (
     <div className="hidden md:flex lg:hidden h-screen bg-[#F8FAFC]">
       <aside className="w-16 bg-white border-r border-slate-100 flex flex-col items-center py-3 gap-1 flex-shrink-0">
@@ -64,7 +66,13 @@ export default function TabletLayout({ activeTab, setActiveTab, stats, children 
               {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>
-          <div className="flex items-center gap-2"><StatChips stats={stats} /></div>
+          <div className="flex items-center gap-2">
+            <StatChips stats={stats} />
+            <button onClick={onLogout}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-semibold text-slate-600 hover:bg-slate-50 transition-all">
+              <LogOut size={14} /> Keluar
+            </button>
+          </div>
         </header>
         {children}
       </div>

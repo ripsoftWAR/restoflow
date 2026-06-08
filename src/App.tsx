@@ -45,7 +45,7 @@ export default function App() {
     stats, ingredients, recipes, sales, movements,
     loading, authChecked, authSession, authError, authMode,
     setAuthMode, fetchAllData,
-    handleLogin, handleRegister,
+    handleLogin, handleRegister, handleLogout,
     handleAddIngredient, handleEditIngredient, handleDeleteIngredient, handleAdjustStock,
     handleAddOrUpdateRecipe,
     handleTriggerSale,
@@ -132,13 +132,13 @@ export default function App() {
 
   return (
     <>
-      <MobileLayout activeTab={activeTab} setActiveTab={setActiveTab} rolePrimaryTabs={rolePrimaryTabs}>
+      <MobileLayout activeTab={activeTab} setActiveTab={setActiveTab} rolePrimaryTabs={rolePrimaryTabs} onLogout={handleLogout}>
         <Content />
       </MobileLayout>
-      <TabletLayout activeTab={activeTab} setActiveTab={setActiveTab} stats={stats}>
+      <TabletLayout activeTab={activeTab} setActiveTab={setActiveTab} stats={stats} onLogout={handleLogout}>
         <Content />
       </TabletLayout>
-      <DesktopLayout activeTab={activeTab} setActiveTab={setActiveTab} stats={stats} rolePrimaryTabs={rolePrimaryTabs} roleSecondaryTabs={roleSecondaryTabs}>
+      <DesktopLayout activeTab={activeTab} setActiveTab={setActiveTab} stats={stats} rolePrimaryTabs={rolePrimaryTabs} roleSecondaryTabs={roleSecondaryTabs} onLogout={handleLogout}>
         <Content />
       </DesktopLayout>
     </>
