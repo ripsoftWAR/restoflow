@@ -1,3 +1,5 @@
+import type { ComponentType } from 'react';
+
 export type BaseUnit = 'gram' | 'ml' | 'pcs';
 
 export interface Ingredient {
@@ -117,6 +119,12 @@ export interface ShiftSession {
   login_at: string;
   logout_at?: string;
   date: string;
+}
+
+export interface NavItem {
+  id: string;
+  icon: ComponentType<{ size?: number | string; className?: string }>;
+  label: string;
 }
 
 export interface AuthSession {
