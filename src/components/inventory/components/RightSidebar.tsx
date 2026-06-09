@@ -3,7 +3,7 @@ import {
   Sparkles, ArrowUp, ArrowDown, Sliders, Scan,
   Plus, Upload, Tag, Store, Printer,
 } from 'lucide-react';
-import { Ingredient } from '../../types';
+import { Ingredient } from '../../../types';
 
 interface RightSidebarProps {
   ingredients: Ingredient[];
@@ -34,7 +34,7 @@ export default function RightSidebar({
   onAdjustFirstClick,
 }: RightSidebarProps) {
   return (
-    <div className="w-52 flex-shrink-0 flex flex-col gap-3">
+    <div className="w-full flex flex-col gap-3 xl:w-72 xl:flex-shrink-0">
 
       {/* AI Insight */}
       <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl p-3.5 text-white relative overflow-hidden">
@@ -71,7 +71,7 @@ export default function RightSidebar({
       {/* Quick Action */}
       <div className="bg-white rounded-xl border border-slate-100 p-3.5">
         <h4 className="text-xs font-bold text-slate-800 mb-3">Quick Action</h4>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
           {[
             { icon: <Plus size={16} />,    label: 'Tambah Bahan',   onClick: onAddClick },
             { icon: <Upload size={16} />,  label: 'Import Stok',    onClick: undefined },

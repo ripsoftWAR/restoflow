@@ -1,6 +1,6 @@
 import React from 'react';
-import { selectCls } from '../../utils/styles';
-import { DEFAULT_CATS } from '../../utils/constants';
+import { selectCls } from '../utils/styles';
+import { DEFAULT_CATS } from '../utils/constants';
 import { Ingredient } from '../../../types';
 
 interface CatSelectProps {

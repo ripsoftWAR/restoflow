@@ -1,16 +1,14 @@
 import React from 'react';
-import { Ingredient } from '../types';
+import { Ingredient } from '../../types';
 import { useInventoryState } from './hooks/useInventoryState';
-import {
-  StatCards,
-  MidRow,
-  TableSection,
-  RightSidebar,
-  AddModal,
-  EditModal,
-  AdjustModal,
-  DeleteModal,
-} from './components';
+import StatCards from './components/StatCards';
+import MidRow from './components/MidRow';
+import TableSection from './components/TableSection';
+import RightSidebar from './components/RightSidebar';
+import AddModal from './modals/AddModal';
+import EditModal from './modals/EditModal';
+import AdjustModal from './modals/AdjustModal';
+import DeleteModal from './modals/DeleteModal';
 
 interface InventoryProps {
   ingredients: Ingredient[];
@@ -37,11 +35,11 @@ export default function Inventory({
 
   return (
     <>
-      <div className="min-h-full w-full bg-transparent p-4">
-        <div className="flex gap-4 min-h-0">
+      <div className="min-h-full w-full bg-transparent p-3 sm:p-4">
+        <div className="flex flex-col gap-4 min-h-0 xl:flex-row xl:items-start">
 
           {/* ── Left: main content ── */}
-          <div className="flex-1 min-w-0 flex flex-col gap-3 overflow-y-auto">
+          <div className="w-full min-w-0 flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto">
             <StatCards ingredients={ingredients} />
 
             <MidRow
@@ -55,22 +53,24 @@ export default function Inventory({
               totalItem={stats.totalItem}
               activeTab={activeTab}
               onTabChange={setActiveTab}
-              onAdjust={ing => openModal('adjust', ing)}
-              onEdit={ing => openModal('edit', ing)}
-              onDelete={ing => openModal('delete', ing)}
+              onAdjust={(ing: Ingredient) => openModal('adjust', ing)}
+              onEdit={(ing: Ingredient) => openModal('edit', ing)}
+              onDelete={(ing: Ingredient) => openModal('delete', ing)}
             />
           </div>
 
           {/* ── Right: sidebar ── */}
-          <RightSidebar
-            ingredients={ingredients}
-            totalItem={stats.totalItem}
-            onAddClick={() => openModal('add')}
-            onAdjustFirstClick={() => {
-              const first = ingredients[0];
-              if (first) openModal('adjust', first);
-            }}
-          />
+          <div className="w-full xl:w-72 xl:flex-shrink-0">
+            <RightSidebar
+              ingredients={ingredients}
+              totalItem={stats.totalItem}
+              onAddClick={() => openModal('add')}
+              onAdjustFirstClick={() => {
+                const first = ingredients[0];
+                if (first) openModal('adjust', first);
+              }}
+            />
+          </div>
         </div>
       </div>
 

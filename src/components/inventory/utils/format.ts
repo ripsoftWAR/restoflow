@@ -1,4 +1,4 @@
-import { BaseUnit } from '../../types';
+import { BaseUnit } from '../../../types';
 
 export const formatIDR = (n: number) =>
   new Intl.NumberFormat('id-ID').format(n);

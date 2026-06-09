@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sliders, Edit2, Trash2, ChevronLeft, ChevronRight, List, LayoutGrid } from 'lucide-react';
-import { Ingredient } from '../../types';
+import { Ingredient } from '../../../types';
 import { formatIDR, formatStock, pricePerBulk, bulkLabel } from '../utils/format';
 
 const TABS = ['Semua Bahan', 'Bahan Mentah', 'Bumbu & Rempah', 'Minuman', 'Kemasan', 'Lainnya'];
@@ -51,14 +51,14 @@ export default function TableSection({
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between p-3 border-b border-slate-50">
-        <select className="text-[11px] py-1.5 px-2.5 border border-slate-200 rounded-lg bg-white text-slate-600 outline-none focus:border-purple-500">
+      <div className="flex flex-col gap-2 p-3 border-b border-slate-50 sm:flex-row sm:items-center sm:justify-between">
+        <select className="w-full text-[11px] py-1.5 px-2.5 border border-slate-200 rounded-lg bg-white text-slate-600 outline-none focus:border-purple-500 sm:w-auto">
           <option>Semua Unit</option>
           <option>gram / kg</option>
           <option>ml / L</option>
           <option>pcs</option>
         </select>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           <button className="p-1.5 border border-purple-200 bg-purple-50 text-purple-600 rounded-lg">
             <List size={14} />
           </button>

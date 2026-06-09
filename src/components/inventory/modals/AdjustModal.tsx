@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Ingredient } from '../../../types';
-import { formatStock } from '../../utils/format';
-import { inputCls } from '../../utils/styles';
-import { Modal, Field, FormActions } from '../shared';
-
+import { formatStock } from '../utils/format';
+import { inputCls } from '../utils/styles';
+import Modal from '../shared/Modal';
+import Field from '../shared/Field';
+import FormActions from '../shared/FormActions';
 interface AdjustModalProps {
   ingredient: Ingredient;
   onClose: () => void;

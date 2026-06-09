@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { Ingredient } from '../../../types';
-import { formatStock } from '../../utils/format';
-import { Modal } from '../shared';
+import { formatStock } from '../utils/format';
+import Modal from '../shared/Modal';
 
 interface DeleteModalProps {
   ingredient: Ingredient;

@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { LayoutDashboard, Layers, Utensils, ShoppingCart, Scan, ListOrdered, Zap } from 'lucide-react';
 
 import Dashboard       from './components/dashboard/Dashboard';
-import Inventory       from './components/Inventory';
-import RecipeSystem    from './components/RecipeSystem';
-import SalesSimulator  from './components/SalesSimulator';
+import Inventory       from './components/inventory';
+import RecipeSystem    from './components/recipes';
+import SalesSimulator  from './components/sales';
 import ReceiptScanner  from './components/ReceiptScanner';
 import MovementLogs    from './components/MovementLogs';
 import AIChatAssistant from './components/AIChatAssistant';

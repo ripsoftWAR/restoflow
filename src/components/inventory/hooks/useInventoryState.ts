@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Ingredient } from '../../types';
+import { Ingredient } from '../../../types';
 
 type ModalType = 'add' | 'edit' | 'adjust' | 'delete' | null;
 

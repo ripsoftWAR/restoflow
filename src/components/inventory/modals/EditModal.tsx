@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Ingredient } from '../../../types';
-import { formatIDR, pricePerBulk, bulkLabel } from '../../utils/format';
-import { inputCls } from '../../utils/styles';
-import { Modal, Field, CatSelect, FormActions } from '../shared';
+import { formatIDR, pricePerBulk, bulkLabel } from '../utils/format';
+import { inputCls } from '../utils/styles';
+import Modal from '../shared/Modal';
+import Field from '../shared/Field';
+import CatSelect from '../shared/CatSelect';
+import FormActions from '../shared/FormActions';
 
 interface EditModalProps {
   ingredient: Ingredient;
