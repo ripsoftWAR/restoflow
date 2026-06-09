@@ -43,7 +43,7 @@ const SideBtn = ({ id, icon: Icon, label, activeTab, setActiveTab }: NavItem & {
 
 export default function TabletLayout({ activeTab, setActiveTab, stats, onLogout, children }: Props) {
   return (
-    <div className="hidden md:flex lg:hidden h-screen bg-[#F8FAFC]">
+    <div className="hidden md:flex lg:hidden h-screen bg-[e3e5e6]">
       <aside className="w-16 bg-white border-r border-slate-100 flex flex-col items-center py-3 gap-1 flex-shrink-0">
         <div className="bg-blue-600 w-8 h-8 rounded-xl flex items-center justify-center mb-3">
           <Zap size={14} fill="white" className="text-white" />

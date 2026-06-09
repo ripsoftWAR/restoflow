@@ -11,7 +11,7 @@ interface Props {
 
 export default function MobileLayout({ activeTab, setActiveTab, rolePrimaryTabs, onLogout, children }: Props) {
   return (
-    <div className="flex flex-col h-screen bg-[#F8FAFC] md:hidden">
+    <div className="flex flex-col h-screen bg-[e3e5e6] md:hidden">
       <header className="bg-white border-b border-slate-100 px-4 pt-3 pb-2.5 flex-shrink-0">
         <div className="flex items-center justify-between gap-3 mb-2.5">
           <div className="flex items-center gap-2">

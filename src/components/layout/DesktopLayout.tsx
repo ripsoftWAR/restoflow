@@ -34,7 +34,7 @@ export default function DesktopLayout({ activeTab, setActiveTab, stats, rolePrim
   );
 
   return (
-    <div className="hidden lg:flex h-screen bg-[#F8FAFC]">
+    <div className="hidden lg:flex h-screen bg-[e3e5e6]">
       <aside className="w-52 bg-white border-r border-slate-100 flex flex-col py-4 flex-shrink-0">
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-4 mb-6">

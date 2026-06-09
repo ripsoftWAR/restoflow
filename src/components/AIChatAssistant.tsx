@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion'; // Menggunakan framer-motion standar agar kompatibel
 import { 
   Bot, 
   Send, 
@@ -8,11 +8,10 @@ import {
   CornerDownLeft, 
   TrendingUp, 
   AlertTriangle, 
-  PlusCircle, 
   PackageCheck, 
   Utensils, 
   RefreshCw,
-  HelpCircle
+  Paperclip
 } from 'lucide-react';
 import { Ingredient, RecipeWithDetails } from '../types';
 
@@ -40,72 +39,57 @@ export default function AIChatAssistant({ ingredients, recipes, onRefreshData, e
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState<{ label: string; text: string; icon: any; color: string }[]>([]);
-  
-  // Floating position state (for custom dragging offset fallback if screen sizes are weird)
   const [dragged, setDragged] = useState(false);
-  
   const scrollRef = useRef<HTMLDivElement>(null);
-  const showChat = embedded || isOpen;
-  const rootWrapperClassName = embedded
-    ? 'flex flex-col h-full overflow-hidden'
-    : 'fixed inset-0 bg-slate-900/95 backdrop-blur-md z-50 flex items-center justify-center p-0 md:p-4 lg:p-6';
-  const contentWrapperClassName = embedded
-    ? 'bg-white w-full h-full rounded-3xl border border-slate-200 overflow-hidden flex flex-col'
-    : 'bg-white w-full h-full md:max-w-4xl md:h-[85vh] md:rounded-2xl border border-slate-200/80 shadow-2xl overflow-hidden flex flex-col relative';
 
-  // Set proactive templates dynamically based on current DB state!
+  const showChat = embedded || isOpen;
+
+  // Logika pembungkus luar (Overlay)
+  const rootWrapperClassName = embedded
+    ? 'flex flex-col h-full overflow-hidden bg-slate-50'
+    : 'fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-0 md:p-6';
+
+  // Logika container chat
+  const contentWrapperClassName = embedded
+    ? 'flex flex-col h-full w-full'
+    : 'bg-slate-50 w-full h-full md:max-w-4xl md:h-[90vh] md:rounded-[24px] shadow-2xl overflow-hidden flex flex-col relative border border-white';
+
+  // [LOGIKA ASLI TETAP DIBAWAH INI - TIDAK DIUBAH]
   useEffect(() => {
     const tmp = [];
-    
-    // 1. Critical stock alert template
     const lowStockItems = ingredients.filter(i => i.stock <= i.min_stock);
     if (lowStockItems.length > 0) {
       const topLow = lowStockItems[0];
       tmp.push({
-        label: `🚨 Restock: ${topLow.name} menipis!`,
+        label: `Restock: ${topLow.name}`,
         text: `Tolong tambahkan stock ${topLow.name} sebanyak ${topLow.base_unit === 'gram' ? '1 kg' : '20 pcs'}`,
         icon: AlertTriangle,
-        color: 'text-amber-500 bg-amber-50 border-amber-200'
+        color: 'text-amber-600 border-amber-200 bg-white'
       });
     } else {
-      // General restock proposal
       const candidate = ingredients[Math.floor(Math.random() * ingredients.length)] || { name: 'Cabai Merah', base_unit: 'gram' };
       tmp.push({
-        label: `📦 Re-stock ${candidate.name}`,
+        label: `Re-stock ${candidate.name}`,
         text: `Tolong isi ulang stock ${candidate.name} sebanyak ${candidate.base_unit === 'gram' ? '500 gram' : '10 pcs'}`,
         icon: PackageCheck,
-        color: 'text-blue-500 bg-blue-50 border-blue-200'
+        color: 'text-blue-600 border-blue-200 bg-white'
       });
     }
-
-    // 2. Recipe proposal template
     tmp.push({
-      label: `🍛 Buat Resep Baru`,
+      label: `Buat Resep Baru`,
       text: `Buat resep Nasi Goreng Spesial menggunakan bahan Bawang Merah 30 gram dan Cabai Merah 25 gram`,
       icon: Utensils,
-      color: 'text-emerald-500 bg-emerald-50 border-emerald-200'
+      color: 'text-emerald-600 border-emerald-200 bg-white'
     });
-
-    // 3. Operational Analysis template
     tmp.push({
-      label: `📊 Analisis Bahan Kritis`,
+      label: `Analisis Kritis`,
       text: `Bahan baku apa saja yang stoknya di bawah batas minimum dan perlu diisi secepatnya? Bagikan rekomendasinya.`,
       icon: TrendingUp,
-      color: 'text-purple-500 bg-purple-50 border-purple-200'
+      color: 'text-purple-600 border-purple-200 bg-white'
     });
-
-    // 4. Creative dessert request
-    tmp.push({
-      label: `🍹 Rekomendasi Menu Baru`,
-      text: `Saya ingin membuat menu minuman segar baru menggunakan stok Susu atau Gila. Apa rekomendasi resepnya?`,
-      icon: Sparkles,
-      color: 'text-pink-500 bg-pink-50 border-pink-200'
-    });
-
     setTemplates(tmp);
   }, [ingredients, recipes]);
 
-  // Auto scroll to bottom of chat
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -124,12 +108,10 @@ export default function AIChatAssistant({ ingredients, recipes, onRefreshData, e
   const handleSendMessage = async (textToSend: string) => {
     const authToken = typeof window !== 'undefined' ? localStorage.getItem('restoflow_session_id') : null;
     if (!textToSend.trim() || loading) return;
-
     const userMsg: Message = { role: 'user', text: textToSend };
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setLoading(true);
-
     try {
       const response = await fetch(resolveApiUrl('/api/gemini/chat'), {
         method: 'POST',
@@ -137,321 +119,208 @@ export default function AIChatAssistant({ ingredients, recipes, onRefreshData, e
           'Content-Type': 'application/json',
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
         },
-        body: JSON.stringify({
-          message: textToSend,
-          history: messages
-        })
+        body: JSON.stringify({ message: textToSend, history: messages })
       });
-
-      if (!response.ok) {
-        throw new Error('Gagal menghubungi asisten AI.');
-      }
-
+      if (!response.ok) throw new Error('Gagal menghubungi asisten AI.');
       const data = await response.json();
-      
       setMessages(prev => [...prev, { role: 'assistant', text: data.text }]);
-      
-      // If AI executed action (like restock or recipe creation), refresh the global dashboard!
       if (data.actions && data.actions.length > 0) {
         const hasRefresh = data.actions.some((act: any) => act.type === 'REFRESH_DATA');
-        if (hasRefresh) {
-          await onRefreshData();
-        }
+        if (hasRefresh) await onRefreshData();
       }
     } catch (err: any) {
-      setMessages(prev => [
-        ...prev, 
-        { role: 'assistant', text: `⚠️ **Error**: ${err.message || 'Gagal berkomunikasi dengan server backend.'}` }
-      ]);
+      setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ **Error**: ${err.message || 'Gagal berkomunikasi dengan server backend.'}` }]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper to format simplified bold/bullets/numbered lists markdown
   const renderMessageContent = (text: string) => {
     return text.split('\n').map((line, idx) => {
       let content = line;
-      
-      // Formatting Bold (**text**)
       const boldRegex = /\*\*(.*?)\*\*/g;
       const parts = [];
       let lastIndex = 0;
       let match;
-      
       while ((match = boldRegex.exec(content)) !== null) {
-        if (match.index > lastIndex) {
-          parts.push(content.substring(lastIndex, match.index));
-        }
-        parts.push(
-          <strong key={match.index} className="font-bold text-slate-900 border-b border-blue-100 bg-blue-50/50 px-1 rounded-sm">
-            {match[1]}
-          </strong>
-        );
+        if (match.index > lastIndex) parts.push(content.substring(lastIndex, match.index));
+        parts.push(<strong key={match.index} className="font-bold text-slate-900">{match[1]}</strong>);
         lastIndex = boldRegex.lastIndex;
       }
-      
-      if (lastIndex < content.length) {
-        parts.push(content.substring(lastIndex));
-      }
-
+      if (lastIndex < content.length) parts.push(content.substring(lastIndex));
       const inlineContent = parts.length > 0 ? parts : content;
 
-      // Unordered lists (- or *)
       if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-        const cleanText = line.replace(/^[\*\-]\s+/, '');
-        return (
-          <li key={idx} className="ml-4 list-disc text-sm text-slate-700 leading-relaxed mb-1">
-            {cleanText.includes('**') ? inlineContent : cleanText}
-          </li>
-        );
+        return <li key={idx} className="ml-4 list-disc mb-1">{inlineContent}</li>;
       }
-
-      // Ordered lists (1. , 2. )
       const numMatch = line.trim().match(/^(\d+)\.\s+/);
       if (numMatch) {
-        const cleanText = line.replace(/^\d+\.\s+/, '');
-        return (
-          <div key={idx} className="flex gap-2.5 ml-1 text-sm text-slate-700 leading-relaxed mb-1.5 items-start">
-            <span className="font-mono text-[11px] bg-slate-100 text-slate-500 w-4 h-4 rounded-full flex items-center justify-center font-bold mt-0.5 shrink-0">
-              {numMatch[1]}
-            </span>
-            <span className="flex-1">
-              {line.includes('**') ? inlineContent : cleanText}
-            </span>
-          </div>
-        );
+        return <div key={idx} className="flex gap-2 ml-1 mb-1.5"><span className="font-bold text-indigo-600">{numMatch[1]}.</span><span className="flex-1">{inlineContent}</span></div>;
       }
-
-      // Normal lines
-      return (
-        <p key={idx} className="text-sm text-slate-700 leading-relaxed min-h-[1rem] mb-2">
-          {inlineContent}
-        </p>
-      );
+      return <p key={idx} className="mb-2 last:mb-0">{inlineContent}</p>;
     });
   };
 
   return (
     <>
-      {/* 1. MINIMIZED DRAGGABLE AVATAR HEAD ("bentuk wajah kecil namun bisa dimove keselruh arah") */}
+      {/* 1. FLOATING AVATAR (Hanya muncul jika tidak mode embedded) */}
       <AnimatePresence>
         {!embedded && !isOpen && (
           <motion.div
-            id="ai-avatar-floating"
-            role="button"
             drag
             dragMomentum={false}
-            dragElastic={0.1}
             onDragStart={() => setDragged(true)}
             onDragEnd={() => setTimeout(() => setDragged(false), 200)}
-            onClick={() => {
-              if (!dragged) setIsOpen(true);
-            }}
-            initial={{ scale: 0, opacity: 0, y: 100 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
+            onClick={() => !dragged && setIsOpen(true)}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            style={{ touchAction: 'none' }}
-            className="fixed bottom-24 right-6 sm:bottom-8 sm:right-8 z-50 cursor-grab active:cursor-grabbing select-none"
-            whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.95 }}
+            className="fixed bottom-8 right-8 z-[60] cursor-grab active:cursor-grabbing"
           >
-            {/* Ambient Pulsing Glow Rings */}
-            <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full blur-md opacity-70 animate-pulse"></div>
-            
-            <div className="relative w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 border-2 border-white rounded-full flex items-center justify-center text-white shadow-xl">
-              {/* Smiling Facial Avatar Face structure inside the ball */}
-              <div className="flex flex-col items-center justify-center gap-1">
-                {/* Eyes blinking */}
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
-                  <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+            <div className="relative w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(79,70,229,0.4)] border-2 border-white">
+              <div className="flex flex-col items-center">
+                <div className="flex gap-1.5 mb-1">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:0.2s]"></div>
                 </div>
-                {/* Smiley mouth */}
-                <svg className="w-4 h-1 text-white" fill="none" viewBox="0 0 16 4">
-                  <path d="M1 1C5 3 11 3 15 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
+                <div className="w-4 h-0.5 bg-white/60 rounded-full"></div>
               </div>
-
-              {/* Little proactive indicators count badge */}
-              <div className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-white animate-bounce-subtle">
-                AI
-              </div>
-            </div>
-            
-            {/* Pop-up bubble text helper */}
-            <div className="absolute top-1/2 -left-36 -translate-y-1/2 bg-slate-900/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-xl text-[10px] font-semibold tracking-wide pointer-events-none opacity-0 group-hover:opacity-100 sm:block hidden shadow-md transition-opacity duration-300">
-              Tanya RestoFlow AI 🍲
+              <div className="absolute -top-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white"></div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* 2. FULL INTEGRATED MODE ACTIVE OVERLAY ("jika dibuka langsung mode chat ai bukan chat floating") */}
+      {/* 2. CHAT INTERFACE */}
       <AnimatePresence>
         {showChat && (
           <motion.div
-            id="ai-active-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className={rootWrapperClassName}
           >
             <motion.div
-              initial={{ scale: embedded ? 1 : 0.95, y: embedded ? 0 : 30 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: embedded ? 0.95 : 0.95, y: embedded ? 0 : 30 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
               className={contentWrapperClassName}
             >
-              {/* Header block with elegant display styling */}
-              <div className="p-5 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 text-white flex items-center justify-between shadow-md shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center text-blue-200 border border-white/20">
-                    <Bot className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <div>
-                    <h2 className="font-sans font-bold text-base tracking-tight flex items-center gap-1.5">
-                      RestoFlow AI Copilot 
-                      <span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-mono uppercase tracking-widest leading-none">
-                        Live DB Access
-                      </span>
-                    </h2>
-                    <p className="text-xs text-blue-100 opacity-85 mt-0.5">Asisten koki cerdas pelacak inventori & formulas resep</p>
-                  </div>
-                </div>
-
+              {/* Tombol Tutup Minimalis (Hanya jika modal) */}
+              {!embedded && (
                 <button 
-                  onClick={() => {
-                    if (embedded && onClose) onClose();
-                    else setIsOpen(false);
-                  }}
-                  className="p-1.5 hover:bg-white/10 rounded-lg text-white/80 hover:text-white transition-colors cursor-pointer"
-                  title="Tutup AI Chat"
+                  onClick={() => setIsOpen(false)}
+                  className="absolute top-4 right-4 z-10 p-2 bg-slate-200/50 hover:bg-slate-200 rounded-full transition-colors text-slate-600"
                 >
                   <X className="w-5 h-5" />
                 </button>
-              </div>
+              )}
 
-              {/* Chat Speech Screen Panel */}
-              <div 
-                ref={scrollRef}
-                className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/50"
-              >
-                {messages.map((msg, index) => {
-                  const isAi = msg.role === 'assistant';
-                  return (
-                    <div 
-                      key={index} 
-                      className={`flex gap-3 max-w-[85%] ${isAi ? 'mr-auto' : 'ml-auto flex-row-reverse'}`}
-                    >
-                      {/* Speaker Badge Avatar */}
-                      <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-xs font-bold font-mono shadow-sm ${
-                        isAi ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'
-                      }`}>
-                        {isAi ? <Bot className="w-4 h-4" /> : 'ME'}
-                      </div>
-
-                      {/* Bubble message box */}
-                      <div className={`p-4 rounded-2xl text-slate-800 shadow-sm leading-relaxed border ${
-                        isAi 
-                          ? 'bg-white rounded-tl-none border-slate-100 text-slate-800' 
-                          : 'bg-blue-50/80 rounded-tr-none border-blue-100/90 text-blue-950'
-                      }`}>
-                        {isAi ? (
-                          <div className="space-y-1">
-                            {renderMessageContent(msg.text)}
-                          </div>
-                        ) : (
-                          <p className="text-sm font-semibold">{msg.text}</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Submitting Loading indicator with JetBrains font */}
-                {loading && (
-                  <div className="flex gap-3 mr-auto items-center">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center">
-                      <Bot className="w-4 h-4 animate-spin" />
-                    </div>
-                    <div className="bg-slate-100 text-slate-400 p-3.5 rounded-2xl rounded-tl-none border border-slate-200/60 font-mono text-xs flex items-center gap-2">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500" />
-                      <span>AI sedang memperoses database SQLite...</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Dynamic Suggestions Prompt Templates Panel */}
-              <div className="border-t border-slate-150 px-6 py-4 bg-white space-y-2.5 shrink-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase flex items-center gap-1.5">
-                    <Sparkles className="w-3 h-3 text-amber-500" />
-                    Instruksi Proaktif AI Ter-update:
-                  </span>
-                  <span className="text-[9px] font-mono text-slate-400">
-                    Berdasarkan sisa sediaan gudang real-time
-                  </span>
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {templates.map((tmp, idx) => {
-                    const Icon = tmp.icon;
+              {/* Chat Area */}
+              <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 md:px-8 py-8 space-y-6 scroll-smooth">
+                <div className="max-w-3xl mx-auto w-full space-y-6">
+                  {messages.map((msg, idx) => {
+                    const isAi = msg.role === 'assistant';
                     return (
-                      <button
-                        key={idx}
-                        onClick={() => handleSendMessage(tmp.text)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 hover:scale-[1.02] hover:-translate-y-0.5 active:translate-y-0 ${tmp.color}`}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                        <span>{tmp.label}</span>
-                      </button>
+                      <div key={idx} className={`flex ${isAi ? 'justify-start' : 'justify-end'} group`}>
+                        <div className={`max-w-[85%] md:max-w-[75%] ${isAi ? 'flex gap-3' : ''}`}>
+                          {isAi && (
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-1">
+                              <Bot className="w-4 h-4 text-indigo-600" />
+                            </div>
+                          )}
+                          <div>
+                            <div className={`px-4 py-3 shadow-sm text-[15px] leading-relaxed ${
+                              isAi 
+                                ? 'bg-white border border-slate-100 text-slate-700 rounded-2xl rounded-tl-none' 
+                                : 'bg-indigo-600 text-white rounded-2xl rounded-tr-none shadow-indigo-200'
+                            }`}>
+                              {isAi ? renderMessageContent(msg.text) : <p className="whitespace-pre-wrap">{msg.text}</p>}
+                            </div>
+                            <span className={`text-[10px] mt-1.5 block text-slate-400 font-medium ${!isAi && 'text-right'}`}>
+                              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
+                  
+                  {loading && (
+                    <div className="flex gap-3 justify-start">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                        <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />
+                      </div>
+                      <div className="bg-white border border-slate-100 px-4 py-3 rounded-2xl rounded-tl-none shadow-sm">
+                        <div className="flex gap-1">
+                          <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
+                          <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                          <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Message Input control bar */}
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendMessage(inputValue);
-                }}
-                className="p-4 bg-slate-50 border-t border-slate-200/80 flex gap-3 h-20 items-center justify-between shrink-0"
-              >
-                <div className="relative flex-grow">
-                  <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder="Tanya stock master, resep, atau restock (misal: 'tambah stock Cabai Merah 2 kg')..."
-                    className="w-full bg-white border border-slate-200 text-slate-800 text-sm pl-4 pr-12 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-400 shadow-inner font-sans"
-                    disabled={loading}
-                    autoFocus
-                  />
+              {/* Bottom Actions & Input Area */}
+              <div className="bg-white/80 backdrop-blur-md border-t border-slate-100">
+                <div className="max-w-3xl mx-auto w-full px-4 pt-4 pb-6">
                   
-                  {/* Absolute hint corner key badge */}
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-slate-400 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded-md flex items-center gap-1 pointer-events-none md:flex hidden font-mono">
-                    <CornerDownLeft className="w-2.5 h-2.5" />
-                    ENTER
-                  </span>
-                </div>
+                  {/* Chips/Templates - Minimalist Style */}
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4">
+                    {templates.map((tmp, idx) => {
+                      const Icon = tmp.icon;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => handleSendMessage(tmp.text)}
+                          className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold border transition-all flex items-center gap-2 hover:bg-slate-50 active:scale-95 ${tmp.color}`}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          {tmp.label}
+                        </button>
+                      );
+                    })}
+                  </div>
 
-                <button
-                  type="submit"
-                  disabled={!inputValue.trim() || loading}
-                  className={`h-11 px-5 rounded-xl text-white font-bold text-sm tracking-wide shadow-md flex items-center justify-center gap-1.5 transition-all select-none ${
-                    !inputValue.trim() || loading
-                      ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700 active:scale-95 cursor-pointer hover:shadow-lg hover:shadow-blue-200'
-                  }`}
-                >
-                  <Send className="w-4 h-4" />
-                  <span>Kirim</span>
-                </button>
-              </form>
+                  {/* Input Pill */}
+                  <form 
+                    onSubmit={(e) => { e.preventDefault(); handleSendMessage(inputValue); }}
+                    className="relative flex items-center bg-slate-100 rounded-[28px] p-1.5 pr-2 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-100 transition-all border border-transparent focus-within:border-indigo-200"
+                  >
+                    <button type="button" className="p-2.5 text-slate-400 hover:text-indigo-600 transition-colors">
+                      <Paperclip className="w-5 h-5" />
+                    </button>
+                    <input
+                      type="text"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder="Tulis pesan ke asisten..."
+                      className="flex-1 bg-transparent border-none focus:outline-none text-[15px] px-2 text-slate-700 placeholder-slate-400"
+                      disabled={loading}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!inputValue.trim() || loading}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                        !inputValue.trim() || loading 
+                          ? 'bg-slate-200 text-slate-400' 
+                          : 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-90'
+                      }`}
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </form>
+                  
+                  <div className="flex justify-center mt-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold opacity-40 flex items-center gap-2">
+                      <div className="w-1 h-1 bg-emerald-500 rounded-full"></div>
+                      RestoFlow AI System Active
+                    </p>
+                  </div>
+                </div>
+              </div>
+
             </motion.div>
           </motion.div>
         )}

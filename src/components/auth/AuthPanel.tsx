@@ -17,7 +17,7 @@ export default function AuthPanel({ authMode, authError, setAuthMode, onLogin, o
 
   if (authMode === 'landing') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+      <div className="min-h-screen flex items-center justify-center bg-[e3e5e6]">
         <div className="w-full max-w-md text-center bg-white p-10 rounded-[2.5rem] shadow-xl">
           <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <Zap size={32} fill="white" className="text-white" />
@@ -51,7 +51,7 @@ export default function AuthPanel({ authMode, authError, setAuthMode, onLogin, o
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[e3e5e6] px-4">
       <div className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-xl">
         <button onClick={() => setAuthMode('landing')} className="text-slate-400 text-sm mb-6">
           ← Kembali

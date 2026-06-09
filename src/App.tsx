@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LayoutDashboard, Layers, Utensils, ShoppingCart, Scan, ListOrdered, Zap } from 'lucide-react';
 
-import Dashboard       from './components/Dashboard';
+import Dashboard       from './components/dashboard/Dashboard';
 import Inventory       from './components/Inventory';
 import RecipeSystem    from './components/RecipeSystem';
 import SalesSimulator  from './components/SalesSimulator';
@@ -30,7 +30,7 @@ const NAV_SECONDARY: NavItem[] = [
 ];
 
 const Spinner = ({ label }: { label: string }) => (
-  <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+  <div className="min-h-screen flex items-center justify-center bg-[e3e5e6]">
     <div className="flex items-center gap-3 text-slate-400">
       <div className="bg-blue-600 p-2 rounded-xl animate-pulse"><Zap size={18} className="text-white" /></div>
       <span className="text-sm font-medium">{label}</span>
@@ -89,7 +89,13 @@ export default function App() {
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
         {activeTab === 'home' && (
           stats
-            ? <Dashboard stats={stats} movements={movements} ingredients={ingredients} onNavigate={setActiveTab} />
+            ? <Dashboard
+                stats={stats}
+                movements={movements}
+                ingredients={ingredients}
+                recipes={recipes}
+                onNavigate={setActiveTab}
+              />
             : (
               <div className="flex items-center justify-center min-h-[400px] rounded-3xl bg-white border border-dashed border-slate-200">
                 <p className="text-sm text-slate-500">
