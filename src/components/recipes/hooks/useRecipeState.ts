@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ingredient, RecipeWithDetails } from '../../types';
+import { Ingredient, RecipeWithDetails } from '../../../types';
 
 export interface CustomOption {
   name: string;
@@ -47,7 +47,7 @@ export function useRecipeState(ingredients: Ingredient[]) {
       setMenuPrice(recipe.price?.toString() ?? '0');
       setSpiceLevelOption(recipe.spice_level_option === 1);
       setSugarLevelOption(recipe.sugar_level_option === 1);
-      setRecipeLines(recipe.items.map(i => ({ ingredient_id: i.ingredient_id, amount: i.amount })));
+      setRecipeLines(recipe.items.map((i: any) => ({ ingredient_id: i.ingredient_id, amount: i.amount })));
       try {
         setCustomOptionsList(recipe.custom_options ? JSON.parse(recipe.custom_options) : []);
       } catch {

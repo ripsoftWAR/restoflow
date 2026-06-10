@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit2, Package, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { Edit2, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 import { Ingredient, RecipeWithDetails, RecipeItem } from '../../../types';
 import {
   calculateHPP, calculateMarginPct, calculateCookablePortions,
@@ -11,9 +11,10 @@ interface RecipeCardProps {
   ingredients: Ingredient[];
   index: number;
   onEdit: (recipe: RecipeWithDetails) => void;
+  onDelete: (menuName: string) => Promise<void>;
 }
 
-export default function RecipeCard({ recipe, ingredients, index, onEdit }: RecipeCardProps) {
+export default function RecipeCard({ recipe, ingredients, index, onEdit, onDelete }: RecipeCardProps) {
   const hpp = calculateHPP(recipe, ingredients);
   const portions = calculateCookablePortions(recipe, ingredients);
   const marginPct = calculateMarginPct(hpp, recipe.price ?? 0);
@@ -27,7 +28,7 @@ export default function RecipeCard({ recipe, ingredients, index, onEdit }: Recip
   } catch {}
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
+    <div className="h-full w-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
 
       {/* Card header — food thumbnail placeholder + name */}
       <div className={`h-16 bg-gradient-to-br ${gradient} flex items-center px-4 gap-3 relative`}>
@@ -48,13 +49,14 @@ export default function RecipeCard({ recipe, ingredients, index, onEdit }: Recip
             )}
           </div>
         </div>
-        {/* Status badge */}
-        <div className={`flex-shrink-0 flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-lg
-          ${isDryStock ? 'bg-red-500/90 text-white' : 'bg-white/20 text-white'}`}>
-          {isDryStock
-            ? <><AlertCircle size={10} /> Bahan Habis</>
-            : <><CheckCircle size={10} /> {portions} Porsi</>
-          }
+        <div className="flex items-center gap-1.5">
+          <div className={`flex-shrink-0 flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-lg
+            ${isDryStock ? 'bg-red-500/90 text-white' : 'bg-white/20 text-white'}`}>
+            {isDryStock
+              ? <><AlertCircle size={10} /> Bahan Habis</>
+              : <><CheckCircle size={10} /> {portions} Porsi</>
+            }
+          </div>
         </div>
       </div>
 
@@ -125,13 +127,27 @@ export default function RecipeCard({ recipe, ingredients, index, onEdit }: Recip
 
       {/* Action button */}
       <div className="px-3 py-2.5 border-t border-slate-100">
-        <button
-          id={`btn-edit-recipe-${recipe.menu_name.replace(/\s+/g, '-')}`}
-          onClick={() => onEdit(recipe)}
-          className="w-full py-2 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-all flex items-center justify-center gap-1.5"
-        >
-          <Edit2 size={12} /> Aksi
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            id={`btn-edit-recipe-${recipe.menu_name.replace(/\s+/g, '-')}`}
+            onClick={() => onEdit(recipe)}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-[11px] font-semibold text-slate-600 transition-all hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200"
+          >
+            <Edit2 size={12} /> Aksi
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (window.confirm(`Hapus resep "${recipe.menu_name}"?`)) {
+                await onDelete(recipe.menu_name);
+              }
+            }}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 shadow-sm transition hover:bg-rose-50 hover:text-rose-600"
+            aria-label="Hapus resep"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -109,4 +109,32 @@ router.post('/', async (req, res) => {
   }
 });
 
+// ✅ FIX — hapus duplikat, cukup satu route
+router.delete('/:menu_name', async (req, res) => {
+  console.log('DELETE HIT:', req.params.menu_name, '| user:', req.user);
+  const restaurantId = req.user!.restaurant_id;
+  const menuName = decodeURIComponent(req.params.menu_name || '');
+
+  if (!menuName.trim()) {
+    return res.status(400).json({ error: 'Nama resep tidak valid.' });
+  }
+
+  try {
+    const result = await db.query(
+      'DELETE FROM recipes WHERE menu_name = $1 AND restaurant_id = $2',
+      [menuName, restaurantId]
+    );
+
+    // ← Tambah ini: cek apakah ada row yang terhapus
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Resep tidak ditemukan.' });
+    }
+
+    res.json({ status: 'success', menu_name: menuName });
+  } catch (err: any) {
+    console.error('Recipe Delete Error:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
 export default router;

@@ -210,6 +210,15 @@ export function useAppData() {
     await fetchAllData(authSession, true);
   };
 
+  const handleDeleteRecipe = async (menuName: string) => {
+    const res = await apiFetch(`/api/recipes/${encodeURIComponent(menuName)}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.error || 'Gagal menghapus resep.');
+    }
+    await fetchAllData(authSession, true);
+  };
+
   // ─── Sales handler ─────────────────────────────────────────────────────────
   const handleTriggerSale = async (saleData: {
     menu_name: string; quantity: number; total_price: number;
@@ -268,6 +277,7 @@ export function useAppData() {
     handleLogin, handleRegister, handleLogout,
     handleAddIngredient, handleEditIngredient, handleDeleteIngredient, handleAdjustStock,
     handleAddOrUpdateRecipe,
+    handleDeleteRecipe,
     handleTriggerSale,
     handleScanReceipt, handleConfirmReceiptItems,
   };

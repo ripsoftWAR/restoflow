@@ -48,6 +48,7 @@ export default function App() {
     handleLogin, handleRegister, handleLogout,
     handleAddIngredient, handleEditIngredient, handleDeleteIngredient, handleAdjustStock,
     handleAddOrUpdateRecipe,
+    handleDeleteRecipe,
     handleTriggerSale,
     handleScanReceipt, handleConfirmReceiptItems,
   } = useAppData();
@@ -114,7 +115,12 @@ export default function App() {
           />
         )}
         {activeTab === 'recipes' && (
-          <RecipeSystem ingredients={ingredients} recipes={recipes} onAddOrUpdateRecipe={handleAddOrUpdateRecipe} />
+          <RecipeSystem
+            ingredients={ingredients}
+            recipes={recipes}
+            onAddOrUpdateRecipe={handleAddOrUpdateRecipe}
+            onDeleteRecipe={handleDeleteRecipe}
+          />
         )}
         {activeTab === 'sales' && (
           <SalesSimulator recipes={recipes} ingredients={ingredients} sales={sales} onTriggerSale={handleTriggerSale} onRefreshStats={fetchAllData} />

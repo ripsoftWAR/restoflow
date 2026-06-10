@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Search, Plus, Filter, List, LayoutGrid,
-  CheckCircle, AlertCircle,
+  CheckCircle, AlertCircle, Maximize2, Minimize2,
 } from 'lucide-react';
 import { Ingredient, RecipeWithDetails } from '../../types';
 import { useRecipeState } from './hooks/useRecipeState';
@@ -22,6 +22,7 @@ interface RecipeSystemProps {
     custom_options?: string,
     price?: number
   ) => Promise<void>;
+  onDeleteRecipe: (menuName: string) => Promise<void>;
 }
 
 const TABS_BASE = ['Semua Menu', 'Makanan Utama', 'Minuman', 'Camilan', 'Saus/Bumbu Base'];
@@ -30,8 +31,12 @@ export default function RecipeSystem({
   ingredients,
   recipes,
   onAddOrUpdateRecipe,
+  onDeleteRecipe,
 }: RecipeSystemProps) {
   const state = useRecipeState(ingredients);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const PAGE_SIZE = 6;
 
   // Derive tabs from actual recipe categories + base tabs
   const dynamicTabs = useMemo(() => {
@@ -51,6 +56,16 @@ export default function RecipeSystem({
       return matchSearch && (r.category || 'Makanan') === state.activeTab;
     });
   }, [recipes, state.search, state.activeTab]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRecipes.length / PAGE_SIZE));
+  const pagedRecipes = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredRecipes.slice(start, start + PAGE_SIZE);
+  }, [filteredRecipes, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [state.search, state.activeTab]);
 
   const handleSaveRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +110,7 @@ export default function RecipeSystem({
 
 
       {/* ── Stats bar ── */}
-      <RecipeStatsBar recipes={recipes} ingredients={ingredients} />
+      {!isFullScreen && <RecipeStatsBar recipes={recipes} ingredients={ingredients} />}
 
       {/* ── Feedback banners ── */}
       {state.success && (
@@ -116,7 +131,7 @@ export default function RecipeSystem({
       {/* ── Main content: tabs + grid + right panel ── */}
       <div className="flex gap-4">
         {/* Left: tabs + grid */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 max-w-7xl w-full mx-auto">
 
           {/* Tabs + toolbar */}
           <div className="bg-white rounded-xl border border-slate-100 mb-3 overflow-hidden">
@@ -137,13 +152,23 @@ export default function RecipeSystem({
                     </button>
                   ))}
                 </div>
-                <button
-                  id="btn-recipe-builder-trigger"
-                  onClick={() => state.openBuilder()}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[11px] font-semibold transition-colors flex-shrink-0"
-                >
-                  <Plus size={13} /> Tambah Resep
-                </button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsFullScreen(v => !v)}
+                    className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 hover:bg-slate-50 bg-white"
+                  >
+                    {isFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                    {isFullScreen ? 'Kecilkan' : 'Fullscreen'}
+                  </button>
+                  <button
+                    id="btn-recipe-builder-trigger"
+                    onClick={() => state.openBuilder()}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[11px] font-semibold transition-colors"
+                  >
+                    <Plus size={13} /> Tambah Resep
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -174,17 +199,45 @@ export default function RecipeSystem({
 
           {/* Recipe grid */}
           {filteredRecipes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filteredRecipes.map((recipe, idx) => (
-                <RecipeCard
-                  key={recipe.menu_name}
-                  recipe={recipe}
-                  ingredients={ingredients}
-                  index={idx}
-                  onEdit={r => state.openBuilder(r)}
-                />
-              ))}
-            </div>
+            <>
+              <div className={`grid gap-3 auto-rows-fr items-stretch ${isFullScreen ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'}`}>
+                {pagedRecipes.map((recipe, idx) => (
+                  <RecipeCard
+                    key={recipe.menu_name}
+                    recipe={recipe}
+                    ingredients={ingredients}
+                    index={idx}
+                    onEdit={r => state.openBuilder(r)}
+                    onDelete={onDeleteRecipe}
+                  />
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white px-3 py-3 shadow-sm">
+                  <p className="text-[11px] text-slate-500">Menampilkan {Math.min(filteredRecipes.length, (currentPage - 1) * PAGE_SIZE + 1)}-{Math.min(filteredRecipes.length, currentPage * PAGE_SIZE)} dari {filteredRecipes.length} resep</p>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="rounded-xl border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >Sebelumnya</button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`min-w-[2rem] rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold transition ${currentPage === page ? 'border-purple-600 bg-purple-600 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      >{page}</button>
+                    ))}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="rounded-xl border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >Berikutnya</button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="bg-white border border-slate-100 rounded-xl p-12 text-center">
               <p className="text-[12px] text-slate-400 italic">Tidak ada resep yang cocok.</p>
@@ -193,7 +246,7 @@ export default function RecipeSystem({
         </div>
 
         {/* Right panel */}
-        <RecipeRightPanel recipes={recipes} ingredients={ingredients} />
+        {!isFullScreen && <RecipeRightPanel recipes={recipes} ingredients={ingredients} />}
       </div>
 
       {/* ── Builder Modal ── */}
