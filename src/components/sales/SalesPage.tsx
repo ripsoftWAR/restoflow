@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, Filter, Plus } from 'lucide-react';
+import { Search, Filter, Plus, X, ChevronRight } from 'lucide-react';
 import { RecipeWithDetails, Ingredient, Sale } from '../../types';
 import { useCart } from './hooks/useCart';
 import { useCheckout } from './hooks/useCheckout';
@@ -14,12 +14,14 @@ interface SalesPageProps {
   sales: Sale[];
   onTriggerSale: (data: any) => Promise<void>;
   onRefreshStats: () => void;
-  onNavigateToKasir: () => void;   // ← navigation callback
+  onNavigateToKasir: () => void;
+  user?: any;
 }
 
 export default function SalesPage({
   recipes, ingredients, sales,
   onTriggerSale, onRefreshStats, onNavigateToKasir,
+  user
 }: SalesPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showVoucherGenerator, setShowVoucherGenerator] = useState(false);
@@ -50,9 +52,11 @@ export default function SalesPage({
 
   const voucherLabel = useMemo(() => cart.voucher?.label ?? '', [cart.voucher]);
 
+  // Ambil recipe untuk option sheet yang sedang terbuka
+  const activeRecipe = recipes.find(r => r.menu_name === cart.optionSheet.menuName);
+
   return (
     <div className="min-h-full w-full bg-transparent p-4 space-y-4">
-
       {/* Topbar */}
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">
@@ -67,6 +71,8 @@ export default function SalesPage({
             type="text"
             placeholder="Cari Produk / Barcode…"
             className="w-full pl-8 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] focus:outline-none focus:border-purple-400"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <button className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 hover:bg-slate-50 bg-white flex-shrink-0">
@@ -91,7 +97,7 @@ export default function SalesPage({
             ingredients={ingredients}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
-            onAddItem={cart.openOptionSheet}
+            onAddItem={(menu: RecipeWithDetails) => cart.openOptionSheet(menu.menu_name)}
           />
         </div>
 
@@ -123,6 +129,7 @@ export default function SalesPage({
         />
       </div>
 
+      {/* ── Voucher Generator Modal ──────────────────────────────────── */}
       {showVoucherGenerator && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
           <div className="w-full max-w-5xl rounded-3xl bg-white p-4 shadow-2xl">
@@ -139,14 +146,136 @@ export default function SalesPage({
               </button>
             </div>
             <VoucherGenerator
-              onVoucherGenerated={(code, voucher) => {
-                setGeneratedVouchers(prev => ({ ...prev, [code.toUpperCase()]: voucher }));
+              restaurantId={user?.restaurant_id}
+              sessionId={user?.sessionId}
+              onVoucherGenerated={(code: string) => {
+                setGeneratedVouchers(prev => ({ ...prev, [code.toUpperCase()]: true }));
                 setShowVoucherGenerator(false);
               }}
             />
           </div>
         </div>
       )}
+
+      {/* ── Option Sheet Modal ───────────────────────────────────────── */}
+      {cart.optionSheet.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+          onClick={() => cart.setOptionSheet(s => ({ ...s, open: false }))}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
+              <div>
+                <p className="text-[10px] font-black text-purple-500 uppercase tracking-widest mb-0.5">Kustomisasi Pesanan</p>
+                <h3 className="text-[15px] font-black text-slate-800 capitalize">
+                  {cart.optionSheet.menuName}
+                </h3>
+              </div>
+              <button
+                onClick={() => cart.setOptionSheet(s => ({ ...s, open: false }))}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition"
+              >
+                <X size={14} className="text-slate-500" />
+              </button>
+            </div>
+
+            {/* Options Body */}
+            <div className="px-6 py-5 space-y-5 max-h-[60vh] overflow-y-auto">
+
+              {/* Spice Level */}
+              {activeRecipe?.spice_level_option === 1 && (
+                <OptionGroup label="🌶️ Level Pedas">
+                  {['Tidak Pedas', 'Sedang', 'Pedas', 'Sangat Pedas'].map(s => (
+                    <OptionChip
+                      key={s}
+                      label={s}
+                      active={cart.optionSheet.spice === s}
+                      onClick={() => cart.setOptionSheet(prev => ({ ...prev, spice: s }))}
+                    />
+                  ))}
+                </OptionGroup>
+              )}
+
+              {/* Sugar Level */}
+              {activeRecipe?.sugar_level_option === 1 && (
+                <OptionGroup label="🧋 Level Gula">
+                  {['Less Sugar (70%)', 'Normal (100%)', 'Extra Sugar (130%)'].map(s => (
+                    <OptionChip
+                      key={s}
+                      label={s}
+                      active={cart.optionSheet.sugar === s}
+                      onClick={() => cart.setOptionSheet(prev => ({ ...prev, sugar: s }))}
+                    />
+                  ))}
+                </OptionGroup>
+              )}
+
+              {/* Custom Options */}
+              {cart.optionSheet.customFields.map(field => (
+                <OptionGroup key={field.name} label={`✨ ${field.name}`}>
+                  {field.choices.map(choice => (
+                    <OptionChip
+                      key={choice}
+                      label={choice}
+                      active={cart.optionSheet.customChoices[field.name] === choice}
+                      onClick={() => cart.setOptionSheet(prev => ({
+                        ...prev,
+                        customChoices: { ...prev.customChoices, [field.name]: choice }
+                      }))}
+                    />
+                  ))}
+                </OptionGroup>
+              ))}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="px-6 pb-6 pt-4 border-t border-slate-100 flex gap-3">
+              <button
+                onClick={() => cart.setOptionSheet(s => ({ ...s, open: false }))}
+                className="flex-1 py-3 rounded-2xl border border-slate-200 text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={cart.confirmOptionSheet}
+                className="flex-[2] py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-[12px] font-black shadow-lg shadow-purple-100 transition flex items-center justify-center gap-2"
+              >
+                Tambah ke Keranjang <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// ── Helper Components ─────────────────────────────────────────────────────────
+
+function OptionGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2.5">{label}</p>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
+function OptionChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3.5 py-2 rounded-xl text-[11px] font-bold border transition-all ${
+        active
+          ? 'bg-purple-600 text-white border-purple-600 shadow-sm shadow-purple-200'
+          : 'border-slate-200 text-slate-600 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50'
+      }`}
+    >
+      {label}
+    </button>
   );
 }

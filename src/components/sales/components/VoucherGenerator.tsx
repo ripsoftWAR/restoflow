@@ -11,61 +11,63 @@ interface VoucherGeneratorProps {
 
 export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGenerated }: VoucherGeneratorProps) {
   // Gunakan 'PERCENTAGE' dan 'FIXED' agar sinkron dengan standar database umumnya
-  const [discountType, setDiscountType]   = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
+  const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
   const [discountValue, setDiscountValue] = useState('10');
-  const [minPurchase, setMinPurchase]     = useState('50000');
-  const [dateFrom, setDateFrom]           = useState(() => new Date().toISOString().split('T')[0]);
-  const [dateTo, setDateTo]               = useState(() => {
+  const [minPurchase, setMinPurchase] = useState('50000');
+  const [dateFrom, setDateFrom] = useState(() => new Date().toISOString().split('T')[0]);
+  const [dateTo, setDateTo] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() + 30);
     return d.toISOString().split('T')[0];
   });
-  const [limitUsage, setLimitUsage]       = useState('100');
-  const [isActive, setIsActive]           = useState(true);
+  const [limitUsage, setLimitUsage] = useState('100');
+  const [isActive, setIsActive] = useState(true);
   const [generatedCode, setGeneratedCode] = useState('SAVE10');
-  const [copied, setCopied]               = useState(false);
-  const [loading, setLoading]             = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+
 
   // Inisialisasi API fetcher kita
-  const apiFetch = makeApiFetch(sessionId);
-
+  // ✅ Pindah ke useMemo agar tidak dibuat ulang tiap render
+  const apiFetch = React.useMemo(() => makeApiFetch(sessionId), [sessionId]);
   const handleGenerate = async () => {
     setLoading(true);
     const code = generateVoucherCode();
-    
-    // Siapkan Payload untuk API
+
     const payload = {
       restaurant_id: restaurantId,
-      code: code,
+      code,
       type: discountType,
       value: parseFloat(discountValue) || 0,
       min_purchase: parseFloat(minPurchase) || 0,
       is_active: isActive,
       start_at: dateFrom,
       end_at: dateTo,
-      max_usage: parseInt(limitUsage) || null
+      max_usage: parseInt(limitUsage) || null,
     };
 
     try {
-      // PANGGIL BACKEND API (Gunakan endpoint yang sesuai di server, misal /api/vouchers)
       const response = await apiFetch('/api/vouchers', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
 
-      // Ambil datanya
-      const result = await response.json();
+      // ✅ Tangani response non-JSON (misal 404/500 HTML dari server)
+      const contentType = response.headers.get('content-type');
+      const result = contentType?.includes('application/json')
+        ? await response.json()
+        : { message: await response.text() };
 
       if (!response.ok) {
-        throw new Error(result.error || result.message || 'Gagal menyimpan voucher');
+        throw new Error(result.error || result.message || `HTTP ${response.status}`);
       }
 
       setGeneratedCode(code);
-      if (onVoucherGenerated) onVoucherGenerated(code);
+      onVoucherGenerated?.(code);
       alert(`Voucher ${code} berhasil dibuat!`);
-      
+
     } catch (error: any) {
-      console.error("Voucher Error:", error);
-      alert("Gagal Membuat Voucher: " + error.message);
+      console.error('Voucher Error:', error);
+      alert('Gagal Membuat Voucher: ' + (error.message ?? 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -89,58 +91,58 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField label="Tipe">
-            <select 
-              value={discountType} 
-              onChange={e => setDiscountType(e.target.value as any)} 
+            <select
+              value={discountType}
+              onChange={e => setDiscountType(e.target.value as any)}
               className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none bg-white"
             >
               <option value="PERCENTAGE">Persentase (%)</option>
               <option value="FIXED">Nominal (Rp)</option>
             </select>
           </FormField>
-          
+
           <FormField label={discountType === 'PERCENTAGE' ? "Nilai (%)" : "Nilai (Rp)"}>
-            <input 
-              type="number" 
-              value={discountValue} 
-              onChange={e => setDiscountValue(e.target.value)} 
-              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none" 
+            <input
+              type="number"
+              value={discountValue}
+              onChange={e => setDiscountValue(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none"
             />
           </FormField>
 
           <FormField label="Min. Beli">
-            <input 
-              type="number" 
-              value={minPurchase} 
-              onChange={e => setMinPurchase(e.target.value)} 
-              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none" 
+            <input
+              type="number"
+              value={minPurchase}
+              onChange={e => setMinPurchase(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none"
             />
           </FormField>
 
           <FormField label="Mulai">
-            <input 
-              type="date" 
-              value={dateFrom} 
-              onChange={e => setDateFrom(e.target.value)} 
-              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none" 
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none"
             />
           </FormField>
 
           <FormField label="Berakhir">
-            <input 
-              type="date" 
-              value={dateTo} 
-              onChange={e => setDateTo(e.target.value)} 
-              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none" 
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none"
             />
           </FormField>
 
           <FormField label="Limit Pemakaian">
-            <input 
-              type="number" 
-              value={limitUsage} 
-              onChange={e => setLimitUsage(e.target.value)} 
-              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none" 
+            <input
+              type="number"
+              value={limitUsage}
+              onChange={e => setLimitUsage(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[12px] font-bold outline-none"
               placeholder="Kosongkan jika tak terbatas"
             />
           </FormField>
@@ -148,23 +150,22 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
 
         <div className="w-full lg:w-56 flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-slate-100 pt-6 lg:pt-0 lg:pl-8 text-center">
           <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Preview Kode</p>
-          <div 
-            onClick={handleCopy} 
-            className={`border-2 border-dashed rounded-2xl py-4 cursor-pointer transition-all mb-3 ${
-              copied ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-purple-200 hover:bg-purple-50'
-            }`}
+          <div
+            onClick={handleCopy}
+            className={`border-2 border-dashed rounded-2xl py-4 cursor-pointer transition-all mb-3 ${copied ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-purple-200 hover:bg-purple-50'
+              }`}
           >
-             <p className={`text-xl font-black tracking-widest ${copied ? 'text-green-600' : 'text-purple-700'}`}>
+            <p className={`text-xl font-black tracking-widest ${copied ? 'text-green-600' : 'text-purple-700'}`}>
               {copied ? <Check className="inline-block" size={20} /> : generatedCode}
-             </p>
-             <span className="text-[9px] text-slate-400 uppercase font-bold">
+            </p>
+            <span className="text-[9px] text-slate-400 uppercase font-bold">
               {copied ? 'Berhasil Disalin' : 'Klik untuk Salin'}
-             </span>
+            </span>
           </div>
-          
-          <button 
-            onClick={handleGenerate} 
-            disabled={loading} 
+
+          <button
+            onClick={handleGenerate}
+            disabled={loading}
             className="w-full py-3.5 bg-purple-600 text-white rounded-2xl text-[12px] font-black shadow-lg hover:bg-purple-700 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
           >
             {loading ? (

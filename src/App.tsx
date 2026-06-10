@@ -1,32 +1,32 @@
 import { useState, useEffect } from 'react';
 import { LayoutDashboard, Layers, Utensils, ShoppingCart, Scan, ListOrdered, Zap } from 'lucide-react';
 
-import Dashboard       from './components/dashboard/Dashboard';
-import Inventory       from './components/inventory';
-import RecipeSystem    from './components/recipes';
-import SalesSimulator  from './components/sales';
-import ReceiptScanner  from './components/ReceiptScanner';
-import MovementLogs    from './components/MovementLogs';
+import Dashboard from './components/dashboard/Dashboard';
+import Inventory from './components/inventory';
+import RecipeSystem from './components/recipes';
+import SalesSimulator from './components/sales';
+import ReceiptScanner from './components/ReceiptScanner';
+import MovementLogs from './components/MovementLogs';
 import AIChatAssistant from './components/AIChatAssistant';
 
-import AuthPanel      from './components/auth/AuthPanel';
-import MobileLayout   from './components/layout/MobileLayout';
-import TabletLayout   from './components/layout/TabletLayout';
-import DesktopLayout  from './components/layout/DesktopLayout';
+import AuthPanel from './components/auth/AuthPanel';
+import MobileLayout from './components/layout/MobileLayout';
+import TabletLayout from './components/layout/TabletLayout';
+import DesktopLayout from './components/layout/DesktopLayout';
 
 import { useAppData } from '../src/hooks/useAppData';
-import { NavItem }    from '../src/types';
+import { NavItem } from '../src/types';
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'home',      icon: LayoutDashboard, label: 'Dashboard' },
-  { id: 'inventory', icon: Layers,          label: 'Inventori' },
-  { id: 'recipes',   icon: Utensils,        label: 'Resep'     },
-  { id: 'sales',     icon: ShoppingCart,    label: 'Penjualan' },
+  { id: 'home', icon: LayoutDashboard, label: 'Dashboard' },
+  { id: 'inventory', icon: Layers, label: 'Inventori' },
+  { id: 'recipes', icon: Utensils, label: 'Resep' },
+  { id: 'sales', icon: ShoppingCart, label: 'Penjualan' },
 ];
 
 const NAV_SECONDARY: NavItem[] = [
-  { id: 'ocr',  icon: Scan,        label: 'Scan OCR' },
-  { id: 'logs', icon: ListOrdered, label: 'Log'      },
+  { id: 'ocr', icon: Scan, label: 'Scan OCR' },
+  { id: 'logs', icon: ListOrdered, label: 'Log' },
 ];
 
 const Spinner = ({ label }: { label: string }) => (
@@ -91,12 +91,12 @@ export default function App() {
         {activeTab === 'home' && (
           stats
             ? <Dashboard
-                stats={stats}
-                movements={movements}
-                ingredients={ingredients}
-                recipes={recipes}
-                onNavigate={setActiveTab}
-              />
+              stats={stats}
+              movements={movements}
+              ingredients={ingredients}
+              recipes={recipes}
+              onNavigate={setActiveTab}
+            />
             : (
               <div className="flex items-center justify-center min-h-[400px] rounded-3xl bg-white border border-dashed border-slate-200">
                 <p className="text-sm text-slate-500">
@@ -130,6 +130,10 @@ export default function App() {
             onTriggerSale={handleTriggerSale}
             onRefreshStats={fetchAllData}
             onNavigateToKasir={() => setActiveTab('kasir')}
+            user={{
+              ...authSession.user,
+              sessionId: authSession.user.id // Gunakan authSession.user.id
+            }}
           />
         )}
         {activeTab === 'ocr' && (

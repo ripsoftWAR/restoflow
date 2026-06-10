@@ -110,44 +110,60 @@ export function useCart(
   };
 
   const openOptionSheet = (menuName: string) => {
-    const recipe = recipes.find(r => r.menu_name === menuName);
-    if (!recipe) return;
+  const recipe = recipes.find(r => r.menu_name === menuName);
+  if (!recipe) return;
 
-    const hasOptions =
-      recipe.spice_level_option === 1 ||
-      recipe.sugar_level_option === 1 ||
-      !!recipe.custom_options;
+  const hasOptions =
+    recipe.spice_level_option === 1 ||
+    recipe.sugar_level_option === 1 ||
+    !!recipe.custom_options;
 
-    if (!hasOptions) {
-      commitAddToCart(menuName, '', '', {});
-      return;
+  console.log('hasOptions:', hasOptions);
+
+  if (!hasOptions) {
+    commitAddToCart(menuName, '', '', {});
+    return;
+  }
+
+  console.log('CHECKPOINT 1'); // ← tambah ini
+
+  const initialCustom: Record<string, string> = {};
+  const customFields: { name: string; choices: string[] }[] = [];
+
+  console.log('CHECKPOINT 2'); // ← tambah ini
+
+  if (recipe.custom_options) {
+    console.log('CHECKPOINT 3 - masuk custom_options'); // ← tambah ini
+    try {
+      const parsed = typeof recipe.custom_options === 'string'
+        ? JSON.parse(recipe.custom_options)
+        : recipe.custom_options;
+
+      console.log('CHECKPOINT 4 - parsed:', parsed); // ← tambah ini
+
+      parsed.forEach((opt: { name: string; choices: string }) => {
+        const choices = opt.choices.split(',').map((c: string) => c.trim()).filter(Boolean);
+        initialCustom[opt.name] = choices[0] || '';
+        customFields.push({ name: opt.name, choices });
+      });
+    } catch (e) {
+      console.error('CHECKPOINT 3 ERROR:', e);
     }
+  }
 
-    const initialCustom: Record<string, string>          = {};
-    const customFields: { name: string; choices: string[] }[] = [];
+  console.log('CHECKPOINT 5 - sebelum setOptionSheet'); // ← tambah ini
 
-    if (recipe.custom_options) {
-      try {
-        const parsed = JSON.parse(recipe.custom_options);
-        parsed.forEach((opt: { name: string; choices: string }) => {
-          const choices = opt.choices.split(',').map((c: string) => c.trim()).filter(Boolean);
-          initialCustom[opt.name] = choices[0] || '';
-          customFields.push({ name: opt.name, choices });
-        });
-      } catch (_) { /* malformed JSON — skip custom options */ }
-    }
-
-    setOptionSheet({
-      open: true,
-      menuName,
-      spice: 'Sedang',
-      sugar: 'Less Sugar (70%)',
-      customChoices: initialCustom,
-      customFields,
-    });
-  };
-
+  setOptionSheet({
+    open: true,
+    menuName,
+    spice: 'Sedang',
+    sugar: 'Less Sugar (70%)',
+    customChoices: initialCustom,
+    customFields,
+  });
+};
   const confirmOptionSheet = () => {
+    
     commitAddToCart(
       optionSheet.menuName,
       optionSheet.spice,
