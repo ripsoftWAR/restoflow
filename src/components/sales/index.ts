@@ -1,1 +1,1 @@
-export { default } from './SalesSimulator';
+export { default } from "./SalesPage";

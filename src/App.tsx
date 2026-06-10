@@ -123,7 +123,14 @@ export default function App() {
           />
         )}
         {activeTab === 'sales' && (
-          <SalesSimulator recipes={recipes} ingredients={ingredients} sales={sales} onTriggerSale={handleTriggerSale} onRefreshStats={fetchAllData} />
+          <SalesSimulator
+            recipes={recipes}
+            ingredients={ingredients}
+            sales={sales}
+            onTriggerSale={handleTriggerSale}
+            onRefreshStats={fetchAllData}
+            onNavigateToKasir={() => setActiveTab('kasir')}
+          />
         )}
         {activeTab === 'ocr' && (
           <ReceiptScanner ingredients={ingredients} onScanReceipt={handleScanReceipt} onConfirmReceiptItems={handleConfirmReceiptItems} onRefreshStats={fetchAllData} />

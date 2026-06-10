@@ -1,4 +1,4 @@
-import { Ingredient, RecipeWithDetails } from '../../types';
+import { Ingredient, RecipeWithDetails } from '../../../types';
 
 export const formatIDR = (n: number) =>
   new Intl.NumberFormat('id-ID').format(n);
