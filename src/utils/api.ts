@@ -1,3 +1,5 @@
+// API.ts
+
 const rawApiUrl = (import.meta as any).env.VITE_API_URL || '';
 export const API_URL = rawApiUrl ? rawApiUrl.replace(/\/$/, '') : '';
 
@@ -14,17 +16,34 @@ export const resolveApiUrl = (url: string) => {
 };
 
 export const makeApiFetch = (sessionId: number | null) =>
-  (url: string, options: RequestInit = {}) =>
-    fetch(resolveApiUrl(url), {
+  (url: string, options: RequestInit = {}) => {
+    
+    // 1. Gabungkan Headers
+    const headers = new Headers(options.headers || {});
+
+    // 2. Tambahkan Authorization jika ada session
+    if (sessionId) {
+      headers.set('Authorization', `Bearer ${sessionId}`);
+    }
+
+    // 3. Tambahkan Content-Type JSON jika ada body dan bukan kirim file (FormData)
+    if (options.body && !(options.body instanceof FormData)) {
+      if (!headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json');
+      }
+    }
+
+    // 4. Kembalikan fetch secara standar (tetap mengembalikan Response object)
+    return fetch(resolveApiUrl(url), {
       ...options,
-      headers: {
-        ...(options.headers || {}),
-        ...(sessionId ? { 'Authorization': `Bearer ${sessionId}` } : {}),
-      },
+      headers: headers,
     });
+  };
 
 export const formatIDR = (num: number) =>
   new Intl.NumberFormat('id-ID', {
-    style: 'currency', currency: 'IDR',
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
+    style: 'currency', 
+    currency: 'IDR',
+    minimumFractionDigits: 0, 
+    maximumFractionDigits: 0,
   }).format(num);

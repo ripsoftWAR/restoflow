@@ -35,9 +35,16 @@ export const buildCartItemId = (
   return `${menuName}-${spice || 'none'}-${sugar || 'none'}-${choiceHash || 'none'}`;
 };
 
+export const formatIDR = (n: number) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(n);
+
 export const calcCartTotals = (cart: CartItem[]) => {
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const tax = Math.round(subtotal * 0.1);
-  const service = 2000;
+  const tax      = Math.round(subtotal * 0.1);
+  const service  = 2000;
   return { subtotal, tax, service, grandTotal: subtotal + tax + service };
 };

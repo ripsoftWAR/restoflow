@@ -49,14 +49,16 @@ export interface RecipeWithDetails {
 
 export interface Sale {
   id: number;
+  restaurant_id: number;
   menu_name: string;
   quantity: number;
   total_price: number;
   selected_options?: string;
-  payment_method: 'CASH' | 'QRIS'; // Tambahan agar sinkron dengan DB
-  cash_paid?: number | null;       // Tambahan agar sinkron dengan DB
-  cash_change?: number | null;     // Tambahan agar sinkron dengan DB
-  created_at: string;
+  payment_method: string;
+  cash_paid: number;
+  cash_change: number;
+  invoice_id?: string; // TAMBAHKAN INI (opsional karena data lama mungkin tidak punya)
+  created_at?: string;
 }
 
 export interface OCRItemReview {
