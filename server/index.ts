@@ -14,6 +14,7 @@ import ocrRoutes from './routes/ocr';
 import chatRoutes from './routes/chat';
 import authRoutes from './routes/auth';
 import { requireAuth, requireRole } from './utils/authMiddleware';
+import voucherRoutes from './routes/vouchers';
 
 dotenv.config();
 
@@ -78,6 +79,7 @@ app.use('/api/recipes', requireAuth, recipeRoutes);
 app.use('/api/sales', requireAuth, requireRole('Kasir', 'Pemilik', 'Dapur'), salesRoutes);
 app.use('/api/ocr', requireAuth, requireRole('Kasir', 'Pemilik'), ocrRoutes);
 app.use('/api/gemini/chat', requireAuth, chatRoutes);
+app.use('/api/vouchers', requireAuth, requireRole('Pemilik', 'Kasir'), voucherRoutes);
 
 // ==========================================
 // 4. HEALTH CHECK & ERROR HANDLING
