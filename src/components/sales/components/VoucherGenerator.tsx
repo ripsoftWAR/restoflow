@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { RefreshCw, Copy, Check, Sparkles } from 'lucide-react';
-import { generateVoucherCode } from '../utils/salesHelpers';
-import { makeApiFetch } from '../../../utils/api'; // Pastikan path import benar
+import { RefreshCw, Check, Sparkles } from 'lucide-react';
+import { generateVoucherCode, VoucherResult } from '../utils/salesHelpers';
+import { makeApiFetch } from '../../../utils/api';
 
 interface VoucherGeneratorProps {
   restaurantId: number;
-  sessionId: number; // Tambahkan sessionId agar bisa auth ke backend
-  onVoucherGenerated?: (code: string) => void;
+  sessionId: number;
+  // ✅ Kirim object lengkap agar bisa langsung dipakai di keranjang
+  onVoucherGenerated?: (code: string, voucher: VoucherResult) => void;
 }
 
 export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGenerated }: VoucherGeneratorProps) {
-  // Gunakan 'PERCENTAGE' dan 'FIXED' agar sinkron dengan standar database umumnya
   const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
   const [discountValue, setDiscountValue] = useState('10');
   const [minPurchase, setMinPurchase] = useState('50000');
@@ -25,10 +25,8 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
 
-
-  // Inisialisasi API fetcher kita
-  // ✅ Pindah ke useMemo agar tidak dibuat ulang tiap render
   const apiFetch = React.useMemo(() => makeApiFetch(sessionId), [sessionId]);
+
   const handleGenerate = async () => {
     setLoading(true);
     const code = generateVoucherCode();
@@ -51,7 +49,6 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
         body: JSON.stringify(payload),
       });
 
-      // ✅ Tangani response non-JSON (misal 404/500 HTML dari server)
       const contentType = response.headers.get('content-type');
       const result = contentType?.includes('application/json')
         ? await response.json()
@@ -62,7 +59,19 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
       }
 
       setGeneratedCode(code);
-      onVoucherGenerated?.(code);
+
+      // ✅ Bangun VoucherResult dari nilai yang diinput user
+      const val = parseFloat(discountValue) || 0;
+      const voucherResult: VoucherResult = {
+        valid: true,
+        type: discountType === 'PERCENTAGE' ? 'percent' : 'flat',
+        value: val,
+        label: discountType === 'PERCENTAGE'
+          ? `Diskon ${val}%`
+          : `Diskon Rp ${new Intl.NumberFormat('id-ID').format(val)}`,
+      };
+
+      onVoucherGenerated?.(code, voucherResult);
       alert(`Voucher ${code} berhasil dibuat!`);
 
     } catch (error: any) {
@@ -101,7 +110,7 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
             </select>
           </FormField>
 
-          <FormField label={discountType === 'PERCENTAGE' ? "Nilai (%)" : "Nilai (Rp)"}>
+          <FormField label={discountType === 'PERCENTAGE' ? 'Nilai (%)' : 'Nilai (Rp)'}>
             <input
               type="number"
               value={discountValue}
@@ -152,8 +161,9 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
           <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Preview Kode</p>
           <div
             onClick={handleCopy}
-            className={`border-2 border-dashed rounded-2xl py-4 cursor-pointer transition-all mb-3 ${copied ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-purple-200 hover:bg-purple-50'
-              }`}
+            className={`border-2 border-dashed rounded-2xl py-4 cursor-pointer transition-all mb-3 ${
+              copied ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-purple-200 hover:bg-purple-50'
+            }`}
           >
             <p className={`text-xl font-black tracking-widest ${copied ? 'text-green-600' : 'text-purple-700'}`}>
               {copied ? <Check className="inline-block" size={20} /> : generatedCode}
@@ -168,11 +178,7 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
             disabled={loading}
             className="w-full py-3.5 bg-purple-600 text-white rounded-2xl text-[12px] font-black shadow-lg hover:bg-purple-700 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
           >
-            {loading ? (
-              <RefreshCw size={16} className="animate-spin" />
-            ) : (
-              "BUAT VOUCHER"
-            )}
+            {loading ? <RefreshCw size={16} className="animate-spin" /> : 'BUAT VOUCHER'}
           </button>
         </div>
       </div>

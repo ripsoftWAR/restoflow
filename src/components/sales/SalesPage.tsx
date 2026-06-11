@@ -7,6 +7,9 @@ import KasirStatsBar from './components/KasirStatsBar';
 import KasirMenuGrid from './components/KasirMenuGrid';
 import KasirCartPanel from './components/KasirCartPanel';
 import VoucherGenerator from './components/VoucherGenerator';
+import { VoucherResult } from './utils/salesHelpers';
+import { useEffect } from 'react';
+import { makeApiFetch } from '../../utils/api';
 
 interface SalesPageProps {
   recipes: RecipeWithDetails[];
@@ -27,7 +30,7 @@ export default function SalesPage({
   const [showVoucherGenerator, setShowVoucherGenerator] = useState(false);
   const [generatedVouchers, setGeneratedVouchers] = useState<Record<string, any>>({});
 
-  const cart = useCart(recipes, ingredients, generatedVouchers);
+  const cart = useCart(recipes, ingredients, generatedVouchers, user?.sessionId);
   const { checkoutLoading, handleCheckout } = useCheckout();
 
   const doCheckout = () => {
@@ -46,9 +49,33 @@ export default function SalesPage({
       onTriggerSale,
       onRefreshStats,
       cashInputRef: cart.cashInputRef,
-      onSuccess: () => {},
+      onSuccess: () => { },
     });
   };
+  // Tambah import
+
+
+// Di dalam SalesPage, setelah state generatedVouchers:
+useEffect(() => {
+  const apiFetch = makeApiFetch(user?.sessionId);
+  apiFetch(`/api/vouchers?restaurant_id=${user?.restaurant_id}`)
+    .then(r => r.json())
+    .then((vouchers: any[]) => {
+      const map: Record<string, any> = {};
+      vouchers.forEach(v => {
+        map[v.code.toUpperCase()] = {
+          valid: true,
+          type: v.type === 'PERCENTAGE' ? 'percent' : 'flat',
+          value: v.value,
+          label: v.type === 'PERCENTAGE'
+            ? `Diskon ${v.value}%`
+            : `Diskon Rp ${new Intl.NumberFormat('id-ID').format(v.value)}`,
+        };
+      });
+      setGeneratedVouchers(map);
+    })
+    .catch(console.error);
+}, [user?.restaurant_id]);
 
   const voucherLabel = useMemo(() => cart.voucher?.label ?? '', [cart.voucher]);
 
@@ -148,8 +175,12 @@ export default function SalesPage({
             <VoucherGenerator
               restaurantId={user?.restaurant_id}
               sessionId={user?.sessionId}
-              onVoucherGenerated={(code: string) => {
-                setGeneratedVouchers(prev => ({ ...prev, [code.toUpperCase()]: true }));
+              onVoucherGenerated={(code: string, voucher: VoucherResult) => {
+                // ✅ Simpan sebagai VoucherResult lengkap agar bisa divalidasi di useCart
+                setGeneratedVouchers(prev => ({
+                  ...prev,
+                  [code.toUpperCase()]: voucher,
+                }));
                 setShowVoucherGenerator(false);
               }}
             />
@@ -269,11 +300,10 @@ function OptionChip({ label, active, onClick }: { label: string; active: boolean
   return (
     <button
       onClick={onClick}
-      className={`px-3.5 py-2 rounded-xl text-[11px] font-bold border transition-all ${
-        active
-          ? 'bg-purple-600 text-white border-purple-600 shadow-sm shadow-purple-200'
-          : 'border-slate-200 text-slate-600 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50'
-      }`}
+      className={`px-3.5 py-2 rounded-xl text-[11px] font-bold border transition-all ${active
+        ? 'bg-purple-600 text-white border-purple-600 shadow-sm shadow-purple-200'
+        : 'border-slate-200 text-slate-600 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50'
+        }`}
     >
       {label}
     </button>

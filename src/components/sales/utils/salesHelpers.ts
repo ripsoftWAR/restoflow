@@ -18,8 +18,10 @@ export const getDishPrice = (
   const recipe = recipes.find(r => normalizeName(r.menu_name) === normalizeName(name));
 
   // Priority 1: explicit price from DB
-  if (recipe && typeof recipe.price === 'number' && recipe.price > 0) {
-    return recipe.price;
+  if (recipe) {
+    const raw = recipe.price ?? 0;
+    const parsed = typeof raw === 'string' ? parseFloat(raw) : Number(raw);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
   }
 
   // Priority 2: HPP × 1.5 from recipe items + ingredient unit_price
@@ -76,15 +78,16 @@ export interface VoucherResult {
   type: 'percent' | 'flat' | null;
   value: number;
   label: string;
+  id?: string;
 }
 
 // Static built-in vouchers
 const STATIC_VOUCHER_DB: Record<string, VoucherResult> = {
   RESTFLOW10: { valid: true, type: 'percent', value: 10, label: '10% Diskon' },
-  HEMAT20:    { valid: true, type: 'percent', value: 20, label: '20% Diskon' },
-  FLAT5K:     { valid: true, type: 'flat',    value: 5000,  label: 'Diskon Rp 5.000' },
-  FLAT10K:    { valid: true, type: 'flat',    value: 10000, label: 'Diskon Rp 10.000' },
-  SAVE10:     { valid: true, type: 'percent', value: 10, label: '10% Diskon' },
+  HEMAT20: { valid: true, type: 'percent', value: 20, label: '20% Diskon' },
+  FLAT5K: { valid: true, type: 'flat', value: 5000, label: 'Diskon Rp 5.000' },
+  FLAT10K: { valid: true, type: 'flat', value: 10000, label: 'Diskon Rp 10.000' },
+  SAVE10: { valid: true, type: 'percent', value: 10, label: '10% Diskon' },
 };
 
 /** Validates against static DB only — kept for backward compat */
