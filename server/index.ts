@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import userRoutes from './routes/users';
 
 // Import Routes
 import dashboardRoutes from './routes/dashboard';
@@ -80,7 +81,7 @@ app.use('/api/sales', requireAuth, requireRole('Kasir', 'Pemilik', 'Dapur'), sal
 app.use('/api/ocr', requireAuth, requireRole('Kasir', 'Pemilik'), ocrRoutes);
 app.use('/api/gemini/chat', requireAuth, chatRoutes);
 app.use('/api/vouchers', requireAuth, requireRole('Pemilik', 'Kasir'), voucherRoutes);
-
+app.use('/api/users', requireAuth, requireRole('Pemilik'), userRoutes);
 // ==========================================
 // 4. HEALTH CHECK & ERROR HANDLING
 // ==========================================

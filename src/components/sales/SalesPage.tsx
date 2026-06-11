@@ -52,36 +52,36 @@ export default function SalesPage({
       onSuccess: () => { },
     });
   };
-  // Tambah import
-
-
-// Di dalam SalesPage, setelah state generatedVouchers:
-useEffect(() => {
-  const apiFetch = makeApiFetch(user?.sessionId);
-  apiFetch(`/api/vouchers?restaurant_id=${user?.restaurant_id}`)
-    .then(r => r.json())
-    .then((vouchers: any[]) => {
-      const map: Record<string, any> = {};
-      vouchers.forEach(v => {
-        map[v.code.toUpperCase()] = {
-          valid: true,
-          type: v.type === 'PERCENTAGE' ? 'percent' : 'flat',
-          value: v.value,
-          label: v.type === 'PERCENTAGE'
-            ? `Diskon ${v.value}%`
-            : `Diskon Rp ${new Intl.NumberFormat('id-ID').format(v.value)}`,
-        };
-      });
-      setGeneratedVouchers(map);
-    })
-    .catch(console.error);
-}, [user?.restaurant_id]);
 
   const voucherLabel = useMemo(() => cart.voucher?.label ?? '', [cart.voucher]);
 
   // Ambil recipe untuk option sheet yang sedang terbuka
   const activeRecipe = recipes.find(r => r.menu_name === cart.optionSheet.menuName);
+  useEffect(() => {
+    const apiFetch = makeApiFetch(user?.sessionId);
+    apiFetch(`/api/vouchers?restaurant_id=${user?.restaurant_id}`)
+      .then(r => r.json())
+      .then((res: any) => {
+        // ✅ Ambil res.data, bukan res langsung
+        const vouchers: any[] = Array.isArray(res.data) ? res.data : [];
+        const map: Record<string, any> = {};
+        vouchers.forEach(v => {
+          map[v.code.toUpperCase()] = {
+            valid: true,
+            type: v.type === 'PERCENTAGE' ? 'percent' : 'flat',
+            value: Number(v.value),
+            label: v.type === 'PERCENTAGE'
+              ? `Diskon ${v.value}%`
+              : `Diskon Rp ${new Intl.NumberFormat('id-ID').format(Number(v.value))}`,
+            id: v.id,
+          };
+        });
+        setGeneratedVouchers(map);
+      })
+      .catch(console.error);
+  }, [user?.restaurant_id]);
 
+  
   return (
     <div className="min-h-full w-full bg-transparent p-4 space-y-4">
       {/* Topbar */}

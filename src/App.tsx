@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Layers, Utensils, ShoppingCart, Scan, ListOrdered, Zap } from 'lucide-react';
+import { LayoutDashboard, Layers, Utensils, ShoppingCart, Scan, ListOrdered, Zap, Users } from 'lucide-react';
 
 import Dashboard from './components/dashboard/Dashboard';
 import Inventory from './components/inventory';
@@ -8,6 +8,7 @@ import SalesSimulator from './components/sales';
 import ReceiptScanner from './components/ReceiptScanner';
 import MovementLogs from './components/MovementLogs';
 import AIChatAssistant from './components/AIChatAssistant';
+import UsersPage from './components/userspage';
 
 import AuthPanel from './components/auth/AuthPanel';
 import MobileLayout from './components/layout/MobileLayout';
@@ -22,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'inventory', icon: Layers, label: 'Inventori' },
   { id: 'recipes', icon: Utensils, label: 'Resep' },
   { id: 'sales', icon: ShoppingCart, label: 'Penjualan' },
+  { id: 'users', icon: Users, label: 'Pengguna' },
 ];
 
 const NAV_SECONDARY: NavItem[] = [
@@ -143,6 +145,9 @@ export default function App() {
           <AIChatAssistant ingredients={ingredients} recipes={recipes} onRefreshData={fetchAllData} embedded onClose={() => setActiveTab('home')} />
         )}
         {activeTab === 'logs' && <MovementLogs movements={movements} />}
+        {activeTab === 'users' && (
+          <UsersPage user={{ ...authSession.user, sessionId: authSession.session_id }} />
+        )}
         {activeTab === 'settings' && (
           <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
             <h2 className="text-lg font-semibold text-slate-900">Pengaturan</h2>

@@ -5,14 +5,15 @@ interface Props {
   authMode:       'landing' | 'login' | 'register';
   authError:      string | null;
   setAuthMode:    (mode: 'landing' | 'login' | 'register') => void;
-  onLogin:        (username: string, password: string, shift_id: number) => Promise<void>;
+  onLogin:        (username: string, credential: string, shift_id: number, mode: 'owner' | 'staf') => Promise<void>;
   onRegister:     (username: string, password: string, role: string, restaurant_name: string) => Promise<void>;
 }
 
 export default function AuthPanel({ authMode, authError, setAuthMode, onLogin, onRegister }: Props) {
   const [form, setForm] = useState({
-    username: '', password: '', role: 'Staff', shiftId: 1, restaurant_name: '',
+    username: '', password: '', pin: '', role: 'Staff', shiftId: 1, restaurant_name: '',
   });
+  const [loginMode, setLoginMode] = useState<'Owner' | 'Staf'>('Owner');
   const [submitting, setSubmitting] = useState(false);
 
   if (authMode === 'landing') {
@@ -43,7 +44,9 @@ export default function AuthPanel({ authMode, authError, setAuthMode, onLogin, o
     e.preventDefault();
     setSubmitting(true);
     if (authMode === 'login') {
-      await onLogin(form.username, form.password, form.shiftId);
+      const mode = loginMode === 'Owner' ? 'owner' : 'staf';
+      const credential = mode === 'owner' ? form.password : form.pin;
+      await onLogin(form.username, credential, form.shiftId, mode);
     } else {
       await onRegister(form.username, form.password, form.role, form.restaurant_name);
     }
@@ -62,17 +65,37 @@ export default function AuthPanel({ authMode, authError, setAuthMode, onLogin, o
         <form className="space-y-4" onSubmit={handleSubmit}>
           <input placeholder="Username" className="w-full rounded-2xl border p-4"
             onChange={e => setForm({ ...form, username: e.target.value })} required />
-          <input type="password" placeholder="Password" className="w-full rounded-2xl border p-4"
-            onChange={e => setForm({ ...form, password: e.target.value })} required />
 
           {authMode === 'login' ? (
-            <select className="w-full rounded-2xl border p-4 bg-white"
-              onChange={e => setForm({ ...form, shiftId: Number(e.target.value) })}>
-              <option value={1}>Shift 1 (08:00 - 16:00)</option>
-              <option value={2}>Shift 2 (16:00 - 24:00)</option>
-            </select>
+            <>
+              <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1">
+                {['Owner', 'Staf'].map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setLoginMode(mode as 'Owner' | 'Staf')}
+                    className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${loginMode === mode ? 'bg-blue-600 text-white shadow' : 'text-slate-600'}`}>
+                    {mode}
+                  </button>
+                ))}
+              </div>
+              {loginMode === 'Owner' ? (
+                <input type="password" placeholder="Password" className="w-full rounded-2xl border p-4"
+                  onChange={e => setForm({ ...form, password: e.target.value })} required />
+              ) : (
+                <input type="password" inputMode="numeric" maxLength={6} placeholder="PIN 6 digit" className="w-full rounded-2xl border p-4 tracking-[0.35em] font-semibold"
+                  onChange={e => setForm({ ...form, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })} required />
+              )}
+              <select className="w-full rounded-2xl border p-4 bg-white"
+                onChange={e => setForm({ ...form, shiftId: Number(e.target.value) })}>
+                <option value={1}>Shift 1 (08:00 - 16:00)</option>
+                <option value={2}>Shift 2 (16:00 - 24:00)</option>
+              </select>
+            </>
           ) : (
             <>
+              <input type="password" placeholder="Password" className="w-full rounded-2xl border p-4"
+                onChange={e => setForm({ ...form, password: e.target.value })} required />
               <input placeholder="Nama Restoran" className="w-full rounded-2xl border p-4"
                 value={form.restaurant_name}
                 onChange={e => setForm({ ...form, restaurant_name: e.target.value })} required />

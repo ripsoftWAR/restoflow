@@ -96,13 +96,18 @@ export function useAppData() {
   }, [authSession]);
 
   // ─── Auth handlers ─────────────────────────────────────────────────────────
-  const handleLogin = async (username: string, password: string, shift_id: number) => {
+  const handleLogin = async (username: string, credential: string, shift_id: number, mode: 'owner' | 'staf' = 'owner') => {
     setAuthError(null);
     try {
-      const res  = await apiFetch('/api/auth/login', {
+      const endpoint = mode === 'staf' ? '/api/auth/login-pin' : '/api/auth/login';
+      const body = mode === 'staf'
+        ? { username, pin: credential, shift_id }
+        : { username, password: credential, shift_id };
+
+      const res  = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, shift_id }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || 'Login gagal');
