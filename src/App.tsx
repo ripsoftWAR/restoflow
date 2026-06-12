@@ -14,9 +14,11 @@ import AuthPanel from './components/auth/AuthPanel';
 import MobileLayout from './components/layout/MobileLayout';
 import TabletLayout from './components/layout/TabletLayout';
 import DesktopLayout from './components/layout/DesktopLayout';
+import KasirMode from './components/kasir/KasirMode';
 
 import { useAppData } from '../src/hooks/useAppData';
 import { NavItem } from '../src/types';
+
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'home', icon: LayoutDashboard, label: 'Dashboard' },
@@ -135,6 +137,21 @@ export default function App() {
             user={{
               ...authSession.user,
               sessionId: authSession.user.id // Gunakan authSession.user.id
+            }}
+          />
+        )}
+        {activeTab === 'kasir' && (
+          <KasirMode
+            recipes={recipes}
+            ingredients={ingredients}
+            sales={sales}
+            onTriggerSale={handleTriggerSale}
+            onRefreshStats={fetchAllData}
+            onExit={() => setActiveTab('sales')}
+            user={{
+              ...authSession.user,
+              sessionId: authSession.session_id,
+              restaurant_id: authSession.user.id,
             }}
           />
         )}

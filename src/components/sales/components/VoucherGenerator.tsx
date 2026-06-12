@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RefreshCw, Check, Sparkles } from 'lucide-react';
 import { generateVoucherCode, VoucherResult } from '../utils/salesHelpers';
 import { makeApiFetch } from '../../../utils/api';
@@ -21,11 +21,24 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
   });
   const [limitUsage, setLimitUsage] = useState('100');
   const [isActive, setIsActive] = useState(true);
-  const [generatedCode, setGeneratedCode] = useState('SAVE10');
+  const [generatedCode, setGeneratedCode] = useState('');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const apiFetch = React.useMemo(() => makeApiFetch(sessionId), [sessionId]);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+
+    apiFetch(`/api/vouchers?restaurant_id=${restaurantId}`)
+      .then((res) => res.json())
+      .then((res: any) => {
+        const vouchers = Array.isArray(res?.data) ? res.data : [];
+        const latest = vouchers[0]?.code?.trim().toUpperCase();
+        if (latest) setGeneratedCode(latest);
+      })
+      .catch(() => undefined);
+  }, [apiFetch, restaurantId]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -58,7 +71,8 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
         throw new Error(result.error || result.message || `HTTP ${response.status}`);
       }
 
-      setGeneratedCode(code);
+      const savedCode = result?.data?.code?.trim().toUpperCase() || code;
+      setGeneratedCode(savedCode);
 
       // ✅ Bangun VoucherResult dari nilai yang diinput user
       const val = parseFloat(discountValue) || 0;
@@ -71,8 +85,8 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
           : `Diskon Rp ${new Intl.NumberFormat('id-ID').format(val)}`,
       };
 
-      onVoucherGenerated?.(code, voucherResult);
-      alert(`Voucher ${code} berhasil dibuat!`);
+      onVoucherGenerated?.(savedCode, voucherResult);
+      alert(`Voucher ${savedCode} berhasil dibuat!`);
 
     } catch (error: any) {
       console.error('Voucher Error:', error);
@@ -166,10 +180,10 @@ export default function VoucherGenerator({ restaurantId, sessionId, onVoucherGen
             }`}
           >
             <p className={`text-xl font-black tracking-widest ${copied ? 'text-green-600' : 'text-purple-700'}`}>
-              {copied ? <Check className="inline-block" size={20} /> : generatedCode}
+              {copied ? <Check className="inline-block" size={20} /> : (generatedCode || '—')}
             </p>
             <span className="text-[9px] text-slate-400 uppercase font-bold">
-              {copied ? 'Berhasil Disalin' : 'Klik untuk Salin'}
+              {copied ? 'Berhasil Disalin' : generatedCode ? 'Klik untuk Salin' : 'Belum ada kode dari DB'}
             </span>
           </div>
 

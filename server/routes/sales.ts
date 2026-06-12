@@ -24,14 +24,18 @@ router.get('/', async (req, res) => {
 // POST record sale & auto-deplete ingredients
 router.post('/', async (req, res) => {
   const restaurantId = req.user!.restaurant_id;
-  const { 
-    menu_name, 
-    quantity, 
-    total_price, 
-    selected_options, 
-    payment_method, 
-    cash_paid, 
-    cash_change 
+  const {
+    menu_name,
+    quantity,
+    total_price,
+    selected_options,
+    payment_method,
+    cash_paid,
+    cash_change,
+    voucher_code,
+    voucher_id,
+    voucher_label,
+    discount_amount,
   } = req.body;
 
   // 1. VALIDASI (Tetap sama dengan logic asli Anda)
@@ -56,28 +60,37 @@ router.post('/', async (req, res) => {
     // 2. TRANSACTION HANDLING (PostgreSQL Style)
     await db.query('BEGIN');
 
+    const voucherMeta = voucher_code
+      ? ` [Voucher: ${voucher_code.toUpperCase()}${voucher_label ? ` • ${voucher_label}` : ''}${discount_amount ? ` • Diskon Rp ${Number(discount_amount).toLocaleString('id-ID')}` : ''}]`
+      : '';
+    const saleOptions = [selected_options || '', voucherMeta].filter(Boolean).join(' ').trim();
+
     // A. Log sale record (Tambah restaurant_id)
     await db.query(`
       INSERT INTO sales (
         restaurant_id,
-        menu_name, 
-        quantity, 
-        total_price, 
-        selected_options, 
-        payment_method, 
-        cash_paid, 
+        menu_name,
+        quantity,
+        total_price,
+        selected_options,
+        payment_method,
+        cash_paid,
         cash_change
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `, [
       restaurantId,
-      menu_name, 
-      quantity, 
-      total_price, 
-      selected_options || '', 
+      menu_name,
+      quantity,
+      Number(total_price) || 0,
+      saleOptions,
       payment_method,
       payment_method === 'CASH' ? cash_paid : null,
       payment_method === 'CASH' ? cash_change : null
     ]);
+
+    if (voucher_id) {
+      await db.query('UPDATE vouchers SET current_usage = current_usage + 1 WHERE id = $1', [voucher_id]);
+    }
 
     // B. Cari resep (Filter by restaurant_id)
     const recipeRes = await db.query(

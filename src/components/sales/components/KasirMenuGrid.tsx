@@ -123,13 +123,16 @@ function MenuCard({
 }) {
   const [imgError, setImgError] = useState(false);
   
-  // Hitung stok berdasarkan ketersediaan bahan di inventory
-  const stock  = calculateCookableLimit(recipe, ingredients);
-  const low    = stock > 0 && stock <= 5;
-  const empty  = stock === 0;
-  
-  const emoji  = getCategoryEmoji(recipe.category ?? '');
-  const image  = (recipe as any).image;
+  // Hitung porsi yang bisa disajikan dari bahan yang tersedia
+  const stock = calculateCookableLimit(recipe, ingredients);
+  const low = stock > 0 && stock <= 5;
+  const empty = stock === 0;
+  const portionLabel = empty
+    ? 'Bahan Habis'
+    : `${stock} Porsi Tersedia`;
+
+  const emoji = getCategoryEmoji(recipe.category ?? '');
+  const image = (recipe as any).image;
 
   return (
     <div 
@@ -155,16 +158,18 @@ function MenuCard({
           </div>
         )}
 
-        {/* Badge Stok */}
-        {empty ? (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="bg-red-500 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider">Habis</span>
-          </div>
-        ) : low ? (
-          <span className="absolute top-2 right-2 text-[9px] bg-orange-500 text-white font-black px-2 py-0.5 rounded-full shadow-sm">
-            Sisa {stock}
-          </span>
-        ) : null}
+        {/* Badge porsi tersedia */}
+        <span
+          className={`absolute top-2 right-2 text-[9px] font-black px-2 py-1 rounded-full shadow-sm border ${
+            empty
+              ? 'bg-red-500 text-white border-red-400'
+              : low
+                ? 'bg-amber-500 text-white border-amber-400'
+                : 'bg-emerald-500 text-white border-emerald-400'
+          }`}
+        >
+          {portionLabel}
+        </span>
       </div>
 
       {/* Informasi Produk */}
@@ -174,15 +179,20 @@ function MenuCard({
           <p className="text-[10px] text-slate-400 mt-1 font-medium italic">{recipe.category ?? 'Menu'}</p>
         </div>
         
-        <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-50">
-          <span className="text-[12px] font-black text-purple-600">
-            {formatIDRShort(recipe.price ?? 0)}
-          </span>
-          <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+        <div className="mt-3 pt-2 border-t border-slate-50">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] font-black text-purple-600">
+              {formatIDRShort(recipe.price ?? 0)}
+            </span>
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
             empty ? 'bg-slate-100 text-slate-400' : 'bg-purple-600 text-white group-hover:bg-purple-700 shadow-sm shadow-purple-200'
           }`}>
-            <Plus size={16} strokeWidth={3} />
+              <Plus size={16} strokeWidth={3} />
+            </div>
           </div>
+          <p className={`mt-1 text-[10px] font-semibold ${empty ? 'text-red-500' : low ? 'text-amber-600' : 'text-emerald-600'}`}>
+            {empty ? 'Stok habis untuk saat ini' : `Tersedia ${stock} porsi untuk dijual`}
+          </p>
         </div>
       </div>
     </div>

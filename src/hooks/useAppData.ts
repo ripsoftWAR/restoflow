@@ -229,6 +229,8 @@ export function useAppData() {
     menu_name: string; quantity: number; total_price: number;
     selected_options?: string; payment_method?: 'CASH' | 'QRIS';
     cash_paid?: number | null; cash_change?: number | null;
+    voucher_code?: string; voucher_id?: string | number; voucher_label?: string;
+    discount_amount?: number;
   }) => {
     const res = await apiFetch('/api/sales', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -240,6 +242,10 @@ export function useAppData() {
         payment_method:   saleData.payment_method   ?? 'CASH',
         cash_paid:        saleData.cash_paid         ?? null,
         cash_change:      saleData.cash_change       ?? null,
+        voucher_code:     saleData.voucher_code      ?? null,
+        voucher_id:       saleData.voucher_id        ?? null,
+        voucher_label:    saleData.voucher_label     ?? null,
+        discount_amount:  saleData.discount_amount    ?? 0,
       }),
     });
     if (!res.ok) throw new Error('Gagal mencatat penjualan.');

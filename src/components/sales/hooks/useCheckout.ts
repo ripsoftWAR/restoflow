@@ -25,6 +25,8 @@ interface CheckoutParams {
   totals: { subtotal: number; tax: number; service: number; grandTotal: number };
   discount: number;
   finalTotal: number;
+  voucherCode?: string;
+  voucherId?: string | number;
   voucherLabel?: string;
   isCartEmpty: boolean;
   paymentError: string | null;
@@ -41,7 +43,7 @@ export function useCheckout() {
   const handleCheckout = async (params: CheckoutParams) => {
     const {
       cart, recipes, paymentMethod, cashPaid, cashChange,
-      totals, discount, finalTotal, voucherLabel,
+      totals, discount, finalTotal, voucherCode, voucherId, voucherLabel,
       isCartEmpty, paymentError,
       onTriggerSale, onRefreshStats, onSuccess, cashInputRef,
     } = params;
@@ -66,19 +68,25 @@ export function useCheckout() {
         Object.entries(item.customChoices ?? {}).forEach(([k, v]) => parts.push(`${k}: ${v}`));
         const optionsStr = parts.join(', ');
         const lineTotal = item.price * item.qty;
+        const share = totals.subtotal > 0 ? (discount * lineTotal) / totals.subtotal : 0;
+        const discountedLineTotal = Math.max(0, Math.round(lineTotal - share));
 
         await onTriggerSale({
           menu_name: item.menuName,
           quantity: item.qty,
-          total_price: lineTotal,
+          total_price: discountedLineTotal,
           selected_options: optionsStr,
           payment_method: paymentMethod,
           cash_paid: paymentMethod === 'CASH' ? cashPaid : null,
           cash_change: paymentMethod === 'CASH' ? cashChange : null,
+          voucher_code: voucherCode || undefined,
+          voucher_id: voucherId || undefined,
+          voucher_label: voucherLabel || undefined,
+          discount_amount: discount,
         });
 
         lineReceipts.push({
-          menuName: item.menuName, qty: item.qty, price: item.price, total: lineTotal,
+          menuName: item.menuName, qty: item.qty, price: item.price, total: discountedLineTotal,
           options: optionsStr,
           category: recipes.find(r => r.menu_name === item.menuName)?.category ?? 'Makanan',
         });

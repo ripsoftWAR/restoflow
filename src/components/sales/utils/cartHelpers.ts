@@ -44,7 +44,5 @@ export const formatIDR = (n: number) =>
 
 export const calcCartTotals = (cart: CartItem[]) => {
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const tax      = Math.round(subtotal * 0.1);
-  const service  = 2000;
-  return { subtotal, tax, service, grandTotal: subtotal + tax + service };
+  return { subtotal, tax: 0, service: 0, grandTotal: subtotal };
 };

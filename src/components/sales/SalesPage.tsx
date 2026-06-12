@@ -43,6 +43,8 @@ export default function SalesPage({
       totals: cart.totals,
       discount: cart.discount,
       finalTotal: cart.finalTotal,
+      voucherCode: cart.voucherCode,
+      voucherId: cart.voucher?.id,
       voucherLabel: cart.voucher?.label,
       isCartEmpty: cart.isCartEmpty,
       paymentError: cart.paymentError,
@@ -109,7 +111,7 @@ export default function SalesPage({
           onClick={onNavigateToKasir}
           className="flex items-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[11px] font-bold transition flex-shrink-0"
         >
-          <Plus size={13} /> Transaksi Baru
+          <Plus size={13} /> Mode Kasir
         </button>
       </div>
 
