@@ -26,38 +26,63 @@ const logActivity = async (
   }
 };
 
-// ── Helper: insert default permissions ───────────────────────────────────────
-const insertDefaultPermissions = async (userId: number, restaurantId: number, role: string) => {
-  const menus = ['dashboard','penjualan','inventori','resep','pembelian','laporan','analisis','pengguna','pengaturan'];
-  
-  const defaultPerms: Record<string, { view: boolean; add: boolean; edit: boolean; delete: boolean }> = {
-    Pemilik: { view: true,  add: true,  edit: true,  delete: true  },
-    Manajer: { view: true,  add: true,  edit: true,  delete: false },
-    Kasir:   { view: false, add: false, edit: false, delete: false },
-    Dapur:   { view: false, add: false, edit: false, delete: false },
-  };
+// ── Helper: insert default features ──────────────────────────────────────────
+const FEATURE_KEYS_DEFAULT: Record<string, string[]> = {
+  Pemilik: [], // Pemilik tidak butuh row — selalu full access
+  Manajer: [
+    'pos.view', 'pos.create_transaction', 'pos.view_history', 'pos.export_csv', 'pos.export_pdf',
+    'pos.thermal_print', 'pos.generate_voucher', 'pos.apply_voucher',
+    'sales.view_log', 'sales.view_stats', 'sales.export_csv', 'sales.export_pdf', 'sales.filter_date',
+    'inventory.view', 'inventory.add', 'inventory.edit', 'inventory.delete', 'inventory.adjust_stock', 'inventory.view_logs',
+    'recipes.view', 'recipes.add', 'recipes.edit', 'recipes.delete',
+    'dashboard.view', 'dashboard.view_stats', 'dashboard.view_insights',
+    'ai.chat', 'ocr.scan', 'ocr.confirm',
+    'users.view',
+    'settings.view',
+  ],
+  Kasir: [
+    'pos.view', 'pos.create_transaction', 'pos.view_history',
+    'pos.apply_voucher',
+    'sales.view_log',
+    'ocr.scan', 'ocr.confirm',
+  ],
+  Dapur: [
+    'recipes.view',
+    'inventory.view',
+  ],
+};
 
-  const roleMenuAccess: Record<string, string[]> = {
-    Kasir:   ['dashboard', 'penjualan'],
-    Dapur:   ['resep'],
-    Manajer: ['dashboard', 'penjualan', 'inventori', 'resep', 'laporan'],
-  };
+const ALL_FEATURE_KEYS = [
+  // POS
+  'pos.view', 'pos.create_transaction', 'pos.view_history', 'pos.export_csv', 'pos.export_pdf',
+  'pos.thermal_print', 'pos.generate_voucher', 'pos.apply_voucher',
+  // Sales
+  'sales.view_log', 'sales.view_stats', 'sales.export_csv', 'sales.export_pdf', 'sales.filter_date',
+  // Inventory
+  'inventory.view', 'inventory.add', 'inventory.edit', 'inventory.delete', 'inventory.adjust_stock', 'inventory.view_logs',
+  // Recipes
+  'recipes.view', 'recipes.add', 'recipes.edit', 'recipes.delete',
+  // Dashboard
+  'dashboard.view', 'dashboard.view_stats', 'dashboard.view_insights',
+  // AI
+  'ai.chat',
+  // OCR
+  'ocr.scan', 'ocr.confirm',
+  // Users
+  'users.view', 'users.add', 'users.edit', 'users.toggle_active', 'users.reset_pin', 'users.manage_permissions',
+  // Settings
+  'settings.view',
+];
 
-  for (const menu of menus) {
-    const isPemilik = role === 'Pemilik';
-    const hasAccess = isPemilik || (roleMenuAccess[role]?.includes(menu) ?? false);
-    const p = defaultPerms[role] || { view: false, add: false, edit: false, delete: false };
-
+const insertDefaultFeatures = async (userId: number, restaurantId: number, role: string) => {
+  const allowed = FEATURE_KEYS_DEFAULT[role] || [];
+  for (const key of ALL_FEATURE_KEYS) {
+    const enabled = allowed.includes(key);
     await db.query(
-      `INSERT INTO user_permissions (user_id, restaurant_id, menu, can_view, can_add, can_edit, can_delete)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (user_id, menu) DO NOTHING`,
-      [userId, restaurantId, menu,
-        isPemilik ? true : hasAccess,
-        isPemilik ? true : (hasAccess && p.add),
-        isPemilik ? true : (hasAccess && p.edit),
-        isPemilik ? true : p.delete,
-      ]
+      `INSERT INTO user_features (user_id, restaurant_id, feature_key, enabled)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id, feature_key) DO UPDATE SET enabled = $4`,
+      [userId, restaurantId, key, enabled]
     );
   }
 };
@@ -88,24 +113,24 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// ── GET /api/users/:id/permissions — Ambil permissions user ──────────────────
-router.get('/:id/permissions', async (req: Request, res: Response) => {
+// ── GET /api/users/:id/features — Ambil features user ────────────────────────
+router.get('/:id/features', async (req: Request, res: Response) => {
   try {
     const restaurantId = req.user?.restaurant_id;
     const { id } = req.params;
 
     const result = await db.query(
-      `SELECT menu, can_view, can_add, can_edit, can_delete
-       FROM user_permissions
+      `SELECT feature_key, enabled
+       FROM user_features
        WHERE user_id = $1 AND restaurant_id = $2
-       ORDER BY menu`,
+       ORDER BY feature_key`,
       [id, restaurantId]
     );
 
     res.json({ success: true, data: result.rows });
   } catch (error: any) {
-    console.error('GET permissions error:', error.message);
-    res.status(500).json({ error: 'Gagal mengambil permissions' });
+    console.error('GET features error:', error.message);
+    res.status(500).json({ error: 'Gagal mengambil fitur' });
   }
 });
 
@@ -145,8 +170,8 @@ router.post('/', async (req: Request, res: Response) => {
 
     const newUser = result.rows[0];
 
-    // Insert default permissions
-    await insertDefaultPermissions(newUser.id, restaurantId, role);
+    // Insert default features
+    await insertDefaultFeatures(newUser.id, restaurantId, role);
 
     // Log aktivitas
     await logActivity(ownerId, restaurantId, 'ADD_USER', 'user', String(newUser.id), { username, role });
@@ -226,40 +251,35 @@ router.post('/:id/reset-pin', async (req: Request, res: Response) => {
   }
 });
 
-// ── PATCH /api/users/:id/permissions — Update permissions user ───────────────
-router.patch('/:id/permissions', async (req: Request, res: Response) => {
+// ── PATCH /api/users/:id/features — Update features user ────────────────────
+router.patch('/:id/features', async (req: Request, res: Response) => {
   try {
     const restaurantId = req.user?.restaurant_id;
     const ownerId      = req.user?.id;
     const { id }       = req.params;
-    const { permissions } = req.body;
-    // permissions: [{ menu, can_view, can_add, can_edit, can_delete }]
+    const { features } = req.body;
+    // features: [{ feature_key: string, enabled: boolean }]
 
-    if (!Array.isArray(permissions)) {
-      return res.status(400).json({ error: 'Format permissions tidak valid' });
+    if (!Array.isArray(features)) {
+      return res.status(400).json({ error: 'Format features tidak valid' });
     }
 
-    for (const p of permissions) {
+    for (const f of features) {
       await db.query(
-        `INSERT INTO user_permissions (user_id, restaurant_id, menu, can_view, can_add, can_edit, can_delete, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-         ON CONFLICT (user_id, menu)
-         DO UPDATE SET
-           can_view   = $4,
-           can_add    = $5,
-           can_edit   = $6,
-           can_delete = $7,
-           updated_at = NOW()`,
-        [id, restaurantId, p.menu, p.can_view, p.can_add, p.can_edit, p.can_delete]
+        `INSERT INTO user_features (user_id, restaurant_id, feature_key, enabled)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, feature_key)
+         DO UPDATE SET enabled = $4`,
+        [id, restaurantId, f.feature_key, f.enabled]
       );
     }
 
-    await logActivity(ownerId, restaurantId, 'EDIT_PERMISSION', 'user', id, { permissions });
+    await logActivity(ownerId, restaurantId, 'EDIT_FEATURES', 'user', id, { features_count: features.length });
 
     res.json({ success: true });
   } catch (error: any) {
-    console.error('PATCH permissions error:', error.message);
-    res.status(500).json({ error: 'Gagal update permissions' });
+    console.error('PATCH features error:', error.message);
+    res.status(500).json({ error: 'Gagal update features' });
   }
 });
 

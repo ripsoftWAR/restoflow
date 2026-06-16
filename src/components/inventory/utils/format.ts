@@ -11,8 +11,24 @@ export const formatStock = (amount: number, unit: BaseUnit) => {
   return `${amount} ${unit}`;
 };
 
+/** Format angka stok mentah (tetap dalam base unit, tanpa konversi ke kg/L) */
+export const formatStockRaw = (amount: number) =>
+  new Intl.NumberFormat('id-ID').format(amount);
+
 export const pricePerBulk = (unitPrice: number, unit: BaseUnit) =>
   unit === 'pcs' ? unitPrice : unitPrice * 1000;
 
 export const bulkLabel = (unit: BaseUnit) =>
   unit === 'gram' ? 'kg' : unit === 'ml' ? 'Liter' : 'pcs';
+
+/** Label satuan singkat untuk header/display */
+export const unitLabel = (unit: BaseUnit) =>
+  unit === 'gram' ? 'gram' : unit === 'ml' ? 'ml' : 'pcs';
+
+/** Format harga per unit: "Rp 140/gram" */
+export const formatPricePerUnit = (unitPrice: number, unit: BaseUnit) =>
+  `Rp ${formatIDR(unitPrice)}/${unitLabel(unit)}`;
+
+/** Format harga per bulk: "Rp 140.000/kg" */
+export const formatPricePerBulk = (unitPrice: number, unit: BaseUnit) =>
+  unit === 'pcs' ? '—' : `Rp ${formatIDR(pricePerBulk(unitPrice, unit))}/${bulkLabel(unit)}`;

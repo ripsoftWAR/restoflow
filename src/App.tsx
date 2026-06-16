@@ -17,6 +17,7 @@ import DesktopLayout from './components/layout/DesktopLayout';
 import KasirMode from './components/kasir/KasirMode';
 
 import { useAppData } from '../src/hooks/useAppData';
+import { FeaturesProvider, useFeatures } from '../src/hooks/useFeatures';
 import { NavItem } from '../src/types';
 
 
@@ -43,8 +44,6 @@ const Spinner = ({ label }: { label: string }) => (
 );
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('home');
-
   const {
     stats, ingredients, recipes, sales, movements,
     loading, authChecked, authSession, authError, authMode,
@@ -56,24 +55,6 @@ export default function App() {
     handleTriggerSale,
     handleScanReceipt, handleConfirmReceiptItems,
   } = useAppData();
-
-  // ─── Role-based nav ────────────────────────────────────────────────────────
-  const rolePrimaryTabs = authSession?.user.role === 'Pemilik'
-    ? NAV_ITEMS
-    : authSession?.user.role === 'Kasir'
-      ? NAV_ITEMS.filter(i => i.id === 'sales')
-      : NAV_ITEMS.filter(i => i.id === 'inventory');
-
-  const roleSecondaryTabs = authSession?.user.role === 'Pemilik'
-    ? NAV_SECONDARY
-    : authSession?.user.role === 'Kasir'
-      ? NAV_SECONDARY.filter(i => i.id === 'ocr')
-      : [];
-
-  useEffect(() => {
-    const allowed = [...rolePrimaryTabs, ...roleSecondaryTabs].map(i => i.id);
-    if (authSession && !allowed.includes(activeTab)) setActiveTab(allowed[0] || 'home');
-  }, [authSession, rolePrimaryTabs.length, roleSecondaryTabs.length]);
 
   // ─── Gates ────────────────────────────────────────────────────────────────
   if (!authChecked) return <Spinner label="Memuat sesi..." />;
@@ -87,6 +68,67 @@ export default function App() {
     />
   );
   if (loading) return <Spinner label="Initializing RestFlow…" />;
+
+  return (
+    <FeaturesProvider
+      features={authSession.features || []}
+      isPemilik={authSession.user.role === 'Pemilik'}
+    >
+      <AppContent
+        authSession={authSession}
+        stats={stats}
+        ingredients={ingredients}
+        recipes={recipes}
+        sales={sales}
+        movements={movements}
+        handleLogout={handleLogout}
+        fetchAllData={fetchAllData}
+        handleAddIngredient={handleAddIngredient}
+        handleEditIngredient={handleEditIngredient}
+        handleDeleteIngredient={handleDeleteIngredient}
+        handleAdjustStock={handleAdjustStock}
+        handleAddOrUpdateRecipe={handleAddOrUpdateRecipe}
+        handleDeleteRecipe={handleDeleteRecipe}
+        handleTriggerSale={handleTriggerSale}
+        handleScanReceipt={handleScanReceipt}
+        handleConfirmReceiptItems={handleConfirmReceiptItems}
+      />
+    </FeaturesProvider>
+  );
+}
+
+function AppContent(props: any) {
+  const {
+    authSession, stats, ingredients, recipes, sales, movements,
+    handleLogout, fetchAllData,
+    handleAddIngredient, handleEditIngredient, handleDeleteIngredient, handleAdjustStock,
+    handleAddOrUpdateRecipe, handleDeleteRecipe, handleTriggerSale,
+    handleScanReceipt, handleConfirmReceiptItems,
+  } = props;
+
+  const [activeTab, setActiveTab] = useState('home');
+  const { can } = useFeatures();
+
+  // ─── Feature-based nav ────────────────────────────────────────────────────
+  const rolePrimaryTabs = NAV_ITEMS.filter(item => {
+    if (item.id === 'home') return can('dashboard.view');
+    if (item.id === 'inventory') return can('inventory.view');
+    if (item.id === 'recipes') return can('recipes.view');
+    if (item.id === 'sales') return can('sales.view_log') || can('pos.view');
+    if (item.id === 'users') return can('users.view');
+    return false;
+  });
+
+  const roleSecondaryTabs = NAV_SECONDARY.filter(item => {
+    if (item.id === 'ocr') return can('ocr.scan');
+    if (item.id === 'logs') return can('inventory.view_logs');
+    return false;
+  });
+
+  useEffect(() => {
+    const allowed = [...rolePrimaryTabs, ...roleSecondaryTabs].map(i => i.id);
+    if (!allowed.includes(activeTab)) setActiveTab(allowed[0] || 'home');
+  }, [authSession, rolePrimaryTabs.length, roleSecondaryTabs.length]);
 
   // ─── Main content ──────────────────────────────────────────────────────────
   const Content = () => (
@@ -109,7 +151,7 @@ export default function App() {
               </div>
             )
         )}
-        {activeTab === 'inventory' && (
+        {activeTab === 'inventory' && can('inventory.view') && (
           <Inventory
             ingredients={ingredients}
             onAddIngredient={handleAddIngredient}
@@ -118,7 +160,7 @@ export default function App() {
             onDeleteIngredient={handleDeleteIngredient}
           />
         )}
-        {activeTab === 'recipes' && (
+        {activeTab === 'recipes' && can('recipes.view') && (
           <RecipeSystem
             ingredients={ingredients}
             recipes={recipes}
@@ -126,28 +168,26 @@ export default function App() {
             onDeleteRecipe={handleDeleteRecipe}
           />
         )}
-        {activeTab === 'sales' && (
+        {activeTab === 'sales' && (can('sales.view_log') || can('pos.view')) && (
           <SalesSimulator
             recipes={recipes}
             ingredients={ingredients}
             sales={sales}
             onTriggerSale={handleTriggerSale}
-            onRefreshStats={fetchAllData}
-            onNavigateToKasir={() => setActiveTab('kasir')}
+            onRefreshStats={() => fetchAllData(authSession, true)} onNavigateToKasir={() => setActiveTab('kasir')}
             user={{
               ...authSession.user,
-              sessionId: authSession.user.id // Gunakan authSession.user.id
+              sessionId: authSession.user.id
             }}
           />
         )}
-        {activeTab === 'kasir' && (
+        {activeTab === 'kasir' && can('pos.view') && (
           <KasirMode
             recipes={recipes}
             ingredients={ingredients}
             sales={sales}
             onTriggerSale={handleTriggerSale}
-            onRefreshStats={fetchAllData}
-            onExit={() => setActiveTab('sales')}
+            onRefreshStats={() => fetchAllData(authSession, true)} onExit={() => setActiveTab('sales')}
             user={{
               ...authSession.user,
               sessionId: authSession.session_id,
@@ -155,17 +195,17 @@ export default function App() {
             }}
           />
         )}
-        {activeTab === 'ocr' && (
+        {activeTab === 'ocr' && can('ocr.scan') && (
           <ReceiptScanner ingredients={ingredients} onScanReceipt={handleScanReceipt} onConfirmReceiptItems={handleConfirmReceiptItems} onRefreshStats={fetchAllData} />
         )}
-        {activeTab === 'ai' && (
+        {activeTab === 'ai' && can('ai.chat') && (
           <AIChatAssistant ingredients={ingredients} recipes={recipes} onRefreshData={fetchAllData} embedded onClose={() => setActiveTab('home')} />
         )}
-        {activeTab === 'logs' && <MovementLogs movements={movements} />}
-        {activeTab === 'users' && (
+        {activeTab === 'logs' && can('inventory.view_logs') && <MovementLogs movements={movements} />}
+        {activeTab === 'users' && can('users.view') && (
           <UsersPage user={{ ...authSession.user, sessionId: authSession.session_id }} />
         )}
-        {activeTab === 'settings' && (
+        {activeTab === 'settings' && can('settings.view') && (
           <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
             <h2 className="text-lg font-semibold text-slate-900">Pengaturan</h2>
             <p className="text-sm text-slate-500 mt-2">Halaman pengaturan sedang dalam pembangunan.</p>

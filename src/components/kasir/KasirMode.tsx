@@ -8,7 +8,6 @@ import {
   Zap,
   Filter,
   Download,
-  Printer,
   ChevronDown,
   BadgeCheck,
 } from 'lucide-react';
@@ -24,6 +23,7 @@ import {
   VoucherResult,
 } from '../sales/utils/salesHelpers';
 import { makeApiFetch } from '../../utils/api';
+import { CheckCircle, Printer } from 'lucide-react';
 
 // ── Click sound ───────────────────────────────────────────────────────────────
 const playClick = () => {
@@ -68,13 +68,7 @@ function StatCard({
   value: string;
   accent: 'green' | 'blue' | 'purple' | 'orange';
 }) {
-  const colors: Record<string, string> = {
-    green: 'bg-emerald-50 border-emerald-100 text-emerald-500 font-bold-color text-emerald-700',
-    blue: 'bg-sky-50 border-sky-100 text-sky-500 font-bold-color text-sky-700',
-    purple: 'bg-purple-50 border-purple-100 text-purple-500 font-bold-color text-purple-700',
-    orange: 'bg-orange-50 border-orange-100 text-orange-500 font-bold-color text-orange-700',
-  };
-
+  // FIX #5: Hapus variable `colors` yang tidak pernah dipakai
   const accentMap: Record<string, { bg: string; label: string; value: string }> = {
     green: { bg: 'bg-emerald-50 border-emerald-100', label: 'text-emerald-500', value: 'text-emerald-700' },
     blue: { bg: 'bg-sky-50 border-sky-100', label: 'text-sky-500', value: 'text-sky-700' },
@@ -186,8 +180,11 @@ export default function KasirMode({
       .catch(console.error);
   }, [user?.restaurant_id]);
 
-  // ── Checkout ───────────────────────────────────────────────────────────────
-    const doCheckout = useCallback(() => {
+  // Gunakan ref agar onSuccess tidak stale walau parent re-render di tengah checkout
+  const setLastSaleRef = useRef(setLastSale);
+  useEffect(() => { setLastSaleRef.current = setLastSale; }, [setLastSale]);
+
+  const doCheckout = useCallback(() => {
     handleCheckout({
       cart: cart.cart,
       recipes,
@@ -206,23 +203,36 @@ export default function KasirMode({
       onRefreshStats,
       cashInputRef: cart.cashInputRef,
       onSuccess: (receipt) => {
-        console.log('✅ onSuccess fired', receipt);
-        setLastSale({
-          items: receipt.items.map(i => ({
-            menuName: i.menuName,
-            qty: i.qty,
-            price: i.price,
-          })),
-          paymentMethod: receipt.paymentMethod,
-          cashPaid: receipt.cashPaid,
-          cashChange: receipt.cashChange,
-          finalTotal: receipt.totalAmount,
-          voucherLabel: receipt.voucherLabel,
-          discount: receipt.discount,
-        });
+        console.log('✅ onSuccess dipanggil, set lastSale:', receipt);
+        setLastSaleRef.current(receipt); // pakai ref → tidak pernah stale
       },
     });
-  }, [cart, handleCheckout, recipes, onTriggerSale, onRefreshStats, setLastSale]);
+  }, [
+    cart.cart,
+    cart.paymentMethod,
+    cart.cashPaid,
+    cart.cashChange,
+    cart.totals,
+    cart.discount,
+    cart.finalTotal,
+    cart.voucherCode,
+    cart.voucher,
+    cart.isCartEmpty,
+    cart.paymentError,
+    cart.cashInputRef,
+    handleCheckout,
+    recipes,
+    onTriggerSale,
+    onRefreshStats,
+  ]);
+
+  // ── FIX #2 & #3: Satu handler terpusat untuk tutup receipt ─────────────────
+  const handleReceiptClose = useCallback(() => {
+    setLastSale(null);
+    cart.clearCart();
+    onRefreshStats();
+  }, [cart.clearCart, onRefreshStats]);
+
   // ── Item add handler ───────────────────────────────────────────────────────
   const handleAddItem = useCallback(
     (r: RecipeWithDetails) => {
@@ -398,7 +408,6 @@ export default function KasirMode({
     >
       {/* ── Topbar ──────────────────────────────────────────────────────────── */}
       <header className="bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm px-5 py-2.5 flex items-center gap-3 flex-shrink-0 z-10">
-        {/* Logo + user */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <div
             className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md"
@@ -422,10 +431,8 @@ export default function KasirMode({
           </div>
         </div>
 
-        {/* Divider */}
         <div className="h-8 w-px bg-slate-100 flex-shrink-0 hidden md:block" />
 
-        {/* Stats */}
         <div className="hidden md:flex items-center gap-2">
           <StatCard label="Omzet Hari Ini" value={formatIDR(todayTotal)} accent="green" />
           <StatCard label="Transaksi" value={`${todayCount}×`} accent="blue" />
@@ -436,7 +443,6 @@ export default function KasirMode({
           />
         </div>
 
-        {/* Tabs — center */}
         <div className="flex items-center gap-1 mx-auto bg-slate-100 rounded-2xl p-1">
           <TabBtn
             active={activeTab === 'pos'}
@@ -460,7 +466,6 @@ export default function KasirMode({
           />
         </div>
 
-        {/* Exit */}
         <button
           onClick={onExit}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-[12px] font-semibold text-slate-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all flex-shrink-0 shadow-sm"
@@ -476,7 +481,6 @@ export default function KasirMode({
         {/* ══ TAB 1: POS ══════════════════════════════════════════════════════ */}
         {activeTab === 'pos' && (
           <div className="flex h-full">
-            {/* Menu area — uses KasirMenuGrid */}
             <div className="flex-1 min-w-0 overflow-hidden">
               <KasirMenuGrid
                 recipes={recipes}
@@ -487,7 +491,8 @@ export default function KasirMode({
               />
             </div>
 
-            {/* Cart panel */}
+            {/* FIX #3: Hapus lastSale prop dari KasirCartPanel,
+                receipt modal dikelola sepenuhnya di KasirMode */}
             <KasirCartPanel
               recipes={recipes}
               cart={cart.cart}
@@ -509,14 +514,10 @@ export default function KasirMode({
               onApplyVoucher={cart.handleApplyVoucher}
               onRemoveVoucher={cart.removeVoucher}
               onDecrement={cart.decrementQty}
-              onIncrement={(id: string) => cart.incrementQty(id)}              onRemoveItem={cart.removeItem}
+              onIncrement={(id: string) => cart.incrementQty(id)}
+              onRemoveItem={cart.removeItem}
               onClearCart={cart.clearCart}
               onCheckout={doCheckout}
-              lastSale={lastSale}
-              onReceiptClose={() => {
-                setLastSale(null);
-                cart.clearCart();
-              }}
               stockMap={Object.fromEntries(
                 recipes.map(r => [r.menu_name, calculateCookableLimit(r, ingredients)])
               )}
@@ -528,7 +529,6 @@ export default function KasirMode({
         {activeTab === 'riwayat' && (
           <div className="h-full overflow-y-auto px-5 py-4 space-y-4">
 
-            {/* Summary cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {paymentBreakdown.map((b) => (
                 <div
@@ -548,7 +548,6 @@ export default function KasirMode({
               ))}
             </div>
 
-            {/* Toolbar */}
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5 mr-auto">
                 <TrendingUp size={14} className="text-purple-500" />
@@ -560,7 +559,6 @@ export default function KasirMode({
                 </p>
               </div>
 
-              {/* Filter dropdown */}
               <div className="relative" ref={filterRef}>
                 <button
                   onClick={() => setFilterOpen((p) => !p)}
@@ -586,7 +584,6 @@ export default function KasirMode({
                 )}
               </div>
 
-              {/* Export buttons */}
               <button
                 onClick={exportExcel}
                 className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition shadow-sm"
@@ -607,7 +604,6 @@ export default function KasirMode({
               </button>
             </div>
 
-            {/* Table */}
             {filteredSales.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-300">
                 <History size={40} strokeWidth={1.5} className="mb-3" />
@@ -621,36 +617,22 @@ export default function KasirMode({
                 <table className="w-full text-[11px]">
                   <thead>
                     <tr className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-purple-50/30">
-                      <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase tracking-widest text-[9px]">
-                        Waktu
-                      </th>
-                      <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase tracking-widest text-[9px]">
-                        Menu
-                      </th>
-                      <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase tracking-widest text-[9px]">
-                        Qty
-                      </th>
-                      <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase tracking-widest text-[9px]">
-                        Bayar
-                      </th>
-                      <th className="text-right px-4 py-3 font-bold text-slate-500 uppercase tracking-widest text-[9px]">
-                        Total
-                      </th>
+                      <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase tracking-widest text-[9px]">Waktu</th>
+                      <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase tracking-widest text-[9px]">Menu</th>
+                      <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase tracking-widest text-[9px]">Qty</th>
+                      <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase tracking-widest text-[9px]">Bayar</th>
+                      <th className="text-right px-4 py-3 font-bold text-slate-500 uppercase tracking-widest text-[9px]">Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredSales.map((s, i) => (
                       <tr
                         key={s.id}
-                        className={`border-b border-slate-50 transition hover:bg-purple-50/40 ${i % 2 === 0 ? '' : 'bg-slate-50/40'
-                          }`}
+                        className={`border-b border-slate-50 transition hover:bg-purple-50/40 ${i % 2 === 0 ? '' : 'bg-slate-50/40'}`}
                       >
                         <td className="px-4 py-2.5 text-slate-400 font-mono text-[10px]">
                           {s.created_at
-                            ? new Date(s.created_at).toLocaleTimeString('id-ID', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
+                            ? new Date(s.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
                             : '—'}
                         </td>
                         <td className="px-4 py-2.5 font-semibold text-slate-700 max-w-[160px]">
@@ -660,10 +642,7 @@ export default function KasirMode({
                           <span className="font-bold">{s.quantity ?? 1}</span>×
                         </td>
                         <td className="px-4 py-2.5">
-                          <span
-                            className={`px-2 py-0.5 rounded-lg text-[9px] font-black ${pmColor[s.payment_method ?? ''] ?? 'bg-slate-100 text-slate-600'
-                              }`}
-                          >
+                          <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black ${pmColor[s.payment_method ?? ''] ?? 'bg-slate-100 text-slate-600'}`}>
                             {s.payment_method ?? '—'}
                           </span>
                         </td>
@@ -696,7 +675,6 @@ export default function KasirMode({
         {activeTab === 'voucher' && (
           <div className="h-full overflow-y-auto px-5 py-6">
             <div className="max-w-2xl mx-auto">
-              {/* Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-7 h-7 rounded-xl bg-purple-100 flex items-center justify-center">
@@ -709,7 +687,6 @@ export default function KasirMode({
                 </p>
               </div>
 
-              {/* Active vouchers summary */}
               {Object.keys(generatedVouchers).length > 0 && (
                 <div className="mb-5">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
@@ -722,10 +699,7 @@ export default function KasirMode({
                         <div
                           key={code}
                           className="flex items-center gap-3 bg-white border border-purple-100 rounded-xl px-3.5 py-2.5 shadow-sm"
-                          style={{
-                            background:
-                              'linear-gradient(135deg, #faf5ff 0%, #ffffff 100%)',
-                          }}
+                          style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #ffffff 100%)' }}
                         >
                           <div className="w-7 h-7 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
                             <Tag size={12} className="text-purple-600" />
@@ -740,13 +714,10 @@ export default function KasirMode({
                 </div>
               )}
 
-              {/* VoucherGenerator component */}
               <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-purple-50/60 to-slate-50">
                   <p className="text-[12px] font-black text-slate-700">Buat Voucher Baru</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Voucher berlaku untuk semua menu hari ini.
-                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Voucher berlaku untuk semua menu hari ini.</p>
                 </div>
                 <div className="p-5">
                   <VoucherGenerator
@@ -766,7 +737,7 @@ export default function KasirMode({
         )}
       </div>
 
-      {/* ── Option Sheet Modal (POS tab) ─────────────────────────────────────── */}
+      {/* ── Option Sheet Modal ───────────────────────────────────────────────── */}
       {cart.optionSheet.open && (
         <div
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4"
@@ -777,7 +748,6 @@ export default function KasirMode({
             className="w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Sheet header */}
             <div
               className="px-6 pt-6 pb-4 border-b border-slate-100"
               style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #ffffff 100%)' }}
@@ -790,7 +760,6 @@ export default function KasirMode({
               </h3>
             </div>
 
-            {/* Options */}
             <div className="px-6 py-5 space-y-5 max-h-[55vh] overflow-y-auto">
               {(() => {
                 const activeRecipe = recipes.find(
@@ -806,9 +775,7 @@ export default function KasirMode({
                             key={s}
                             label={s}
                             active={cart.optionSheet.spice === s}
-                            onClick={() =>
-                              cart.setOptionSheet((p: any) => ({ ...p, spice: s }))
-                            }
+                            onClick={() => cart.setOptionSheet((p: any) => ({ ...p, spice: s }))}
                           />
                         ))}
                       </OptionGroup>
@@ -820,9 +787,7 @@ export default function KasirMode({
                             key={s}
                             label={s}
                             active={cart.optionSheet.sugar === s}
-                            onClick={() =>
-                              cart.setOptionSheet((p: any) => ({ ...p, sugar: s }))
-                            }
+                            onClick={() => cart.setOptionSheet((p: any) => ({ ...p, sugar: s }))}
                           />
                         ))}
                       </OptionGroup>
@@ -856,7 +821,6 @@ export default function KasirMode({
               })()}
             </div>
 
-            {/* Sheet footer */}
             <div className="px-6 pb-6 pt-4 border-t border-slate-100 flex gap-3">
               <button
                 onClick={() => cart.setOptionSheet((s: any) => ({ ...s, open: false }))}
@@ -879,37 +843,65 @@ export default function KasirMode({
           </div>
         </div>
       )}
+
+      {/* ── Receipt / Success Modal ──────────────────────────────────────────── */}
+      {/* FIX #2 & #3: Satu modal terpusat, pakai handleReceiptClose untuk semua tombol */}
+      {lastSale && (
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-xl"
+          style={{ zIndex: 99999 }}
+        >
+          <div className="bg-white rounded-[40px] w-full max-w-sm overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+            <div className="p-10 text-center text-white" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+              <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4 border-4 border-white/40">
+                <CheckCircle size={56} />
+              </div>
+              <p className="text-[12px] font-black uppercase tracking-widest opacity-80 mb-2">Transaction Success</p>
+              <h2 className="text-4xl font-black mb-1">{formatIDR(lastSale.finalTotal || lastSale.totalAmount)}</h2>
+              <p className="text-sm font-medium opacity-90">{lastSale.paymentMethod}</p>
+            </div>
+
+            <div className="p-8 space-y-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const w = window.open('', '_blank');
+                  w?.document.write(`<html><body><h2>STRUK</h2><hr/>TOTAL: ${formatIDR(lastSale.finalTotal)}</body></html>`);
+                  w?.document.close();
+                  w?.print();
+                }}
+                className="w-full py-4 border-2 border-slate-100 rounded-3xl font-black text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-50 transition-all"
+              >
+                <Printer size={20} /> Cetak Struk
+              </button>
+
+              {/* FIX #2: Pakai handleReceiptClose — clear cart + refresh stats + tutup modal sekaligus */}
+              <button
+                type="button"
+                onClick={handleReceiptClose}
+                className="w-full py-4 bg-purple-600 text-white rounded-3xl font-black text-[16px] shadow-xl shadow-purple-100 transition-all active:scale-95"
+              >
+                Transaksi Baru
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Helper UI ─────────────────────────────────────────────────────────────────
-function OptionGroup({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function OptionGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
-        {label}
-      </p>
+      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2.5">{label}</p>
       <div className="flex flex-wrap gap-2">{children}</div>
     </div>
   );
 }
 
-function OptionChip({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
+function OptionChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}

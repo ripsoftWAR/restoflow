@@ -9,6 +9,8 @@ interface RightSidebarProps {
   ingredients: Ingredient[];
   totalItem: number;
   onAddClick: () => void;
+  isFullscreen: boolean;
+  toggleFullscreen: () => void;
   onAdjustFirstClick: () => void;
 }
 

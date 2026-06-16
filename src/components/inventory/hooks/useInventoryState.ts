@@ -7,6 +7,7 @@ export function useInventoryState(ingredients: Ingredient[]) {
   // ── Filters ──
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('Semua Bahan');
+  const [statusFilter, setStatusFilter] = useState('Semua');
 
   // ── Modal ──
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -28,11 +29,14 @@ export function useInventoryState(ingredients: Ingredient[]) {
       const matchSearch =
         ing.name.toLowerCase().includes(q) ||
         ing.supplier.toLowerCase().includes(q);
-      if (activeTab === 'Semua Bahan') return matchSearch;
-      if (activeTab === 'Stok Kritis') return matchSearch && ing.stock <= ing.min_stock;
-      return matchSearch && ing.category === activeTab;
+      const matchCategory = activeTab === 'Semua Bahan' ? true : ing.category === activeTab;
+      const matchStatus =
+        statusFilter === 'Semua' ? true
+        : statusFilter === 'Aman' ? ing.stock > ing.min_stock
+        : ing.stock <= ing.min_stock;
+      return matchSearch && matchCategory && matchStatus;
     });
-  }, [ingredients, search, activeTab]);
+  }, [ingredients, search, activeTab, statusFilter]);
 
   const stats = useMemo(() => ({
     totalItem:   ingredients.length,
@@ -45,6 +49,7 @@ export function useInventoryState(ingredients: Ingredient[]) {
     // filters
     search, setSearch,
     activeTab, setActiveTab,
+    statusFilter, setStatusFilter,
     // modal
     activeModal, selected,
     openModal, closeModal,

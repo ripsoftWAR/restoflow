@@ -72,6 +72,8 @@ export const requireRole = (...roles: string[]) => {
       if (!req.user) {
         return res.status(401).json({ error: 'Akses ditolak, user belum terautentikasi' });
       }
+      // Pemilik selalu lolos — bypass role check
+      if (req.user.role === 'Pemilik') return next();
       if (!roles.includes(req.user.role)) {
         return res.status(403).json({ error: 'Akses dilarang untuk role ini' });
       }
@@ -82,7 +84,6 @@ export const requireRole = (...roles: string[]) => {
       return run();
     }
     
-    // Jika requireAuth belum dijalankan, jalankan secara asinkron
     try {
       await requireAuth(req, res, (err?: any) => {
         if (err) return next(err);
@@ -92,4 +93,49 @@ export const requireRole = (...roles: string[]) => {
       next(e);
     }
   };
+};
+
+// ── Feature-based middleware (granular) ───────────────────────────────────────
+export const requireFeature = (featureKey: string) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    // Pastikan user sudah terautentikasi
+    if (!req.user) {
+      try {
+        await requireAuth(req, res, (err?: any) => {
+          if (err) return next(err);
+          checkFeature(req, res, next, featureKey);
+        });
+        return;
+      } catch (e) {
+        return next(e);
+      }
+    }
+    await checkFeature(req, res, next, featureKey);
+  };
+};
+
+const checkFeature = async (req: Request, res: Response, next: NextFunction, featureKey: string) => {
+  try {
+    // Pemilik selalu punya semua akses
+    if (req.user?.role === 'Pemilik') return next();
+
+    const result = await db.query(
+      `SELECT enabled FROM user_features
+       WHERE user_id = $1 AND feature_key = $2`,
+      [req.user?.id, featureKey]
+    );
+
+    const feature = result.rows[0];
+    if (!feature || !feature.enabled) {
+      return res.status(403).json({
+        error: 'Akses ditolak',
+        detail: `Fitur "${featureKey}" tidak diaktifkan untuk user ini`,
+      });
+    }
+
+    next();
+  } catch (err) {
+    console.error('Feature check error:', err);
+    return res.status(500).json({ error: 'Gagal memeriksa izin fitur' });
+  }
 };

@@ -3,9 +3,10 @@ import {
   Users, Plus, Search, MoreHorizontal, Shield, RefreshCw,
   CheckCircle, XCircle, Clock, Eye, EyeOff, Copy, Check,
   ChevronLeft, ChevronRight, X, Save, AlertTriangle,
-  Activity, UserCheck, UserX, UserPlus,
+  Activity, UserCheck, UserX, UserPlus, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { makeApiFetch } from '../utils/api';
+import { FEATURE_KEYS, FEATURE_GROUPS, type FeatureKey } from '../hooks/useFeatures';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface User {
@@ -20,12 +21,9 @@ interface User {
   invited_by_name?: string;
 }
 
-interface Permission {
-  menu: string;
-  can_view: boolean;
-  can_add: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
+interface FeatureRow {
+  feature_key: string;
+  enabled: boolean;
 }
 
 interface UsersPageProps {
@@ -33,17 +31,6 @@ interface UsersPageProps {
 }
 
 const ROLES = ['Kasir', 'Dapur', 'Manajer'];
-const MENUS = [
-  { key: 'dashboard',  label: 'Dashboard',    icon: '📊' },
-  { key: 'penjualan',  label: 'Penjualan',    icon: '🛒' },
-  { key: 'inventori',  label: 'Inventori',    icon: '📦' },
-  { key: 'resep',      label: 'Resep',        icon: '🍳' },
-  { key: 'pembelian',  label: 'Pembelian',    icon: '🛍️' },
-  { key: 'laporan',    label: 'Laporan',      icon: '📈' },
-  { key: 'analisis',   label: 'Analisis AI',  icon: '🤖' },
-  { key: 'pengguna',   label: 'Pengguna',     icon: '👥' },
-  { key: 'pengaturan', label: 'Pengaturan',   icon: '⚙️' },
-];
 
 const ROLE_COLORS: Record<string, string> = {
   Pemilik: 'bg-purple-100 text-purple-700',
@@ -59,8 +46,8 @@ export default function UsersPage({ user }: UsersPageProps) {
   const [search, setSearch]             = useState('');
   const [roleFilter, setRoleFilter]     = useState('Semua Role');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [permissions, setPermissions]   = useState<Permission[]>([]);
-  const [permLoading, setPermLoading]   = useState(false);
+  const [features, setFeatures]         = useState<FeatureRow[]>([]);
+  const [featLoading, setFeatLoading]   = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPinModal, setShowPinModal] = useState<{ pin: string; nama: string } | null>(null);
   const [page, setPage]                 = useState(1);
@@ -91,24 +78,28 @@ export default function UsersPage({ user }: UsersPageProps) {
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
-  // Load permissions when user selected
+  // Load features when user selected
   useEffect(() => {
     if (!selectedUser) return;
-    setPermLoading(true);
-    apiFetch(`/api/users/${selectedUser.id}/permissions`)
+    setFeatLoading(true);
+    apiFetch(`/api/users/${selectedUser.id}/features`)
       .then(r => r.json())
       .then(data => {
         if (data.success) {
-          // Fill missing menus with defaults
-          const map = Object.fromEntries(data.data.map((p: Permission) => [p.menu, p]));
-          const full = MENUS.map(m => map[m.key] || {
-            menu: m.key, can_view: false, can_add: false, can_edit: false, can_delete: false
-          });
-          setPermissions(full);
+          // Fill missing features with defaults (disabled)
+          const map = Object.fromEntries(
+            data.data.map((f: FeatureRow) => [f.feature_key, f.enabled])
+          );
+          const allKeys = Object.keys(FEATURE_KEYS) as FeatureKey[];
+          const full = allKeys.map(key => ({
+            feature_key: key,
+            enabled: map[key] ?? false,
+          }));
+          setFeatures(full);
         }
       })
-      .catch(() => showToast('Gagal memuat permissions', 'error'))
-      .finally(() => setPermLoading(false));
+      .catch(() => showToast('Gagal memuat izin fitur', 'error'))
+      .finally(() => setFeatLoading(false));
   }, [selectedUser, apiFetch]);
 
   // Filter & paginate
@@ -129,20 +120,20 @@ export default function UsersPage({ user }: UsersPageProps) {
     inactive: users.filter(u => !u.is_active).length,
   };
 
-  // Save permissions
-  const savePermissions = async () => {
+  // Save features
+  const saveFeatures = async () => {
     if (!selectedUser) return;
     setSaving(true);
     try {
-      const res = await apiFetch(`/api/users/${selectedUser.id}/permissions`, {
+      const res = await apiFetch(`/api/users/${selectedUser.id}/features`, {
         method: 'PATCH',
-        body: JSON.stringify({ permissions }),
+        body: JSON.stringify({ features }),
       });
       const data = await res.json();
-      if (data.success) showToast('Hak akses berhasil disimpan');
+      if (data.success) showToast('Izin fitur berhasil disimpan');
       else showToast(data.error || 'Gagal menyimpan', 'error');
     } catch {
-      showToast('Gagal menyimpan hak akses', 'error');
+      showToast('Gagal menyimpan izin fitur', 'error');
     } finally {
       setSaving(false);
     }
@@ -183,27 +174,42 @@ export default function UsersPage({ user }: UsersPageProps) {
     }
   };
 
-  const updatePerm = (menu: string, field: keyof Permission, value: boolean) => {
-    setPermissions(prev => prev.map(p =>
-      p.menu === menu ? { ...p, [field]: value } : p
+  const toggleFeature = (key: string) => {
+    setFeatures(prev => prev.map(f =>
+      f.feature_key === key ? { ...f, enabled: !f.enabled } : f
     ));
   };
 
   const resetToDefault = () => {
     if (!selectedUser) return;
-    const roleMenuAccess: Record<string, string[]> = {
-      Kasir:   ['dashboard', 'penjualan'],
-      Dapur:   ['resep'],
-      Manajer: ['dashboard', 'penjualan', 'inventori', 'resep', 'laporan'],
-      Pemilik: MENUS.map(m => m.key),
+    const roleDefaults: Record<string, string[]> = {
+      Pemilik: Object.keys(FEATURE_KEYS),
+      Manajer: [
+        'pos.view', 'pos.create_transaction', 'pos.view_history', 'pos.export_csv', 'pos.export_pdf',
+        'pos.thermal_print', 'pos.generate_voucher', 'pos.apply_voucher',
+        'sales.view_log', 'sales.view_stats', 'sales.export_csv', 'sales.export_pdf', 'sales.filter_date',
+        'inventory.view', 'inventory.add', 'inventory.edit', 'inventory.delete', 'inventory.adjust_stock', 'inventory.view_logs',
+        'recipes.view', 'recipes.add', 'recipes.edit', 'recipes.delete',
+        'dashboard.view', 'dashboard.view_stats', 'dashboard.view_insights',
+        'ai.chat', 'ocr.scan', 'ocr.confirm',
+        'users.view',
+        'settings.view',
+      ],
+      Kasir: [
+        'pos.view', 'pos.create_transaction', 'pos.view_history',
+        'pos.apply_voucher',
+        'sales.view_log',
+        'ocr.scan', 'ocr.confirm',
+      ],
+      Dapur: [
+        'recipes.view',
+        'inventory.view',
+      ],
     };
-    const allowed = roleMenuAccess[selectedUser.role] || [];
-    setPermissions(MENUS.map(m => ({
-      menu: m.key,
-      can_view:   allowed.includes(m.key),
-      can_add:    allowed.includes(m.key) && ['Pemilik','Manajer','Kasir'].includes(selectedUser.role),
-      can_edit:   allowed.includes(m.key) && ['Pemilik','Manajer'].includes(selectedUser.role),
-      can_delete: selectedUser.role === 'Pemilik',
+    const allowed = roleDefaults[selectedUser.role] || [];
+    setFeatures(prev => prev.map(f => ({
+      ...f,
+      enabled: allowed.includes(f.feature_key),
     })));
   };
 
@@ -478,11 +484,11 @@ export default function UsersPage({ user }: UsersPageProps) {
                 )}
               </div>
 
-              {/* Permissions Card */}
+              {/* Features Card */}
               {selectedUser.role !== 'Pemilik' && (
                 <div className="bg-white rounded-3xl border border-slate-100 p-5">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-[12px] font-black text-slate-700 uppercase tracking-wide">Hak Akses</h3>
+                    <h3 className="text-[12px] font-black text-slate-700 uppercase tracking-wide">Izin Fitur</h3>
                     <button
                       onClick={resetToDefault}
                       className="text-[9px] font-bold text-purple-500 hover:text-purple-700 px-2 py-1 rounded-lg hover:bg-purple-50 transition"
@@ -491,56 +497,95 @@ export default function UsersPage({ user }: UsersPageProps) {
                     </button>
                   </div>
 
-                  {permLoading ? (
+                  {featLoading ? (
                     <div className="flex justify-center py-6 text-slate-300">
                       <RefreshCw size={16} className="animate-spin" />
                     </div>
                   ) : (
                     <>
-                      {/* Header */}
-                      <div className="grid grid-cols-5 gap-1 mb-2">
-                        <div className="text-[9px] font-black text-slate-400 uppercase col-span-1">Menu</div>
-                        {['Lihat', 'Tambah', 'Ubah', 'Hapus'].map(h => (
-                          <div key={h} className="text-[9px] font-black text-slate-400 uppercase text-center">{h}</div>
-                        ))}
-                      </div>
+                      <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                        {FEATURE_GROUPS.map(group => {
+                          const groupFeatures = features.filter(f => group.keys.includes(f.feature_key as FeatureKey));
+                          const enabledCount = groupFeatures.filter(f => f.enabled).length;
+                          const totalCount = groupFeatures.length;
+                          const isAllEnabled = enabledCount === totalCount && totalCount > 0;
+                          const isPartial = enabledCount > 0 && !isAllEnabled;
 
-                      <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                        {MENUS.map(m => {
-                          const p = permissions.find(x => x.menu === m.key);
-                          if (!p) return null;
                           return (
-                            <div key={m.key} className="grid grid-cols-5 gap-1 items-center py-1 hover:bg-slate-50 rounded-lg px-1 transition">
-                              <div className="text-[10px] font-semibold text-slate-600 flex items-center gap-1 col-span-1">
-                                <span>{m.icon}</span>
-                                <span className="truncate">{m.label}</span>
-                              </div>
-                              {(['can_view', 'can_add', 'can_edit', 'can_delete'] as const).map(field => (
-                                <div key={field} className="flex justify-center">
-                                  <button
-                                    onClick={() => updatePerm(m.key, field, !p[field])}
-                                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
-                                      p[field]
-                                        ? 'bg-purple-600 border-purple-600'
-                                        : 'border-slate-200 hover:border-purple-300'
-                                    }`}
-                                  >
-                                    {p[field] && <Check size={10} className="text-white" strokeWidth={3} />}
-                                  </button>
+                            <div key={group.label} className="bg-slate-50/70 rounded-2xl p-3 border border-slate-100">
+                              {/* Group header with toggle all */}
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[13px]">{group.icon}</span>
+                                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                                    {group.label}
+                                  </span>
+                                  <span className={`text-[9px] font-bold ml-1 px-1.5 py-0.5 rounded-full ${
+                                    isAllEnabled ? 'bg-green-100 text-green-600'
+                                    : isPartial ? 'bg-amber-100 text-amber-600'
+                                    : 'bg-slate-200 text-slate-400'
+                                  }`}>
+                                    {enabledCount}/{totalCount}
+                                  </span>
                                 </div>
-                              ))}
+                                <button
+                                  onClick={() => {
+                                    setFeatures(prev => prev.map(f =>
+                                      group.keys.includes(f.feature_key as FeatureKey)
+                                        ? { ...f, enabled: !isAllEnabled }
+                                        : f
+                                    ));
+                                  }}
+                                  className={`p-1 rounded-lg transition ${
+                                    isAllEnabled
+                                      ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                                      : 'bg-slate-200 text-slate-400 hover:bg-slate-300'
+                                  }`}
+                                  title={isAllEnabled ? 'Nonaktifkan semua' : 'Aktifkan semua'}
+                                >
+                                  {isAllEnabled ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+                                </button>
+                              </div>
+
+                              {/* Individual toggles */}
+                              <div className="space-y-0.5">
+                                {group.keys.map(key => {
+                                  const feat = features.find(f => f.feature_key === key);
+                                  const enabled = feat?.enabled ?? false;
+                                  const label = FEATURE_KEYS[key as FeatureKey] || key;
+
+                                  return (
+                                    <button
+                                      key={key}
+                                      onClick={() => toggleFeature(key)}
+                                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] transition ${
+                                        enabled
+                                          ? 'bg-white border border-green-200 text-slate-700'
+                                          : 'bg-transparent border border-transparent hover:bg-white text-slate-400 hover:text-slate-600'
+                                      }`}
+                                    >
+                                      <span className={`font-medium text-left ${enabled ? 'text-slate-800' : 'text-slate-400'}`}>
+                                        {label}
+                                      </span>
+                                      <span className={`flex-shrink-0 transition ${enabled ? 'text-green-500' : 'text-slate-300'}`}>
+                                        {enabled ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
                           );
                         })}
                       </div>
 
                       <button
-                        onClick={savePermissions}
+                        onClick={saveFeatures}
                         disabled={saving}
-                        className="w-full mt-3 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 text-white rounded-xl text-[11px] font-black transition flex items-center justify-center gap-2"
+                        className="w-full mt-4 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 text-white rounded-xl text-[11px] font-black transition flex items-center justify-center gap-2"
                       >
                         {saving ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
-                        {saving ? 'Menyimpan...' : 'Simpan Hak Akses'}
+                        {saving ? 'Menyimpan...' : 'Simpan Izin Fitur'}
                       </button>
                     </>
                   )}

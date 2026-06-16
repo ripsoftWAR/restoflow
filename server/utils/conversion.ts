@@ -18,7 +18,9 @@ export const CONVERSIONS: Record<string, { factor: number; base_unit: 'gram' | '
   'buah': { factor: 1, base_unit: 'pcs' },
   'pack': { factor: 1, base_unit: 'pcs' },
   'bungkus': { factor: 1, base_unit: 'pcs' },
-  'bks': { factor: 1, base_unit: 'pcs' }
+  'bks': { factor: 1, base_unit: 'pcs' },
+  'kaleng': { factor: 1, base_unit: 'pcs' },
+  'can': { factor: 1, base_unit: 'pcs' }
 };
 
 export function convertToBaseUnit(amount: number, unit: string): { amount: number; baseUnit: 'gram' | 'ml' | 'pcs' } {
@@ -29,6 +31,16 @@ export function convertToBaseUnit(amount: number, unit: string): { amount: numbe
   }
   // Try default fallback
   return { amount, baseUnit: 'gram' };
+}
+
+export function convertBuyUnitToBase(amount: number, buyUnit: string, conversionFactor: number): { amount: number; baseUnit: 'gram' | 'ml' | 'pcs' } {
+  const norm = buyUnit.toLowerCase().trim();
+  const rule = CONVERSIONS[norm];
+  if (rule) {
+    return { amount: amount * rule.factor * conversionFactor, baseUnit: rule.base_unit };
+  }
+  // Default fallback
+  return { amount: amount * conversionFactor, baseUnit: 'gram' };
 }
 
 export function convertToUnit(amount: number, unitStr: string, baseUnit: string): number {

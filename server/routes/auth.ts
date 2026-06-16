@@ -148,10 +148,10 @@ router.get('/me-with-permissions', async (req, res) => {
       return res.status(403).json({ error: 'Akun telah dinonaktifkan' });
     }
  
-    // Ambil permissions
-    const permissions = await db.query(
-      `SELECT menu, can_view, can_add, can_edit, can_delete
-       FROM user_permissions WHERE user_id = $1`,
+    // Ambil features
+    const features = await db.query(
+      `SELECT feature_key, enabled
+       FROM user_features WHERE user_id = $1`,
       [session.user_id]
     );
  
@@ -164,7 +164,7 @@ router.get('/me-with-permissions', async (req, res) => {
         restaurant_id: session.restaurant_id,
       },
       session_id: session.session_id,
-      permissions: permissions.rows,
+      features: features.rows,
     });
  
   } catch (err) {
@@ -250,10 +250,10 @@ router.post('/login-pin', async (req, res) => {
       [user.id]
     );
  
-    // Ambil permissions user
-    const permissions = await db.query(
-      `SELECT menu, can_view, can_add, can_edit, can_delete
-       FROM user_permissions
+    // Ambil features user
+    const features = await db.query(
+      `SELECT feature_key, enabled
+       FROM user_features
        WHERE user_id = $1`,
       [user.id]
     );
@@ -268,7 +268,7 @@ router.post('/login-pin', async (req, res) => {
       },
       shift: { id: shift.id, nama: shift.nama },
       session_id: sessionInsert.rows[0].id,
-      permissions: permissions.rows,
+      features: features.rows,
       login_at: new Date().toISOString(),
     });
  

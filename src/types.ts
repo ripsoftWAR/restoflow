@@ -11,6 +11,8 @@ export interface Ingredient {
   base_unit: BaseUnit;
   min_stock: number;
   unit_price: number; // harga beli per base unit
+  buy_unit?: string; // unit pembelian (cth: kaleng, dus, karung)
+  conversion_factor?: number; // faktor konversi: 1 buy_unit = X base_unit
   created_at?: string;
 }
 
@@ -135,4 +137,10 @@ export interface AuthSession {
   shift: Shift;
   session_id: number;
   login_at: string;
+  features?: UserFeature[];
+}
+
+export interface UserFeature {
+  feature_key: string;
+  enabled: boolean;
 }

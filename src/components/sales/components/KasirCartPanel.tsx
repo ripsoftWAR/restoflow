@@ -29,30 +29,30 @@ const playSuccess = () => {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface KasirCartPanelProps {
-  recipes:          RecipeWithDetails[];
-  cart:             CartItem[];
-  totals:           { subtotal: number; tax: number; service: number; grandTotal: number };
-  discount:         number;
-  finalTotal:       number;
-  cashPaid:         number;
-  cashChange:       number;
-  paymentMethod:    'CASH' | 'QRIS' | 'Debit' | 'Kredit';
-  cashPaidAmount:   string;
-  paymentError:     string | null;
-  voucherCode:      string;
-  voucherLabel?:    string;
-  checkoutLoading:  boolean;
-  cashInputRef:     React.RefObject<HTMLInputElement | null>;
-  onSetPayment:     (m: 'CASH' | 'QRIS' | 'Debit' | 'Kredit') => void;
-  onSetCashPaid:    (v: string) => void;
-  onVoucherChange:  (v: string) => void;
-  onApplyVoucher:   () => void;
-  onRemoveVoucher:  () => void;
-  onDecrement:      (id: string) => void;
-  onIncrement:      (id: string, currentQty: number, maxQty: number) => void;
-  onRemoveItem:     (id: string) => void;
-  onClearCart:      () => void;
-  onCheckout:       () => void;
+  recipes: RecipeWithDetails[];
+  cart: CartItem[];
+  totals: { subtotal: number; tax: number; service: number; grandTotal: number };
+  discount: number;
+  finalTotal: number;
+  cashPaid: number;
+  cashChange: number;
+  paymentMethod: 'CASH' | 'QRIS' | 'Debit' | 'Kredit';
+  cashPaidAmount: string;
+  paymentError: string | null;
+  voucherCode: string;
+  voucherLabel?: string;
+  checkoutLoading: boolean;
+  cashInputRef: React.RefObject<HTMLInputElement | null>;
+  onSetPayment: (m: 'CASH' | 'QRIS' | 'Debit' | 'Kredit') => void;
+  onSetCashPaid: (v: string) => void;
+  onVoucherChange: (v: string) => void;
+  onApplyVoucher: () => void;
+  onRemoveVoucher: () => void;
+  onDecrement: (id: string) => void;
+  onIncrement: (id: string, currentQty: number, maxQty: number) => void;
+  onRemoveItem: (id: string) => void;
+  onClearCart: () => void;
+  onCheckout: () => void;
   // inject last sale for receipt modal
   lastSale?: {
     items: { menuName: string; qty: number; price: number }[];
@@ -73,10 +73,10 @@ interface KasirCartPanelProps {
 type PayMethod = 'CASH' | 'QRIS' | 'Debit' | 'Kredit';
 
 const PAY_METHODS: { key: PayMethod; label: string; Icon: React.ElementType; color: string }[] = [
-  { key: 'CASH',   label: 'Tunai',   Icon: Banknote,    color: 'emerald' },
-  { key: 'QRIS',   label: 'QRIS',    Icon: QrCode,      color: 'violet' },
-  { key: 'Debit',  label: 'GoPay',   Icon: Smartphone,  color: 'sky' },
-  { key: 'Kredit', label: 'Grab',    Icon: CreditCard,  color: 'green' },
+  { key: 'CASH', label: 'Tunai', Icon: Banknote, color: 'emerald' },
+  { key: 'QRIS', label: 'QRIS', Icon: QrCode, color: 'violet' },
+  { key: 'Debit', label: 'GoPay', Icon: Smartphone, color: 'sky' },
+  { key: 'Kredit', label: 'Grab', Icon: CreditCard, color: 'green' },
 ];
 
 const CASH_PRESETS = [10000, 20000, 50000, 100000];
@@ -95,58 +95,6 @@ export default function KasirCartPanel({
   stockMap = {},
 }: KasirCartPanelProps) {
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
-
-  // ── Success modal state ───────────────────────────────────────────────────
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [receiptSale, setReceiptSale] = useState<typeof lastSale>(null);
-
-  // Detect when lastSale changes (new checkout completed)
-  const prevLastSale = useRef<typeof lastSale>(undefined);
-  useEffect(() => {
-    if (lastSale) {
-      console.log('🎉 KasirCartPanel lastSale received', lastSale);
-      setReceiptSale(lastSale);
-      setShowSuccess(true);
-      playSuccess();
-    }
-  }, [lastSale]);
-
-  const closeSuccess = () => {
-    setShowSuccess(false);
-    onReceiptClose?.();
-  };
-
-  const handlePrint = () => {
-    if (!receiptSale) return;
-    const lines = [
-      `<h2 style="text-align:center;margin:0 0 4px">RESTOFLOW</h2>`,
-      `<p style="text-align:center;font-size:11px;margin:0 0 12px">${new Date().toLocaleString('id-ID')}</p>`,
-      `<hr/>`,
-      ...receiptSale.items.map(i =>
-        `<div style="display:flex;justify-content:space-between;font-size:12px">
-          <span>${i.menuName} ×${i.qty}</span>
-          <span>${formatIDR(i.price * i.qty)}</span>
-        </div>`
-      ),
-      `<hr/>`,
-      receiptSale.discount
-        ? `<div style="display:flex;justify-content:space-between;font-size:12px"><span>Diskon</span><span>-${formatIDR(receiptSale.discount)}</span></div>`
-        : '',
-      `<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:bold;margin-top:6px">
-        <span>TOTAL</span><span>${formatIDR(receiptSale.finalTotal)}</span>
-      </div>`,
-      receiptSale.paymentMethod === 'CASH' && receiptSale.cashPaid
-        ? `<div style="font-size:12px">Tunai: ${formatIDR(receiptSale.cashPaid)} | Kembali: ${formatIDR(receiptSale.cashChange ?? 0)}</div>`
-        : '',
-      `<p style="text-align:center;font-size:11px;margin-top:12px">Terima kasih! 🙏</p>`,
-    ].join('');
-    const w = window.open('', '_blank');
-    if (w) {
-      w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:monospace;width:300px;margin:auto;padding:16px}</style></head><body>${lines}</body></html>`);
-      w.document.close();
-      setTimeout(() => w.print(), 300);
-    }
-  };
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -204,11 +152,10 @@ export default function KasirCartPanel({
             <button
               key={key}
               onClick={() => onSetPayment(key)}
-              className={`flex flex-col items-center justify-center py-2.5 gap-0.5 text-[10px] font-bold transition border-r border-slate-100 last:border-r-0 ${
-                paymentMethod === key
-                  ? `bg-purple-600 text-white`
-                  : 'text-slate-400 hover:bg-white hover:text-slate-700'
-              }`}
+              className={`flex flex-col items-center justify-center py-2.5 gap-0.5 text-[10px] font-bold transition border-r border-slate-100 last:border-r-0 ${paymentMethod === key
+                ? `bg-purple-600 text-white`
+                : 'text-slate-400 hover:bg-white hover:text-slate-700'
+                }`}
             >
               <Icon size={16} />
               {label}
@@ -275,11 +222,10 @@ export default function KasirCartPanel({
                     <button
                       key={preset}
                       onClick={() => onSetCashPaid(String(preset))}
-                      className={`py-1.5 rounded-lg text-[10px] font-black border transition ${
-                        cashPaidAmount === String(preset)
-                          ? 'bg-purple-600 text-white border-purple-600'
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-purple-300 hover:text-purple-700'
-                      }`}
+                      className={`py-1.5 rounded-lg text-[10px] font-black border transition ${cashPaidAmount === String(preset)
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-purple-300 hover:text-purple-700'
+                        }`}
                     >
                       {preset >= 1000 ? `${preset / 1000}rb` : preset}
                     </button>
@@ -307,8 +253,8 @@ export default function KasirCartPanel({
               <div className="flex items-center justify-center h-full">
                 <span className="text-[10px] text-slate-300 font-medium">
                   {paymentMethod === 'QRIS' ? 'Scan QR saat checkout' :
-                   paymentMethod === 'Debit' ? 'Bayar via GoPay' :
-                   paymentMethod === 'Kredit' ? 'Bayar via GrabPay' : ''}
+                    paymentMethod === 'Debit' ? 'Bayar via GoPay' :
+                      paymentMethod === 'Kredit' ? 'Bayar via GrabPay' : ''}
                 </span>
               </div>
             )}
@@ -316,92 +262,33 @@ export default function KasirCartPanel({
 
           {/* Checkout button */}
           <button
-            onClick={onCheckout}
+            type="button" // <── PENTING: Mencegah tombol bertindak sebagai submit form
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!checkoutLoading && cart.length > 0) {
+                onCheckout();
+              }
+            }}
             disabled={cart.length === 0 || !!paymentError || checkoutLoading}
-            className={`w-full py-3.5 rounded-xl text-[13px] font-black flex items-center justify-center gap-2 transition-all shadow-md ${
-              cart.length === 0 || !!paymentError
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-                : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200'
-            }`}
+            className={`w-full py-3.5 rounded-xl text-[13px] font-black flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 ${cart.length === 0 || !!paymentError || checkoutLoading
+              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+              : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200'
+              }`}
           >
-            {checkoutLoading
-              ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> Memproses…</>
-              : <>Bayar Sekarang <ArrowRight size={15} /></>
-            }
+            {checkoutLoading ? (
+              <>
+                <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                Memproses...
+              </>
+            ) : (
+              <>
+                Bayar Sekarang <ArrowRight size={15} />
+              </>
+            )}
           </button>
         </div>
       </div>
-
-      {/* ── Success Modal ──────────────────────────────────────────────────── */}
-      {showSuccess && receiptSale && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-          style={{ background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)' }}
-        >
-          <div
-            className="w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden"
-            style={{ animation: 'scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1)' }}
-          >
-            {/* Green header */}
-            <div
-              className="px-6 pt-8 pb-6 text-center"
-              style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)' }}
-            >
-              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
-                <CheckCircle size={36} className="text-white" />
-              </div>
-              <p className="text-[11px] font-black text-emerald-100 uppercase tracking-widest mb-1">Transaksi Berhasil</p>
-              <p className="text-[28px] font-black text-white">{formatIDR(receiptSale.finalTotal)}</p>
-              <p className="text-[12px] text-emerald-100 mt-1">{receiptSale.paymentMethod}</p>
-            </div>
-
-            {/* Receipt preview */}
-            <div className="px-6 py-4 space-y-1.5 max-h-[200px] overflow-y-auto border-b border-slate-100">
-              {receiptSale.items.map((item, i) => (
-                <div key={i} className="flex justify-between text-[11px]">
-                  <span className="text-slate-600">{item.menuName} <span className="text-slate-400">×{item.qty}</span></span>
-                  <span className="font-semibold text-slate-700">{formatIDR(item.price * item.qty)}</span>
-                </div>
-              ))}
-              {receiptSale.discount ? (
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-emerald-600">Diskon ({receiptSale.voucherLabel})</span>
-                  <span className="text-emerald-600 font-semibold">- {formatIDR(receiptSale.discount)}</span>
-                </div>
-              ) : null}
-              {receiptSale.paymentMethod === 'CASH' && receiptSale.cashPaid ? (
-                <div className="pt-1 border-t border-slate-100 text-[11px] text-slate-500">
-                  Tunai {formatIDR(receiptSale.cashPaid)} · Kembali {formatIDR(receiptSale.cashChange ?? 0)}
-                </div>
-              ) : null}
-            </div>
-
-            {/* Actions */}
-            <div className="px-6 py-5 flex gap-3">
-              <button
-                onClick={handlePrint}
-                className="flex-1 py-3 rounded-2xl border-2 border-slate-200 text-[12px] font-black text-slate-600 hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50 transition flex items-center justify-center gap-2"
-              >
-                <Printer size={14} /> Print Struk
-              </button>
-              <button
-                onClick={closeSuccess}
-                className="flex-[2] py-3 rounded-2xl text-white text-[12px] font-black transition flex items-center justify-center gap-2 shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)', boxShadow: '0 4px 20px rgba(124,58,237,0.3)' }}
-              >
-                Transaksi Baru <ArrowRight size={14} />
-              </button>
-            </div>
-          </div>
-
-          <style>{`
-            @keyframes scaleIn {
-              from { transform: scale(0.85); opacity: 0; }
-              to   { transform: scale(1);    opacity: 1; }
-            }
-          `}</style>
-        </div>
-      )}
     </>
   );
 }
@@ -410,12 +297,12 @@ export default function KasirCartPanel({
 function CartRow({
   item, recipe, maxQty, onDecrement, onIncrement, onRemove,
 }: {
-  item:        CartItem;
-  recipe?:     RecipeWithDetails;
-  maxQty:      number;
+  item: CartItem;
+  recipe?: RecipeWithDetails;
+  maxQty: number;
   onDecrement: () => void;
   onIncrement: () => void;
-  onRemove:    () => void;
+  onRemove: () => void;
 }) {
   const [imgError, setImgError] = useState(false);
   const image = (recipe as any)?.image as string | undefined;
@@ -468,11 +355,10 @@ function CartRow({
               onClick={onIncrement}
               disabled={atMax}
               title={atMax ? `Stok hanya ${maxQty}` : undefined}
-              className={`w-5 h-5 rounded-md border flex items-center justify-center transition ${
-                atMax
-                  ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
-                  : 'border-slate-200 hover:bg-slate-100'
-              }`}
+              className={`w-5 h-5 rounded-md border flex items-center justify-center transition ${atMax
+                ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
+                : 'border-slate-200 hover:bg-slate-100'
+                }`}
             >
               <Plus size={10} />
             </button>

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db/database';
 import { requireAuth, requireRole } from '../utils/authMiddleware';
 import { hasColumn } from '../utils/dbHelpers';
+import { convertBuyUnitToBase } from '../utils/conversion';
 
 const router = Router();
 // Tambahkan requireAuth sebagai middleware utama
@@ -27,21 +28,29 @@ router.get('/', async (req, res) => {
 // POST create new ingredient
 router.post('/', async (req, res) => {
   const restaurantId = req.user!.restaurant_id;
-  const { name, category, supplier, stock, base_unit, min_stock, unit_price } = req.body;
+  const { name, category, supplier, stock, base_unit, min_stock, unit_price, buy_unit, conversion_factor } = req.body;
 
   const normalizedStock = Number(stock) || 0;
   const normalizedMinStock = Number(min_stock) || 0;
   const normalizedPrice = Number(unit_price) || 0;
   const normalizedUnit = typeof base_unit === 'string' ? base_unit : 'gram';
+  const normalizedBuyUnit = typeof buy_unit === 'string' ? buy_unit : normalizedUnit;
+  const normalizedConversionFactor = Number(conversion_factor) || 1;
+  
+  // Convert stock from buy_unit to base_unit
+  const { amount: convertedStock } = convertBuyUnitToBase(normalizedStock, normalizedBuyUnit, normalizedConversionFactor);
 
-  if (!name || !supplier || !normalizedUnit) {
-    return res.status(400).json({ error: 'Nama bahan, supplier, dan base_unit wajib diisi.' });
+  // Note: unit_price sudah diterima dalam satuan per-base-unit dari frontend.
+  // Frontend bertanggung jawab mengkonversi harga dari per-unit-beli ke per-base-unit.
+
+  if (!name || !supplier || !normalizedUnit || !normalizedBuyUnit) {
+    return res.status(400).json({ error: 'Nama bahan, supplier, base_unit, dan buy_unit wajib diisi.' });
   }
 
   try {
     const hasCategory = await hasColumn('ingredients', 'category');
-    const columns = ['restaurant_id', 'name', 'supplier', 'stock', 'base_unit', 'min_stock', 'unit_price'];
-    const values = [restaurantId, name, supplier, normalizedStock, normalizedUnit, normalizedMinStock, normalizedPrice];
+    const columns = ['restaurant_id', 'name', 'supplier', 'stock', 'base_unit', 'min_stock', 'unit_price', 'buy_unit', 'conversion_factor'];
+    const values = [restaurantId, name, supplier, convertedStock, normalizedUnit, normalizedMinStock, normalizedPrice, normalizedBuyUnit, normalizedConversionFactor];
     if (hasCategory) {
       columns.splice(2, 0, 'category');
       values.splice(2, 0, category || 'Lainnya');
@@ -52,7 +61,7 @@ router.post('/', async (req, res) => {
       values
     );
     const insertedId = insertRes.rows[0].id;
-    res.status(201).json({ id: insertedId, name, category: hasCategory ? category || 'Lainnya' : undefined, supplier, stock: normalizedStock, base_unit: normalizedUnit, min_stock: normalizedMinStock, unit_price: normalizedPrice });
+    res.status(201).json({ id: insertedId, name, category: hasCategory ? category || 'Lainnya' : undefined, supplier, stock: convertedStock, base_unit: normalizedUnit, min_stock: normalizedMinStock, unit_price: normalizedPrice, buy_unit: normalizedBuyUnit, conversion_factor: normalizedConversionFactor });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -62,21 +71,35 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const restaurantId = req.user!.restaurant_id;
   const { id } = req.params;
-  const { name, category, supplier, min_stock, unit_price } = req.body;
+  const { name, category, supplier, min_stock, unit_price, buy_unit, conversion_factor } = req.body;
   try {
     const hasCategory = await hasColumn('ingredients', 'category');
     const setClauses = ['name = $1', 'supplier = $2', 'min_stock = $3', 'unit_price = $4'];
     const values: any[] = [name, supplier, min_stock, unit_price || 0];
+    
     if (hasCategory) {
       setClauses.splice(1, 0, 'category = $2');
       values.splice(1, 0, category || 'Lainnya');
+    }
+
+    // Update unit beli & faktor konversi jika dikirim
+    let paramIdx = values.length;
+    if (buy_unit !== undefined) {
+      paramIdx++;
+      setClauses.push(`buy_unit = ${paramIdx}`);
+      values.push(buy_unit);
+    }
+    if (conversion_factor !== undefined) {
+      paramIdx++;
+      setClauses.push(`conversion_factor = ${paramIdx}`);
+      values.push(Number(conversion_factor) || 1);
     }
 
     values.push(id, restaurantId);
     const query = `
       UPDATE ingredients
       SET ${setClauses.join(', ')}
-      WHERE id = $${values.length - 1} AND restaurant_id = $${values.length}
+      WHERE id = ${values.length - 1} AND restaurant_id = ${values.length}
       RETURNING *
     `;
 

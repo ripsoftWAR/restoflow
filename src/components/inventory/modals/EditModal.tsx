@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Ingredient } from '../../../types';
 import { formatIDR, pricePerBulk, bulkLabel } from '../utils/format';
-import { inputCls } from '../utils/styles';
+import { inputCls, selectCls } from '../utils/styles';
 import Modal from '../shared/Modal';
 import Field from '../shared/Field';
 import CatSelect from '../shared/CatSelect';
@@ -20,23 +20,43 @@ export default function EditModal({
   onClose,
   onEditIngredient,
 }: EditModalProps) {
+  const existingBuyUnit = ingredient.buy_unit || ingredient.base_unit;
+  const existingFactor = ingredient.conversion_factor || 1;
+  const isBuyUnitDifferent = existingBuyUnit !== ingredient.base_unit;
+
+  // Harga yang tersimpan selalu per base_unit. 
+  // Tampilkan ke user dalam unit beli (kalau ada) supaya user tidak bingung.
+  const priceInBuyUnit = (ingredient.unit_price ?? 0) * existingFactor;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editName, setEditName] = useState(ingredient.name);
   const [editCategory, setEditCategory] = useState(ingredient.category);
   const [editSupplier, setEditSupplier] = useState(ingredient.supplier);
   const [editMin, setEditMin] = useState(ingredient.min_stock.toString());
-  const [editPrice, setEditPrice] = useState((ingredient.unit_price ?? 0).toString());
+  const [editPrice, setEditPrice] = useState(priceInBuyUnit.toString());
+  const [editBuyUnit, setEditBuyUnit] = useState(existingBuyUnit);
+  const [editFactor, setEditFactor] = useState(existingFactor.toString());
+
+  const effectiveBuyUnit = editBuyUnit.trim() || ingredient.base_unit;
+  const effectiveFactor = parseFloat(editFactor) || 1;
+  const showBuySection = effectiveBuyUnit !== ingredient.base_unit;
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // 🔑 Konversi harga: dari per-unit-beli → per-base-unit
+      const rawPrice = parseFloat(editPrice) || 0;
+      const pricePerBaseUnit = effectiveFactor > 0 ? rawPrice / effectiveFactor : rawPrice;
+
       await onEditIngredient(ingredient.id, {
         name: editName,
         category: editCategory,
         supplier: editSupplier,
         min_stock: parseFloat(editMin) || 0,
-        unit_price: parseFloat(editPrice) || 0,
+        unit_price: pricePerBaseUnit,
+        buy_unit: effectiveBuyUnit,
+        conversion_factor: effectiveFactor,
       });
       onClose();
     } catch (err) {
@@ -79,6 +99,42 @@ export default function EditModal({
           />
         </Field>
 
+        {/* ── Seksi unit beli ── */}
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+          <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
+            Unit Pembelian
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Unit Beli">
+              <input
+                className={inputCls}
+                placeholder={`cth. kaleng, dus`}
+                value={editBuyUnit}
+                onChange={e => setEditBuyUnit(e.target.value)}
+              />
+            </Field>
+            <Field label={`Isi per ${effectiveBuyUnit} (${ingredient.base_unit})`}>
+              <input
+                type="number"
+                min="0.001"
+                step="0.001"
+                className={inputCls}
+                value={editFactor}
+                onChange={e => setEditFactor(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          {showBuySection && (
+            <p className="text-[11px] text-slate-500">
+              1 <span className="font-medium text-slate-700">{effectiveBuyUnit}</span>
+              {' '}={' '}
+              <span className="font-medium text-slate-700">{effectiveFactor} {ingredient.base_unit}</span>
+            </p>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <Field label={`Min Stok (${ingredient.base_unit})`}>
             <input
@@ -88,7 +144,7 @@ export default function EditModal({
               onChange={e => setEditMin(e.target.value)}
             />
           </Field>
-          <Field label={`Harga (Rp/${ingredient.base_unit})`}>
+          <Field label={`Harga Beli (Rp per ${showBuySection ? effectiveBuyUnit : ingredient.base_unit})`}>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px] font-mono">
                 Rp
@@ -103,9 +159,18 @@ export default function EditModal({
           </Field>
         </div>
 
-        <p className="text-[10px] text-slate-400 -mt-1">
-          = Rp {formatIDR(pricePerBulk(parseFloat(editPrice) || 0, ingredient.base_unit))} per {bulkLabel(ingredient.base_unit)}
-        </p>
+        {/* Preview harga per base unit */}
+        {(parseFloat(editPrice) || 0) > 0 && (
+          <p className="text-[10px] text-slate-400 -mt-1">
+            {showBuySection ? (
+              <>
+                ≈ Rp {formatIDR((parseFloat(editPrice) || 0) / effectiveFactor)} per {ingredient.base_unit}
+                {' · '}
+              </>
+            ) : null}
+            = Rp {formatIDR(pricePerBulk(parseFloat(editPrice) || 0, ingredient.base_unit))} per {bulkLabel(ingredient.base_unit)}
+          </p>
+        )}
 
         <FormActions
           onCancel={onClose}

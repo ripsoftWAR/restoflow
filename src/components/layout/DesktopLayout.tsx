@@ -3,25 +3,25 @@ import { DashboardStats, NavItem } from '../../types';
 import { formatIDR } from '../../utils/api';
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'home',      icon: LayoutDashboard, label: 'Dashboard' },
-  { id: 'inventory', icon: Layers,          label: 'Inventori' },
-  { id: 'recipes',   icon: Utensils,        label: 'Resep'     },
-  { id: 'sales',     icon: ShoppingCart,    label: 'Penjualan' },
+  { id: 'home', icon: LayoutDashboard, label: 'Dashboard' },
+  { id: 'inventory', icon: Layers, label: 'Inventori' },
+  { id: 'recipes', icon: Utensils, label: 'Resep' },
+  { id: 'sales', icon: ShoppingCart, label: 'Penjualan' },
 ];
 
 const NAV_SECONDARY: NavItem[] = [
-  { id: 'ocr',  icon: Scan,        label: 'Scan OCR' },
-  { id: 'logs', icon: ListOrdered, label: 'Log'      },
+  { id: 'ocr', icon: Scan, label: 'Scan OCR' },
+  { id: 'logs', icon: ListOrdered, label: 'Log' },
 ];
 
 interface Props {
-  activeTab:         string;
-  setActiveTab:      (tab: string) => void;
-  stats:             DashboardStats | null;
-  rolePrimaryTabs:   NavItem[];
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  stats: DashboardStats | null;
+  rolePrimaryTabs: NavItem[];
   roleSecondaryTabs: NavItem[];
-  onLogout:          () => void;
-  children:          React.ReactNode;
+  onLogout: () => void;
+  children: React.ReactNode;
 }
 
 export default function DesktopLayout({ activeTab, setActiveTab, stats, rolePrimaryTabs, roleSecondaryTabs, onLogout, children }: Props) {
@@ -105,7 +105,9 @@ export default function DesktopLayout({ activeTab, setActiveTab, stats, rolePrim
             </button>
           </div>
         </header>
-        {children}
+        <div className="relative flex-1 overflow-y-auto">
+          {children}
+        </div>
       </div>
     </div>
   );
