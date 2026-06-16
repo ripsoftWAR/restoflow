@@ -126,6 +126,30 @@ router.post('/login', async (req, res) => {
  * 3. GET /api/auth/me
  * Mengecek apakah session ID di localStorage masih aktif di database
  */
+// Di routes/shifts.ts atau auth.ts
+router.get('/shifts-by-username/:username', async (req, res) => {
+  const { username } = req.params;
+  
+  try {
+    const user = await db.query(
+      'SELECT restaurant_id FROM users WHERE LOWER(username) = LOWER($1)',
+      [username]
+    );
+    
+    if (!user.rows[0]) return res.status(404).json([]);
+    
+    const shifts = await db.query(
+      'SELECT * FROM shifts WHERE restaurant_id = $1 ORDER BY id',
+      [user.rows[0].restaurant_id]
+    );
+    
+    res.json(shifts.rows);
+    
+  } catch (err) {
+    console.error('Shifts by username error:', err);  // ← ini yang muncul di Railway logs
+    res.status(500).json({ error: 'Gagal mengambil shift' });
+  }
+});
 router.get('/me-with-permissions', async (req, res) => {
   const authHeader = String(req.headers.authorization || '');
   const token = authHeader.replace('Bearer ', '').trim();

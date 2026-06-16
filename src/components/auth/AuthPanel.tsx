@@ -1,17 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Zap } from 'lucide-react';
 
+interface Shift {
+  id: number;
+  nama: string;
+  jam_mulai: string;
+  jam_akhir: string;
+}
+
 interface Props {
+  authMode: 'landing' | 'login' | 'register';
   authError: string | null;
+  setAuthMode: React.Dispatch<React.SetStateAction<'landing' | 'login' | 'register'>>;
   onLogin: (username: string, credential: string, shift_id: number, mode: 'owner' | 'staf') => Promise<void>;
+  onRegister: (username: string, password: string, role: string, restaurant_name: string) => Promise<void>;
 }
 
 export default function AuthPanel({ authError, onLogin }: Props) {
-  const [form, setForm] = useState({
-    username: '', password: '', pin: '', shiftId: 1,
-  });
+  const [form, setForm] = useState({ username: '', password: '', pin: '', shiftId: 0 });
   const [loginMode, setLoginMode] = useState<'Owner' | 'Staf'>('Owner');
   const [submitting, setSubmitting] = useState(false);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+
+  // Fetch shift saat username berubah
+  useEffect(() => {
+    if (!form.username) return;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/shifts-by-username/${form.username}`);
+        if (res.ok) {
+          const data = await res.json();
+          setShifts(data);
+          if (data.length > 0) setForm(f => ({ ...f, shiftId: data[0].id }));
+        }
+      } catch { }
+    }, 600); // tunggu 600ms setelah user berhenti ketik
+    return () => clearTimeout(timer);
+  }, [form.username]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,10 +86,19 @@ export default function AuthPanel({ authError, onLogin }: Props) {
               <input type="password" inputMode="numeric" maxLength={6} placeholder="PIN 6 digit" className="w-full rounded-xl border-2 border-slate-200 p-4 tracking-[0.35em] font-semibold focus:border-blue-500 focus:outline-none transition-colors"
                 onChange={e => setForm({ ...form, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })} required />
             )}
-            <select className="w-full rounded-xl border-2 border-slate-200 p-4 bg-white focus:border-blue-500 focus:outline-none transition-colors"
-              onChange={e => setForm({ ...form, shiftId: Number(e.target.value) })}>
-              <option value={1}>Shift 1 (08:00 - 16:00)</option>
-              <option value={2}>Shift 2 (16:00 - 24:00)</option>
+            <select
+              className="w-full rounded-xl border-2 border-slate-200 p-4 bg-white focus:border-blue-500 focus:outline-none transition-colors"
+              onChange={e => setForm({ ...form, shiftId: Number(e.target.value) })}
+              value={form.shiftId}
+            >
+              {shifts.length > 0
+                ? shifts.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.nama} ({s.jam_mulai} - {s.jam_akhir})
+                  </option>
+                ))
+                : <option value={0}>-- Ketik username dulu --</option>
+              }
             </select>
 
             {authError && <div className="text-rose-600 text-sm">{authError}</div>}
