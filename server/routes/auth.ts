@@ -8,6 +8,12 @@ const router = Router();
  * 1. POST /api/auth/register
  * Digunakan untuk pendaftaran RESTORAN BARU dan PEMILIK pertama.
  */
+
+
+router.get('/me', async (req, res) => {
+  // copy logic dari /me-with-permissions
+})
+
 router.post('/register', async (req, res) => {
   const { restaurant_name, username, password, role } = req.body;
 
