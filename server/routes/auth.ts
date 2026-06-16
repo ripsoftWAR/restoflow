@@ -11,7 +11,47 @@ const router = Router();
 
 
 router.get('/me', async (req, res) => {
-  // copy logic dari /me-with-permissions
+  const authHeader = String(req.headers.authorization || '');
+  const token = authHeader.replace('Bearer ', '').trim();
+  const sessionId = Number(token);
+
+  if (!sessionId) {
+    return res.status(401).json({ error: 'Sesi tidak ditemukan' });
+  }
+
+  try {
+    const checkSession = await db.query(
+      `SELECT ss.id as session_id, u.id as user_id, u.username, u.role, 
+              u.nama, u.restaurant_id, u.is_active
+       FROM shift_sessions ss
+       JOIN users u ON ss.user_id = u.id
+       WHERE ss.id = $1 AND ss.logout_at IS NULL`,
+      [sessionId]
+    );
+
+    const session = checkSession.rows[0];
+    if (!session) {
+      return res.status(401).json({ error: 'Sesi telah berakhir atau tidak valid' });
+    }
+
+    if (!session.is_active) {
+      return res.status(403).json({ error: 'Akun telah dinonaktifkan' });
+    }
+
+    res.json({
+      user: {
+        id: session.user_id,
+        username: session.username,
+        role: session.role,
+        nama: session.nama,
+        restaurant_id: session.restaurant_id,
+      },
+      session_id: session.session_id,
+    });
+  } catch (err) {
+    console.error('Check Session Error:', err);
+    res.status(500).json({ error: 'Server gagal memvalidasi sesi' });
+  }
 })
 
 router.post('/register', async (req, res) => {
@@ -126,28 +166,61 @@ router.post('/login', async (req, res) => {
  * 3. GET /api/auth/me
  * Mengecek apakah session ID di localStorage masih aktif di database
  */
-// Di routes/shifts.ts atau auth.ts
+/**
+ * GET /api/auth/shifts-by-username/:username
+ * PUBLIC — digunakan halaman login untuk menampilkan pilihan shift
+ */
 router.get('/shifts-by-username/:username', async (req, res) => {
   const { username } = req.params;
-  
+
+  if (!username || username.trim().length === 0) {
+    return res.status(400).json({ error: 'Username tidak boleh kosong' });
+  }
+
   try {
-    const user = await db.query(
-      'SELECT restaurant_id FROM users WHERE LOWER(username) = LOWER($1)',
-      [username]
+    // 1. Cari user berdasarkan username (case-insensitive)
+    const userResult = await db.query(
+      'SELECT id, restaurant_id FROM users WHERE LOWER(username) = LOWER($1)',
+      [username.trim()]
     );
-    
-    if (!user.rows[0]) return res.status(404).json([]);
-    
-    const shifts = await db.query(
-      'SELECT * FROM shifts WHERE restaurant_id = $1 ORDER BY id',
-      [user.rows[0].restaurant_id]
+
+    if (!userResult.rows[0]) {
+      // User tidak ditemukan → return empty array (bukan 404)
+      return res.json([]);
+    }
+
+    const { restaurant_id } = userResult.rows[0];
+
+    // 2. Ambil shifts milik restoran user tersebut
+    const shiftsResult = await db.query(
+      'SELECT id, nama, jam_mulai, jam_akhir FROM shifts WHERE restaurant_id = $1 ORDER BY id',
+      [restaurant_id]
     );
-    
-    res.json(shifts.rows);
-    
-  } catch (err) {
-    console.error('Shifts by username error:', err);  // ← ini yang muncul di Railway logs
-    res.status(500).json({ error: 'Gagal mengambil shift' });
+
+    return res.json(shiftsResult.rows);
+
+  } catch (err: any) {
+    // Log detail error untuk debugging
+    console.error('[shifts-by-username] Error:', {
+      message: err?.message || err,
+      code: err?.code,
+      stack: err?.stack?.split('\n').slice(0, 3).join('\n'),
+    });
+
+    // Cek apakah error karena tabel tidak ada
+    if (err?.code === '42P01') {
+      // PostgreSQL error code untuk "relation does not exist"
+      console.error('[shifts-by-username] TABEL "shifts" TIDAK DITEMUKAN! Jalankan migrasi SQL.');
+      return res.status(500).json({ 
+        error: 'Database belum siap (tabel shifts tidak ditemukan)',
+        hint: 'Jalankan CREATE TABLE shifts di Supabase SQL Editor'
+      });
+    }
+
+    return res.status(500).json({ 
+      error: 'Gagal mengambil shift',
+      detail: process.env.NODE_ENV !== 'production' ? err?.message : undefined
+    });
   }
 });
 router.get('/me-with-permissions', async (req, res) => {
