@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Zap } from 'lucide-react';
+import { resolveApiUrl } from '../../utils/api';
 
 interface Shift {
   id: number;
@@ -27,7 +28,7 @@ export default function AuthPanel({ authError, onLogin }: Props) {
     if (!form.username) return;
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/auth/shifts-by-username/${form.username}`);
+        const res = await fetch(resolveApiUrl(`/api/auth/shifts-by-username/${form.username}`));
         if (res.ok) {
           const data = await res.json();
           setShifts(data);
