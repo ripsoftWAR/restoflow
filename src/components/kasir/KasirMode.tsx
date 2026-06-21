@@ -10,6 +10,9 @@ import {
   Download,
   ChevronDown,
   BadgeCheck,
+  Layers,
+  Scan,
+  Utensils,
 } from 'lucide-react';
 import { RecipeWithDetails, Ingredient, Sale } from '../../types';
 import { useCart } from '../sales/hooks/useCart';
@@ -24,6 +27,14 @@ import {
 } from '../sales/utils/salesHelpers';
 import { makeApiFetch } from '../../utils/api';
 import { CheckCircle, Printer } from 'lucide-react';
+import { useFeatures } from '../../hooks/useFeatures';
+
+// ── Existing pages, reused as-is for staff tabs (Inventori & OCR) ──────────────
+// These are the SAME components the Owner uses — no new UI is built from
+// scratch. Only the navigation (tab vs sidebar) differs between roles.
+import Inventory from '../inventory';
+import ReceiptScanner from '../ReceiptScanner';
+import RecipeSystem from '../recipes';
 
 // ── Click sound ───────────────────────────────────────────────────────────────
 const playClick = () => {
@@ -53,9 +64,31 @@ interface Props {
   onRefreshStats: () => void;
   onExit: () => void;
   user?: any;
+
+  // ── Needed for the Inventori tab (reuses the same Inventory page Owner uses) ──
+  onAddIngredient: (payload: any) => Promise<void>;
+  onEditIngredient: (id: number, payload: any) => Promise<void>;
+  onAdjustStock: (id: number, finalStock: number, notes: string) => Promise<void>;
+  onDeleteIngredient: (id: number) => Promise<void>;
+
+  // ── Needed for the OCR tab (reuses the same ReceiptScanner page Owner uses) ──
+  onScanReceipt: (base64: string, mimeType: string) => Promise<any>;
+  onConfirmReceiptItems: (items: any[]) => Promise<void>;
+
+  // ── Needed for the Resep tab (reuses the same RecipeSystem page Owner uses) ──
+  onAddOrUpdateRecipe: (
+    menuName: string,
+    items: { ingredient_id: number; amount: number }[],
+    category?: string,
+    spice_level_option?: boolean,
+    sugar_level_option?: boolean,
+    custom_options?: string,
+    price?: number
+  ) => Promise<void>;
+  onDeleteRecipe: (menuName: string) => Promise<void>;
 }
 
-type Tab = 'pos' | 'riwayat' | 'voucher';
+type Tab = 'pos' | 'riwayat' | 'voucher' | 'inventori' | 'resep' | 'ocr';
 type PaymentFilter = 'SEMUA' | 'CASH' | 'QRIS' | 'TRANSFER' | 'EDC';
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
@@ -68,7 +101,6 @@ function StatCard({
   value: string;
   accent: 'green' | 'blue' | 'purple' | 'orange';
 }) {
-  // FIX #5: Hapus variable `colors` yang tidak pernah dipakai
   const accentMap: Record<string, { bg: string; label: string; value: string }> = {
     green: { bg: 'bg-emerald-50 border-emerald-100', label: 'text-emerald-500', value: 'text-emerald-700' },
     blue: { bg: 'bg-sky-50 border-sky-100', label: 'text-sky-500', value: 'text-sky-700' },
@@ -128,8 +160,48 @@ export default function KasirMode({
   onRefreshStats,
   onExit,
   user,
+  onAddIngredient,
+  onEditIngredient,
+  onAdjustStock,
+  onDeleteIngredient,
+  onScanReceipt,
+  onConfirmReceiptItems,
+  onAddOrUpdateRecipe,
+  onDeleteRecipe,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('pos');
+  const { can } = useFeatures();
+
+  // ── Permission-filtered tab list ──────────────────────────────────────────
+  // This is the single source of truth for which tabs this staff member sees.
+  // Same `can()` checks the Owner's sidebar already uses — just rendered as
+  // tabs here instead of a sidebar.
+  const availableTabs = useMemo(
+    () =>
+      (
+        [
+          { id: 'pos' as Tab, label: 'POS', icon: <Zap size={14} />, show: can('pos.view') },
+          { id: 'riwayat' as Tab, label: 'Riwayat', icon: <History size={14} />, show: can('pos.view_history') },
+          { id: 'voucher' as Tab, label: 'Voucher', icon: <Tag size={14} />, show: can('pos.apply_voucher') },
+          { id: 'inventori' as Tab, label: 'Inventori', icon: <Layers size={14} />, show: can('inventory.view') },
+          { id: 'resep' as Tab, label: 'Resep', icon: <Utensils size={14} />, show: can('recipes.view') },
+          { id: 'ocr' as Tab, label: 'OCR', icon: <Scan size={14} />, show: can('ocr.scan') },
+        ] as { id: Tab; label: string; icon: React.ReactNode; show: boolean }[]
+      ).filter((t) => t.show),
+    [can]
+  );
+
+  const [activeTab, setActiveTab] = useState<Tab>(availableTabs[0]?.id ?? 'pos');
+
+  // If the active tab becomes unavailable (e.g. owner revokes a permission
+  // mid-session) or on first mount, fall back to the first tab this staff
+  // member is actually allowed to see.
+  useEffect(() => {
+    if (!availableTabs.some((t) => t.id === activeTab)) {
+      setActiveTab(availableTabs[0]?.id ?? 'pos');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableTabs]);
+
   const [search, setSearch] = useState('');
   const [generatedVouchers, setGeneratedVouchers] = useState<Record<string, VoucherResult>>({});
 
@@ -226,7 +298,7 @@ export default function KasirMode({
     onRefreshStats,
   ]);
 
-  // ── FIX #2 & #3: Satu handler terpusat untuk tutup receipt ─────────────────
+  // ── Satu handler terpusat untuk tutup receipt ─────────────────
   const handleReceiptClose = useCallback(() => {
     setLastSale(null);
     cart.clearCart();
@@ -397,6 +469,29 @@ export default function KasirMode({
     EDC: 'bg-amber-100 text-amber-700',
   };
 
+  // ── No tabs available at all ────────────────────────────────────────────────
+  if (availableTabs.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50">
+        <div className="text-center px-6">
+          <div className="w-16 h-16 rounded-2xl bg-slate-200 flex items-center justify-center mx-auto mb-4">
+            <ShoppingCart size={24} className="text-slate-400" />
+          </div>
+          <p className="text-[14px] font-bold text-slate-600 mb-1">Belum Ada Akses</p>
+          <p className="text-[12px] text-slate-400 mb-5">
+            Akun kamu belum diberikan izin akses fitur apapun. Hubungi pemilik restoran.
+          </p>
+          <button
+            onClick={onExit}
+            className="px-5 py-2.5 rounded-xl bg-slate-800 text-white text-[12px] font-bold hover:bg-slate-900 transition"
+          >
+            Keluar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div
@@ -417,11 +512,11 @@ export default function KasirMode({
           </div>
           <div className="leading-none">
             <div className="flex items-center gap-1.5">
-              <p className="text-[13px] font-black text-slate-800">Mode Kasir</p>
+              <p className="text-[13px] font-black text-slate-800">Mode Kerja</p>
               <BadgeCheck size={12} className="text-purple-500" />
             </div>
             <p className="text-[10px] text-slate-400 mt-0.5">
-              {user?.nama ?? 'Kasir'} &nbsp;·&nbsp;
+              {user?.nama ?? 'Staff'} &nbsp;·&nbsp;
               {new Date().toLocaleDateString('id-ID', {
                 weekday: 'long',
                 day: 'numeric',
@@ -433,37 +528,37 @@ export default function KasirMode({
 
         <div className="h-8 w-px bg-slate-100 flex-shrink-0 hidden md:block" />
 
-        <div className="hidden md:flex items-center gap-2">
-          <StatCard label="Omzet Hari Ini" value={formatIDR(todayTotal)} accent="green" />
-          <StatCard label="Transaksi" value={`${todayCount}×`} accent="blue" />
-          <StatCard
-            label="Avg Transaksi"
-            value={todayCount > 0 ? formatIDR(Math.round(todayTotal / todayCount)) : 'Rp 0'}
-            accent="purple"
-          />
-        </div>
+        {can('pos.view') && (
+          <div className="hidden md:flex items-center gap-2">
+            <StatCard label="Omzet Hari Ini" value={formatIDR(todayTotal)} accent="green" />
+            <StatCard label="Transaksi" value={`${todayCount}×`} accent="blue" />
+            <StatCard
+              label="Avg Transaksi"
+              value={todayCount > 0 ? formatIDR(Math.round(todayTotal / todayCount)) : 'Rp 0'}
+              accent="purple"
+            />
+          </div>
+        )}
 
-        <div className="flex items-center gap-1 mx-auto bg-slate-100 rounded-2xl p-1">
-          <TabBtn
-            active={activeTab === 'pos'}
-            onClick={() => setActiveTab('pos')}
-            icon={<Zap size={14} />}
-            label="POS"
-            badge={cart.cart.length > 0 ? cart.cart.length : undefined}
-          />
-          <TabBtn
-            active={activeTab === 'riwayat'}
-            onClick={() => setActiveTab('riwayat')}
-            icon={<History size={14} />}
-            label="Riwayat"
-            badge={todayCount > 0 ? todayCount : undefined}
-          />
-          <TabBtn
-            active={activeTab === 'voucher'}
-            onClick={() => setActiveTab('voucher')}
-            icon={<Tag size={14} />}
-            label="Voucher"
-          />
+        {/* Tabs are rendered only for what this staff member is permitted to see.
+            Same can() checks the Owner's sidebar uses — just shown as tabs here. */}
+        <div className="flex items-center gap-1 mx-auto bg-slate-100 rounded-2xl p-1 overflow-x-auto">
+          {availableTabs.map((t) => (
+            <TabBtn
+              key={t.id}
+              active={activeTab === t.id}
+              onClick={() => setActiveTab(t.id)}
+              icon={t.icon}
+              label={t.label}
+              badge={
+                t.id === 'pos'
+                  ? (cart.cart.length > 0 ? cart.cart.length : undefined)
+                  : t.id === 'riwayat'
+                    ? (todayCount > 0 ? todayCount : undefined)
+                    : undefined
+              }
+            />
+          ))}
         </div>
 
         <button
@@ -478,8 +573,8 @@ export default function KasirMode({
       {/* ── Tab body ────────────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-hidden">
 
-        {/* ══ TAB 1: POS ══════════════════════════════════════════════════════ */}
-        {activeTab === 'pos' && (
+        {/* ══ TAB: POS ════════════════════════════════════════════════════════ */}
+        {activeTab === 'pos' && can('pos.view') && (
           <div className="flex h-full">
             <div className="flex-1 min-w-0 overflow-hidden">
               <KasirMenuGrid
@@ -491,8 +586,6 @@ export default function KasirMode({
               />
             </div>
 
-            {/* FIX #3: Hapus lastSale prop dari KasirCartPanel,
-                receipt modal dikelola sepenuhnya di KasirMode */}
             <KasirCartPanel
               recipes={recipes}
               cart={cart.cart}
@@ -525,8 +618,8 @@ export default function KasirMode({
           </div>
         )}
 
-        {/* ══ TAB 2: RIWAYAT ══════════════════════════════════════════════════ */}
-        {activeTab === 'riwayat' && (
+        {/* ══ TAB: RIWAYAT ════════════════════════════════════════════════════ */}
+        {activeTab === 'riwayat' && can('pos.view_history') && (
           <div className="h-full overflow-y-auto px-5 py-4 space-y-4">
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -584,24 +677,30 @@ export default function KasirMode({
                 )}
               </div>
 
-              <button
-                onClick={exportExcel}
-                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition shadow-sm"
-              >
-                <Download size={12} /> Excel
-              </button>
-              <button
-                onClick={exportPDF}
-                className="flex items-center gap-1.5 px-3 py-2 bg-sky-50 border border-sky-200 rounded-xl text-[11px] font-semibold text-sky-700 hover:bg-sky-100 transition shadow-sm"
-              >
-                <Download size={12} /> PDF
-              </button>
-              <button
-                onClick={thermalPrint}
-                className="flex items-center gap-1.5 px-3 py-2 bg-violet-50 border border-violet-200 rounded-xl text-[11px] font-semibold text-violet-700 hover:bg-violet-100 transition shadow-sm"
-              >
-                <Printer size={12} /> Thermal
-              </button>
+              {can('pos.export_csv') && (
+                <button
+                  onClick={exportExcel}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition shadow-sm"
+                >
+                  <Download size={12} /> Excel
+                </button>
+              )}
+              {can('pos.export_pdf') && (
+                <button
+                  onClick={exportPDF}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-sky-50 border border-sky-200 rounded-xl text-[11px] font-semibold text-sky-700 hover:bg-sky-100 transition shadow-sm"
+                >
+                  <Download size={12} /> PDF
+                </button>
+              )}
+              {can('pos.thermal_print') && (
+                <button
+                  onClick={thermalPrint}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-violet-50 border border-violet-200 rounded-xl text-[11px] font-semibold text-violet-700 hover:bg-violet-100 transition shadow-sm"
+                >
+                  <Printer size={12} /> Thermal
+                </button>
+              )}
             </div>
 
             {filteredSales.length === 0 ? (
@@ -671,8 +770,8 @@ export default function KasirMode({
           </div>
         )}
 
-        {/* ══ TAB 3: VOUCHER ══════════════════════════════════════════════════ */}
-        {activeTab === 'voucher' && (
+        {/* ══ TAB: VOUCHER ════════════════════════════════════════════════════ */}
+        {activeTab === 'voucher' && can('pos.apply_voucher') && (
           <div className="h-full overflow-y-auto px-5 py-6">
             <div className="max-w-2xl mx-auto">
               <div className="mb-6">
@@ -720,19 +819,67 @@ export default function KasirMode({
                   <p className="text-[10px] text-slate-400 mt-0.5">Voucher berlaku untuk semua menu hari ini.</p>
                 </div>
                 <div className="p-5">
-                  <VoucherGenerator
-                    restaurantId={user?.restaurant_id}
-                    sessionId={user?.sessionId}
-                    onVoucherGenerated={(code: string, voucher: VoucherResult) => {
-                      setGeneratedVouchers((prev) => ({
-                        ...prev,
-                        [code.toUpperCase()]: voucher,
-                      }));
-                    }}
-                  />
+                  {can('pos.generate_voucher') ? (
+                    <VoucherGenerator
+                      restaurantId={user?.restaurant_id}
+                      sessionId={user?.sessionId}
+                      onVoucherGenerated={(code: string, voucher: VoucherResult) => {
+                        setGeneratedVouchers((prev) => ({
+                          ...prev,
+                          [code.toUpperCase()]: voucher,
+                        }));
+                      }}
+                    />
+                  ) : (
+                    <p className="text-[11px] text-slate-400 text-center py-6">
+                      Kamu tidak memiliki izin untuk membuat voucher baru.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ══ TAB: INVENTORI ══════════════════════════════════════════════════ */}
+        {/* Reuses the exact same Inventory page the Owner sees — no new UI.   */}
+        {activeTab === 'inventori' && can('inventory.view') && (
+          <div className="h-full overflow-y-auto px-5 py-4">
+            <Inventory
+              ingredients={ingredients}
+              onAddIngredient={onAddIngredient}
+              onEditIngredient={onEditIngredient}
+              onAdjustStock={onAdjustStock}
+              onDeleteIngredient={onDeleteIngredient}
+              forceFullscreen
+            />
+          </div>
+        )}
+
+        {/* ══ TAB: OCR ════════════════════════════════════════════════════════ */}
+        {/* Reuses the exact same ReceiptScanner page the Owner sees — no new UI. */}
+        {activeTab === 'ocr' && can('ocr.scan') && (
+          <div className="h-full overflow-y-auto px-5 py-4">
+            <ReceiptScanner
+              ingredients={ingredients}
+              onScanReceipt={onScanReceipt}
+              onConfirmReceiptItems={onConfirmReceiptItems}
+              onRefreshStats={onRefreshStats}
+            />
+          </div>
+        )}
+
+        {/* ══ TAB: RESEP ══════════════════════════════════════════════════════ */}
+        {/* Reuses the exact same RecipeSystem page the Owner sees — no new UI. */}
+        {activeTab === 'resep' && can('recipes.view') && (
+          <div className="h-full overflow-y-auto">
+            <RecipeSystem
+              ingredients={ingredients}
+              recipes={recipes}
+              onAddOrUpdateRecipe={onAddOrUpdateRecipe}
+              onDeleteRecipe={onDeleteRecipe}
+              forceFullscreen
+            />
           </div>
         )}
       </div>
@@ -845,7 +992,6 @@ export default function KasirMode({
       )}
 
       {/* ── Receipt / Success Modal ──────────────────────────────────────────── */}
-      {/* FIX #2 & #3: Satu modal terpusat, pakai handleReceiptClose untuk semua tombol */}
       {lastSale && (
         <div
           className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-xl"
@@ -875,7 +1021,6 @@ export default function KasirMode({
                 <Printer size={20} /> Cetak Struk
               </button>
 
-              {/* FIX #2: Pakai handleReceiptClose — clear cart + refresh stats + tutup modal sekaligus */}
               <button
                 type="button"
                 onClick={handleReceiptClose}

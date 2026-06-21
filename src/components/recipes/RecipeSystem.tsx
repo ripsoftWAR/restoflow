@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Ingredient, RecipeWithDetails } from '../../types';
 import { useRecipeState } from './hooks/useRecipeState';
+import { useFeatures } from '../../hooks/useFeatures';
 import RecipeStatsBar from './components/RecipeStatsBar';
 import RecipeCard from './components/RecipeCard';
 import RecipeRightPanel from './components/RecipeRightPanel';
@@ -23,6 +24,7 @@ interface RecipeSystemProps {
     price?: number
   ) => Promise<void>;
   onDeleteRecipe: (menuName: string) => Promise<void>;
+  forceFullscreen?: boolean;
 }
 
 const TABS_BASE = ['Semua Menu', 'Makanan Utama', 'Minuman', 'Camilan', 'Saus/Bumbu Base'];
@@ -32,10 +34,13 @@ export default function RecipeSystem({
   recipes,
   onAddOrUpdateRecipe,
   onDeleteRecipe,
+  forceFullscreen = false,
 }: RecipeSystemProps) {
+  const { can } = useFeatures();
   const state = useRecipeState(ingredients);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isFullScreenState, setIsFullScreenState] = useState(false);
+  const isFullScreen = forceFullscreen || isFullScreenState;
   const PAGE_SIZE = 6;
 
   // Derive tabs from actual recipe categories + base tabs
@@ -153,21 +158,25 @@ export default function RecipeSystem({
                   ))}
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setIsFullScreen(v => !v)}
-                    className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 hover:bg-slate-50 bg-white"
-                  >
-                    {isFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-                    {isFullScreen ? 'Kecilkan' : 'Fullscreen'}
-                  </button>
-                  <button
-                    id="btn-recipe-builder-trigger"
-                    onClick={() => state.openBuilder()}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[11px] font-semibold transition-colors"
-                  >
-                    <Plus size={13} /> Tambah Resep
-                  </button>
+                  {!forceFullscreen && (
+                    <button
+                      type="button"
+                      onClick={() => setIsFullScreenState(v => !v)}
+                      className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 hover:bg-slate-50 bg-white"
+                    >
+                      {isFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                      {isFullScreen ? 'Kecilkan' : 'Fullscreen'}
+                    </button>
+                  )}
+                  {can('recipes.add') && (
+                    <button
+                      id="btn-recipe-builder-trigger"
+                      onClick={() => state.openBuilder()}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[11px] font-semibold transition-colors"
+                    >
+                      <Plus size={13} /> Tambah Resep
+                    </button>
+                  )}
                 </div>
               </div>
 

@@ -16,6 +16,7 @@ interface InventoryProps {
   onEditIngredient: (id: number, data: any) => Promise<void>;
   onAdjustStock: (id: number, finalStock: number, notes: string) => Promise<void>;
   onDeleteIngredient: (id: number) => Promise<void>;
+  forceFullscreen?: boolean;
 }
 
 export default function Inventory({
@@ -24,8 +25,10 @@ export default function Inventory({
   onEditIngredient,
   onAdjustStock,
   onDeleteIngredient,
+  forceFullscreen = false,
 }: InventoryProps) {
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreenState, setIsFullscreenState] = useState(false);
+  const isFullscreen = forceFullscreen || isFullscreenState;
   const {
     search, setSearch,
     activeTab, setActiveTab,
@@ -36,16 +39,18 @@ export default function Inventory({
   } = useInventoryState(ingredients);
 
   const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
+    setIsFullscreenState(!isFullscreenState);
   };
 
   return (
     <>
       <div
         className={
-          isFullscreen
-            ? 'absolute inset-0 z-40 bg-slate-50 p-3 sm:p-4 overflow-hidden'
-            : 'min-h-full w-full bg-transparent p-3 sm:p-4'
+          forceFullscreen
+            ? 'min-h-full w-full bg-transparent p-3 sm:p-4'
+            : isFullscreen
+              ? 'absolute inset-0 z-40 bg-slate-50 p-3 sm:p-4 overflow-hidden'
+              : 'min-h-full w-full bg-transparent p-3 sm:p-4'
         }
       >
         <div className="flex flex-col gap-4 min-h-0 xl:flex-row xl:items-start">

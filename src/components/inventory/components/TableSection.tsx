@@ -16,6 +16,7 @@ import {
   formatPricePerUnit,
   formatPricePerBulk,
 } from '../utils/format';
+import { useFeatures } from '../../../hooks/useFeatures';
 
 // ── Kategori badge styling ──
 const CAT_STYLE: Record<string, string> = {
@@ -57,6 +58,7 @@ export default function TableSection({
   search,
   onSearchChange,
 }: TableSectionProps) {
+  const { can } = useFeatures();
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -116,13 +118,15 @@ export default function TableSection({
         </select>
 
         {/* Tambah Bahan button */}
-        <button
-          onClick={onAddClick}
-          className="inline-flex items-center gap-1.5 h-9 px-3.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors ml-auto"
-        >
-          <Plus size={14} />
-          Tambah Bahan
-        </button>
+        {can('inventory.add') && (
+          <button
+            onClick={onAddClick}
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors ml-auto"
+          >
+            <Plus size={14} />
+            Tambah Bahan
+          </button>
+        )}
       </div>
 
       {/* ── Table ── */}
@@ -244,25 +248,33 @@ export default function TableSection({
                             >
                               <Eye size={14} /> Detail
                             </button>
-                            <button
-                              onClick={() => { setOpenMenuId(null); onEdit(ing); }}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
-                            >
-                              <Edit2 size={14} /> Edit
-                            </button>
-                            <button
-                              onClick={() => { setOpenMenuId(null); onAdjust(ing); }}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
-                            >
-                              <ArrowUp size={14} /> Tambah stok
-                            </button>
-                            <div className="h-px bg-slate-100" />
-                            <button
-                              onClick={() => { setOpenMenuId(null); onDelete(ing); }}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
-                            >
-                              <Trash2 size={14} /> Hapus
-                            </button>
+                            {can('inventory.edit') && (
+                              <button
+                                onClick={() => { setOpenMenuId(null); onEdit(ing); }}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                              >
+                                <Edit2 size={14} /> Edit
+                              </button>
+                            )}
+                            {can('inventory.adjust_stock') && (
+                              <button
+                                onClick={() => { setOpenMenuId(null); onAdjust(ing); }}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                              >
+                                <ArrowUp size={14} /> Tambah stok
+                              </button>
+                            )}
+                            {can('inventory.delete') && (
+                              <>
+                                <div className="h-px bg-slate-100" />
+                                <button
+                                  onClick={() => { setOpenMenuId(null); onDelete(ing); }}
+                                  className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  <Trash2 size={14} /> Hapus
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>

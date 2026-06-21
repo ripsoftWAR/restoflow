@@ -74,25 +74,45 @@ export default function App() {
       features={authSession.features || []}
       isPemilik={authSession.user.role === 'Pemilik'}
     >
-      <AppContent
-        authSession={authSession}
-        stats={stats}
-        ingredients={ingredients}
-        recipes={recipes}
-        sales={sales}
-        movements={movements}
-        handleLogout={handleLogout}
-        fetchAllData={fetchAllData}
-        handleAddIngredient={handleAddIngredient}
-        handleEditIngredient={handleEditIngredient}
-        handleDeleteIngredient={handleDeleteIngredient}
-        handleAdjustStock={handleAdjustStock}
-        handleAddOrUpdateRecipe={handleAddOrUpdateRecipe}
-        handleDeleteRecipe={handleDeleteRecipe}
-        handleTriggerSale={handleTriggerSale}
-        handleScanReceipt={handleScanReceipt}
-        handleConfirmReceiptItems={handleConfirmReceiptItems}
-      />
+      {authSession.user.role === 'Pemilik' ? (
+        <AppContent
+          authSession={authSession}
+          stats={stats}
+          ingredients={ingredients}
+          recipes={recipes}
+          sales={sales}
+          movements={movements}
+          handleLogout={handleLogout}
+          fetchAllData={fetchAllData}
+          handleAddIngredient={handleAddIngredient}
+          handleEditIngredient={handleEditIngredient}
+          handleDeleteIngredient={handleDeleteIngredient}
+          handleAdjustStock={handleAdjustStock}
+          handleAddOrUpdateRecipe={handleAddOrUpdateRecipe}
+          handleDeleteRecipe={handleDeleteRecipe}
+          handleTriggerSale={handleTriggerSale}
+          handleScanReceipt={handleScanReceipt}
+          handleConfirmReceiptItems={handleConfirmReceiptItems}
+        />
+      ) : (
+        <KasirMode
+          recipes={recipes}
+          ingredients={ingredients}
+          sales={sales}
+          onTriggerSale={handleTriggerSale}
+          onRefreshStats={() => fetchAllData(authSession, true)}
+          onExit={handleLogout}
+          onAddIngredient={handleAddIngredient}
+          onEditIngredient={handleEditIngredient}
+          onAdjustStock={handleAdjustStock}
+          onDeleteIngredient={handleDeleteIngredient}
+          onScanReceipt={handleScanReceipt}
+          onConfirmReceiptItems={handleConfirmReceiptItems}
+          onAddOrUpdateRecipe={handleAddOrUpdateRecipe}
+          onDeleteRecipe={handleDeleteRecipe}
+          user={{ ...authSession.user, sessionId: authSession.session_id }}
+        />
+      )}
     </FeaturesProvider>
   );
 }
@@ -187,12 +207,17 @@ function AppContent(props: any) {
             ingredients={ingredients}
             sales={sales}
             onTriggerSale={handleTriggerSale}
-            onRefreshStats={() => fetchAllData(authSession, true)} onExit={() => setActiveTab('sales')}
-            user={{
-              ...authSession.user,
-              sessionId: authSession.session_id,
-              restaurant_id: authSession.user.id,
-            }}
+            onRefreshStats={() => fetchAllData(authSession, true)}
+            onExit={() => setActiveTab('sales')}
+            onAddIngredient={handleAddIngredient}
+            onEditIngredient={handleEditIngredient}
+            onAdjustStock={handleAdjustStock}
+            onDeleteIngredient={handleDeleteIngredient}
+            onScanReceipt={handleScanReceipt}
+            onConfirmReceiptItems={handleConfirmReceiptItems}
+            onAddOrUpdateRecipe={handleAddOrUpdateRecipe}
+            onDeleteRecipe={handleDeleteRecipe}
+            user={{ ...authSession.user, sessionId: authSession.session_id }}
           />
         )}
         {activeTab === 'ocr' && can('ocr.scan') && (

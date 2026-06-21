@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { makeApiFetch, resolveApiUrl } from '../utils/api';
-import { Ingredient, DashboardStats, RecipeWithDetails, Sale, MovementLog, AuthSession, UserFeature } from '../types';
+import { Ingredient, DashboardStats, RecipeWithDetails, Sale, MovementLog, AuthSession } from '../types';
 
 export function useAppData() {
   const [stats,       setStats]       = useState<DashboardStats | null>(null);
@@ -78,7 +78,7 @@ export function useAppData() {
           return;
         }
         const session = await res.json();
-        setAuthSession({ ...session, features: session.features || [] });
+        setAuthSession(session);
         setAuthChecked(true);
       } catch (err) {
         console.error('Session restore failed:', err);
@@ -111,7 +111,7 @@ export function useAppData() {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || 'Login gagal');
-      setAuthSession({ ...data, features: data.features || [] });
+      setAuthSession(data);
       setSessionId(data.session_id);
       localStorage.setItem('restoflow_session_id', String(data.session_id));
     } catch (err: any) {

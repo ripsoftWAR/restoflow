@@ -5,6 +5,7 @@ import {
   calculateHPP, calculateMarginPct, calculateCookablePortions,
   formatIDR, getCategoryEmoji, FOOD_GRADIENTS, getIngredientStock,
 } from '../utils/recipeHelpers';
+import { useFeatures } from '../../../hooks/useFeatures';
 
 interface RecipeCardProps {
   recipe: RecipeWithDetails;
@@ -15,6 +16,7 @@ interface RecipeCardProps {
 }
 
 export default function RecipeCard({ recipe, ingredients, index, onEdit, onDelete }: RecipeCardProps) {
+  const { can } = useFeatures();
   const hpp = calculateHPP(recipe, ingredients);
   const portions = calculateCookablePortions(recipe, ingredients);
   const marginPct = calculateMarginPct(hpp, recipe.price ?? 0);
@@ -126,29 +128,35 @@ export default function RecipeCard({ recipe, ingredients, index, onEdit, onDelet
       </div>
 
       {/* Action button */}
-      <div className="px-3 py-2.5 border-t border-slate-100">
-        <div className="flex items-center gap-2">
-          <button
-            id={`btn-edit-recipe-${recipe.menu_name.replace(/\s+/g, '-')}`}
-            onClick={() => onEdit(recipe)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-[11px] font-semibold text-slate-600 transition-all hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200"
-          >
-            <Edit2 size={12} /> Aksi
-          </button>
-          <button
-            type="button"
-            onClick={async () => {
-              if (window.confirm(`Hapus resep "${recipe.menu_name}"?`)) {
-                await onDelete(recipe.menu_name);
-              }
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 shadow-sm transition hover:bg-rose-50 hover:text-rose-600"
-            aria-label="Hapus resep"
-          >
-            <Trash2 size={13} />
-          </button>
+      {(can('recipes.edit') || can('recipes.delete')) && (
+        <div className="px-3 py-2.5 border-t border-slate-100">
+          <div className="flex items-center gap-2">
+            {can('recipes.edit') && (
+              <button
+                id={`btn-edit-recipe-${recipe.menu_name.replace(/\s+/g, '-')}`}
+                onClick={() => onEdit(recipe)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-[11px] font-semibold text-slate-600 transition-all hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200"
+              >
+                <Edit2 size={12} /> Aksi
+              </button>
+            )}
+            {can('recipes.delete') && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm(`Hapus resep "${recipe.menu_name}"?`)) {
+                    await onDelete(recipe.menu_name);
+                  }
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 shadow-sm transition hover:bg-rose-50 hover:text-rose-600"
+                aria-label="Hapus resep"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
