@@ -9,7 +9,7 @@ import TabTren from './TabTren';
 import TabBreakdown from './TabBreakdown';
 import TabAlerts from './TabAlerts';
 import TabLaporan from './TabLaporan';
-import { AlertTriangle, ChevronRight, Calendar, Clock, ChevronDown } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Calendar, Clock, ChevronDown, X } from 'lucide-react';
 
 interface DashboardProps {
   stats: DashboardStats;
@@ -93,6 +93,7 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
   const [customEnd, setCustomEnd] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
   const calRef = useRef<HTMLDivElement>(null);
+  const [dismissWarning, setDismissWarning] = useState(false);
 
   // Close calendar on outside click
   useEffect(() => {
@@ -314,7 +315,7 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
       {/* ═══════════════════════════════════════════════════════════
           WARNING BAR
           ═══════════════════════════════════════════════════════════ */}
-      {criticalCount > 0 && mostCritical && (
+      {criticalCount > 0 && mostCritical && !dismissWarning && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#FAEEDA] border border-[#FAC775] rounded-xl px-4 py-2.5">
           <span className="text-[12px] text-[#633806] flex items-center gap-1.5">
             <AlertTriangle size={13} className="flex-shrink-0" />
@@ -323,12 +324,20 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
               <strong>{mostCritical.name}</strong> paling kritis, sisa {mostCritical.stock} {mostCritical.base_unit}
             </span>
           </span>
-          <button
-            onClick={() => onNavigate('inventory')}
-            className="text-[11px] text-[#854F0B] underline cursor-pointer whitespace-nowrap"
-          >
-            Lihat detail →
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onNavigate('inventory')}
+              className="text-[11px] text-[#854F0B] underline cursor-pointer whitespace-nowrap"
+            >
+              Lihat detail →
+            </button>
+            <button
+              onClick={() => setDismissWarning(true)}
+              className="text-[#854F0B] hover:text-[#633806] cursor-pointer"
+            >
+              <X size={13} />
+            </button>
+          </div>
         </div>
       )}
 

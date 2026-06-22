@@ -1,6 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import '@fontsource/inter';
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
 
 
 @theme {
@@ -12,7 +13,7 @@
 /* Professional Polish Theme Customizations */
 body {
   font-family: var(--font-sans);
-  background-color: #F0F2F5;
+  background-color: #ffffff;
   color: #1e293b;
   overflow-x: hidden;
 }
@@ -70,4 +71,9 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+.font-mono {
+  font-family: "JetBrains Mono", monospace !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0; /* hapus tracking-[-0.5px] */
 }

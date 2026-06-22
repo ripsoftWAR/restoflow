@@ -21,7 +21,7 @@ function MetricCard({ label, value, trend, sparkData, sparkColor }: MetricCardPr
     <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start justify-between">
       <div className="min-w-0 flex-1">
         <div className="text-[11px] text-slate-400 mb-1.5">{label}</div>
-        <div className="text-[22px] font-medium text-slate-800 font-mono tracking-[-0.5px] mb-1">
+        <div className="text-[22px] font-semibold text-slate-800 tabular-nums tracking-[-0.03em] mb-1">
           {value}
         </div>
         {trend && trend.direction !== 'flat' && (
