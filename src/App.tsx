@@ -161,6 +161,7 @@ function AppContent(props: any) {
               movements={movements}
               ingredients={ingredients}
               recipes={recipes}
+              sales={sales}
               onNavigate={setActiveTab}
             />
             : (

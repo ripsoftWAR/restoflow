@@ -12,7 +12,7 @@ import {
   BadgeCheck,
   Layers,
   Scan,
-  Utensils,
+  ChefHat,
 } from 'lucide-react';
 import { RecipeWithDetails, Ingredient, Sale } from '../../types';
 import { useCart } from '../sales/hooks/useCart';
@@ -71,10 +71,6 @@ interface Props {
   onAdjustStock: (id: number, finalStock: number, notes: string) => Promise<void>;
   onDeleteIngredient: (id: number) => Promise<void>;
 
-  // ── Needed for the OCR tab (reuses the same ReceiptScanner page Owner uses) ──
-  onScanReceipt: (base64: string, mimeType: string) => Promise<any>;
-  onConfirmReceiptItems: (items: any[]) => Promise<void>;
-
   // ── Needed for the Resep tab (reuses the same RecipeSystem page Owner uses) ──
   onAddOrUpdateRecipe: (
     menuName: string,
@@ -86,9 +82,13 @@ interface Props {
     price?: number
   ) => Promise<void>;
   onDeleteRecipe: (menuName: string) => Promise<void>;
+
+  // ── Needed for the OCR tab (reuses the same ReceiptScanner page Owner uses) ──
+  onScanReceipt: (base64: string, mimeType: string) => Promise<any>;
+  onConfirmReceiptItems: (items: any[]) => Promise<void>;
 }
 
-type Tab = 'pos' | 'riwayat' | 'voucher' | 'inventori' | 'resep' | 'ocr';
+type Tab = 'pos' | 'riwayat' | 'voucher' | 'inventori' | 'ocr' | 'resep';
 type PaymentFilter = 'SEMUA' | 'CASH' | 'QRIS' | 'TRANSFER' | 'EDC';
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
@@ -183,7 +183,7 @@ export default function KasirMode({
           { id: 'riwayat' as Tab, label: 'Riwayat', icon: <History size={14} />, show: can('pos.view_history') },
           { id: 'voucher' as Tab, label: 'Voucher', icon: <Tag size={14} />, show: can('pos.apply_voucher') },
           { id: 'inventori' as Tab, label: 'Inventori', icon: <Layers size={14} />, show: can('inventory.view') },
-          { id: 'resep' as Tab, label: 'Resep', icon: <Utensils size={14} />, show: can('recipes.view') },
+          { id: 'resep' as Tab, label: 'Resep', icon: <ChefHat size={14} />, show: can('recipes.view') },
           { id: 'ocr' as Tab, label: 'OCR', icon: <Scan size={14} />, show: can('ocr.scan') },
         ] as { id: Tab; label: string; icon: React.ReactNode; show: boolean }[]
       ).filter((t) => t.show),
@@ -856,6 +856,34 @@ export default function KasirMode({
           </div>
         )}
 
+        {/* ══ TAB: RESEP ══════════════════════════════════════════════════════ */}
+        {/* Reuses the exact same RecipeSystem page the Owner sees — no new UI.  */}
+        {activeTab === 'resep' && can('recipes.view') && (
+          <div className="h-full overflow-y-auto px-5 py-4">
+            <RecipeSystem
+              ingredients={ingredients}
+              recipes={recipes}
+              onAddOrUpdateRecipe={onAddOrUpdateRecipe}
+              onDeleteRecipe={onDeleteRecipe}
+              forceFullscreen
+            />
+          </div>
+        )}
+
+        {/* ══ TAB: RESEP ══════════════════════════════════════════════════════ */}
+        {/* Reuses the exact same RecipeSystem page the Owner sees — no new UI.  */}
+        {activeTab === 'resep' && can('recipes.view') && (
+          <div className="h-full overflow-y-auto px-5 py-4">
+            <RecipeSystem
+              ingredients={ingredients}
+              recipes={recipes}
+              onAddOrUpdateRecipe={onAddOrUpdateRecipe}
+              onDeleteRecipe={onDeleteRecipe}
+              forceFullscreen
+            />
+          </div>
+        )}
+
         {/* ══ TAB: OCR ════════════════════════════════════════════════════════ */}
         {/* Reuses the exact same ReceiptScanner page the Owner sees — no new UI. */}
         {activeTab === 'ocr' && can('ocr.scan') && (
@@ -865,20 +893,6 @@ export default function KasirMode({
               onScanReceipt={onScanReceipt}
               onConfirmReceiptItems={onConfirmReceiptItems}
               onRefreshStats={onRefreshStats}
-            />
-          </div>
-        )}
-
-        {/* ══ TAB: RESEP ══════════════════════════════════════════════════════ */}
-        {/* Reuses the exact same RecipeSystem page the Owner sees — no new UI. */}
-        {activeTab === 'resep' && can('recipes.view') && (
-          <div className="h-full overflow-y-auto">
-            <RecipeSystem
-              ingredients={ingredients}
-              recipes={recipes}
-              onAddOrUpdateRecipe={onAddOrUpdateRecipe}
-              onDeleteRecipe={onDeleteRecipe}
-              forceFullscreen
             />
           </div>
         )}

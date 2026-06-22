@@ -1,84 +1,166 @@
-import { 
-  TrendingUp, 
-  ShoppingCart, 
-  Receipt, 
-  AlertTriangle,
-  Activity 
-} from 'lucide-react';
-import { DashboardStats } from '../../types';
-
-const formatIDR = (num: number) =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
+import { useMemo } from 'react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 
 const formatIDRCompact = (num: number) => {
-  if (num >= 1_000_000) return `Rp${(num / 1_000_000).toFixed(1)} jt`;
-  if (num >= 1_000)     return `Rp${(num / 1_000).toFixed(0)} rb`;
-  return formatIDR(num);
+  if (num >= 1_000_000) return `Rp${(num / 1_000_000).toFixed(1)}jt`;
+  if (num >= 1_000) return `Rp${(num / 1_000).toFixed(0)}rb`;
+  return `Rp${num.toLocaleString('id-ID')}`;
 };
 
-export default function MetricCards({ stats }: { stats: DashboardStats }) {
+interface MetricCardProps {
+  label: string;
+  value: string;
+  trend: { value: number; direction: 'up' | 'down' | 'flat'; label: string } | null;
+  sparkData: number[];
+  sparkColor: string;
+}
+
+function MetricCard({ label, value, trend, sparkData, sparkColor }: MetricCardProps) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start justify-between">
+      <div className="min-w-0 flex-1">
+        <div className="text-[11px] text-slate-400 mb-1.5">{label}</div>
+        <div className="text-[22px] font-medium text-slate-800 font-mono tracking-[-0.5px] mb-1">
+          {value}
+        </div>
+        {trend && trend.direction !== 'flat' && (
+          <div className={`flex items-center gap-1 text-[11px] font-medium ${
+            trend.direction === 'up' ? 'text-emerald-700' : 'text-amber-700'
+          }`}>
+            {trend.direction === 'up'
+              ? <TrendingUp size={11} />
+              : <TrendingDown size={11} />
+            }
+            <span>{trend.direction === 'up' ? '↑' : '↓'} {trend.value}%</span>
+            <span className="text-slate-400 font-normal ml-0.5">{trend.label}</span>
+          </div>
+        )}
+      </div>
+      {sparkData.length > 0 && (
+        <div className="w-[72px] h-[40px] flex-shrink-0 ml-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={sparkData.map((v, i) => ({ i, v }))}>
+              <defs>
+                <linearGradient id={`spark-${label.replace(/\s/g,'')}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={sparkColor} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={sparkColor} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <Area
+                type="monotone"
+                dataKey="v"
+                stroke={sparkColor}
+                strokeWidth={1.5}
+                fill={`url(#spark-${label.replace(/\s/g,'')})`}
+                dot={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface FilteredStats {
+  totalOmset: number;
+  totalTx: number;
+  totalQty: number;
+  profit: number;
+  sparkline: number[];
+}
+
+interface Props {
+  filteredStats: FilteredStats;
+  criticalCount: number;
+  dateRangeLabel: string;
+  onNavigate: (tab: string) => void;
+}
+
+export default function MetricCards({ filteredStats, criticalCount, dateRangeLabel, onNavigate }: Props) {
+  const { totalOmset, totalTx, profit, sparkline } = filteredStats;
+
+  // ── Trend calculation (compare first half vs second half) ───────
+  const salesTrend = useMemo(() => {
+    if (sparkline.length < 2) return null;
+    const mid = Math.floor(sparkline.length / 2);
+    const firstHalf = sparkline.slice(0, mid);
+    const secondHalf = sparkline.slice(mid);
+    const avg1 = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+    const avg2 = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+    if (avg1 === 0) return avg2 > 0 ? { value: 100, direction: 'up' as const, label: 'trend' } : null;
+    const pct = Math.round(((avg2 - avg1) / avg1) * 100);
+    return {
+      value: Math.abs(pct),
+      direction: (pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat') as 'up' | 'down' | 'flat',
+      label: 'trend',
+    };
+  }, [sparkline]);
+
+  // ── Transaction spark (scaled) ──────────────────────────────────
+  const txSpark = useMemo(() => {
+    if (!sparkline.length) return [];
+    const ratio = totalTx / (sparkline[sparkline.length - 1] || 1);
+    return sparkline.map(v => Math.max(0, Math.round(v * ratio * 0.01)));
+  }, [sparkline, totalTx]);
+
+  // ── Profit spark ────────────────────────────────────────────────
+  const profitSpark = useMemo(() => {
+    return sparkline.map(v => Math.round(v * 0.42));
+  }, [sparkline]);
+
+  // ── Critical spark (flat, just for visual) ──────────────────────
+  const criticalSpark = useMemo(() => {
+    return [Math.max(0, criticalCount - 2), Math.max(0, criticalCount - 1), criticalCount, criticalCount, criticalCount, criticalCount, criticalCount];
+  }, [criticalCount]);
+
   const metrics = [
-    { 
-      label: 'Total Omset',  
-      value: formatIDRCompact(stats.totalSalesByDay || 0),  
-      icon: TrendingUp,    
-      color: 'text-blue-600',    
-      bg: 'bg-blue-50',
-      trend: '+12%' 
+    {
+      label: `Omset · ${dateRangeLabel}`,
+      value: formatIDRCompact(totalOmset),
+      trend: salesTrend,
+      sparkData: sparkline,
+      sparkColor: '#1D9E75',
     },
-    { 
-      label: 'Transaksi',    
-      value: `${stats.totalTransactionsByDay || 0}`,         
-      icon: ShoppingCart,  
-      color: 'text-violet-600',  
-      bg: 'bg-violet-50',
-      trend: '+8%' 
+    {
+      label: `Transaksi · ${dateRangeLabel}`,
+      value: `${totalTx}`,
+      trend: null,
+      sparkData: txSpark,
+      sparkColor: '#378ADD',
     },
-    { 
-      label: 'Profit',       
-      value: formatIDRCompact((stats.totalSalesByDay || 0) - (stats.dailyExpense || 0)), 
-      icon: Receipt, 
-      color: 'text-emerald-600', 
-      bg: 'bg-emerald-50',
-      trend: '+5%' 
+    {
+      label: `Profit · ${dateRangeLabel}`,
+      value: formatIDRCompact(profit),
+      trend: null,
+      sparkData: profitSpark,
+      sparkColor: '#7C3AED',
     },
-    { 
-      label: 'Stok Kritis',  
-      value: `${stats.criticalStockItems?.count || 0}`,      
-      icon: AlertTriangle, 
-      color: 'text-amber-600',     
-      bg: 'bg-amber-50',
-      trend: null 
+    {
+      label: 'Stok kritis',
+      value: `${criticalCount} item`,
+      trend: null,
+      sparkData: criticalSpark,
+      sparkColor: '#EF9F27',
     },
   ];
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {metrics.map(({ label, value, icon: Icon, color, bg, trend }) => (
-        <div 
-          key={label}
-          className="group relative bg-white rounded-2xl border border-slate-100 p-4 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-200"
+      {metrics.map(m => (
+        <div
+          key={m.label}
+          onClick={() => {
+            if (m.label.includes('Omset') || m.label.includes('Transaksi') || m.label.includes('Profit')) {
+              onNavigate('sales');
+            } else {
+              onNavigate('inventory');
+            }
+          }}
+          className="cursor-pointer"
         >
-          <div className="flex items-start justify-between mb-3">
-            <div className={`p-2 rounded-xl ${bg}`}>
-              <Icon size={16} className={color} />
-            </div>
-            {trend && (
-              <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">
-                {trend}
-              </span>
-            )}
-          </div>
-
-          <div>
-            <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-0.5 truncate">{label}</p>
-            <h3 className="text-lg font-bold text-slate-800 leading-tight">{value}</h3>
-          </div>
-
-          {/* Mini Chart Placeholder (Decorative) */}
-          <div className="absolute bottom-3 right-3 opacity-20 group-hover:opacity-40 transition-opacity">
-            <Activity size={32} className={color} />
-          </div>
+          <MetricCard {...m} />
         </div>
       ))}
     </div>

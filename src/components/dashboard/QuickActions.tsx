@@ -1,87 +1,67 @@
-import { 
-  Scan, 
-  ShoppingCart, 
-  MessageSquareText, 
-  PackagePlus,
-  Plus
-} from 'lucide-react';
+import { Scan, ShoppingCart, MessageSquareText, Package } from 'lucide-react';
 
 const ACTIONS = [
-  { 
-    label: 'Scan Nota',       
+  {
+    label: 'Scan nota',
+    subtitle: 'OCR otomatis',
     tab: 'ocr',
     icon: Scan,
-    bg: 'bg-blue-50 hover:bg-blue-100',
-    text: 'text-blue-600',
-    border: 'border-blue-100 hover:border-blue-300'
+    color: 'text-blue-600',
   },
-  { 
-    label: 'Input Penjualan', 
+  {
+    label: 'Kasir',
+    subtitle: 'Input pesanan',
     tab: 'sales',
     icon: ShoppingCart,
-    bg: 'bg-violet-50 hover:bg-violet-100',
-    text: 'text-violet-600',
-    border: 'border-violet-100 hover:border-violet-300'
+    color: 'text-violet-600',
   },
-  { 
-    label: 'Tanya AI',        
-    tab: '',
+  {
+    label: 'Tanya AI',
+    subtitle: 'Asisten cerdas',
+    tab: 'ai',
     icon: MessageSquareText,
-    bg: 'bg-emerald-50 hover:bg-emerald-100',
-    text: 'text-emerald-600',
-    border: 'border-emerald-100 hover:border-emerald-300'
+    color: 'text-emerald-600',
   },
-  { 
-    label: 'Tambah Produk',   
+  {
+    label: 'Inventori',
+    subtitle: 'Kelola stok',
     tab: 'inventory',
-    icon: PackagePlus,
-    bg: 'bg-amber-50 hover:bg-amber-100',
-    text: 'text-amber-600',
-    border: 'border-amber-100 hover:border-amber-300'
+    icon: Package,
+    color: 'text-amber-600',
   },
 ];
 
-export default function QuickActions({ onNavigate }: { onNavigate: (tab: string) => void }) {
+interface Props {
+  onNavigate: (tab: string) => void;
+}
+
+export default function QuickActions({ onNavigate }: Props) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden h-full flex flex-col">
+    <div className="bg-white h-full flex flex-col border-t border-slate-100 lg:border-t-0">
       {/* HEADER */}
-      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-        <h3 className="text-sm font-bold text-slate-800">Menu Utama</h3>
-        <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
-          4 shortcuts
-        </span>
+      <div className="px-5 pt-4 pb-3 border-b border-slate-100">
+        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+          Aksi cepat
+        </p>
       </div>
 
-      {/* GRID ACTIONS */}
-      <div className="px-5 pb-5 grid grid-cols-2 gap-3">
-        {ACTIONS.map(({ label, tab, icon: Icon, bg, text, border }) => (
+      {/* VERTICAL ACTION LIST */}
+      <div className="px-4 pb-4 flex flex-col gap-2 flex-1">
+        {ACTIONS.map(({ label, subtitle, tab, icon: Icon, color }) => (
           <button
             key={label}
-            onClick={() => tab && onNavigate(tab)}
-            className={`
-              group relative flex flex-col items-center justify-center gap-2
-              p-4 rounded-xl border ${border} ${bg} 
-              transition-all duration-300 hover:-translate-y-1 hover:shadow-md
-              active:scale-[0.98]
-            `}
+            onClick={() => onNavigate(tab)}
+            className="group flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors duration-150 text-left w-full last:border-b-0"
           >
-            {/* Icon Container */}
-            <div className={`
-              p-2.5 rounded-xl bg-white shadow-sm border border-slate-100 
-              group-hover:scale-110 transition-transform duration-300
-            `}>
-              <Icon size={20} className={text} />
+            <div className="p-1.5 rounded-lg bg-slate-50 group-hover:bg-white transition-colors duration-150">
+              <Icon size={18} className={color} />
             </div>
-            
-            {/* Label */}
-            <span className="text-xs font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">
-              {label}
-            </span>
-            
-            {/* Subtle Shine Effect on Hover */}
-            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" 
-                 style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%)' }} 
-            />
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">
+                {label}
+              </p>
+              <p className="text-[11px] text-slate-400">{subtitle}</p>
+            </div>
           </button>
         ))}
       </div>
