@@ -6,6 +6,7 @@ import { hasColumn } from '../utils/dbHelpers';
 
 const router = Router();
 
+// ── Helper: build ingredient insert query ──────────────────────
 const buildIngredientInsertQuery = async (restaurantId: number, name: string, category: string | null, supplier: string, stock: number, baseUnit: string, minStock: number, unitPrice: number) => {
   const hasCategory = await hasColumn('ingredients', 'category');
   const columns = ['restaurant_id', 'name', 'supplier', 'stock', 'base_unit', 'min_stock', 'unit_price'];
@@ -14,7 +15,7 @@ const buildIngredientInsertQuery = async (restaurantId: number, name: string, ca
     columns.splice(2, 0, 'category');
     values.splice(2, 0, category || 'Bahan Pokok');
   }
-  const placeholders = values.map((_, index) => `$${index + 1}`);
+  const placeholders = values.map((_, i) => `$${i + 1}`);
   return {
     text: `INSERT INTO ingredients (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING id`,
     values,
@@ -28,159 +29,322 @@ const selectIngredientsForRestaurant = async (restaurantId: number) => {
   return db.query(`SELECT ${columns.join(', ')} FROM ingredients WHERE restaurant_id = $1`, [restaurantId]);
 };
 
+// ── Tool definitions untuk Claude ─────────────────────────────
+const TOOLS = [
+  {
+    name: 'get_ingredients',
+    description: 'Ambil daftar semua bahan baku restoran beserta stok saat ini',
+    input_schema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'get_sales_summary',
+    description: 'Ambil ringkasan penjualan berdasarkan rentang waktu',
+    input_schema: {
+      type: 'object',
+      properties: {
+        period: {
+          type: 'string',
+          enum: ['today', '7days', '30days', 'all'],
+          description: 'Periode data: today=hari ini, 7days=7 hari terakhir, 30days=30 hari terakhir, all=semua'
+        }
+      },
+      required: ['period']
+    }
+  },
+  {
+    name: 'get_payment_summary',
+    description: 'Ambil ringkasan pembayaran CASH vs QRIS vs Transfer',
+    input_schema: {
+      type: 'object',
+      properties: {
+        period: {
+          type: 'string',
+          enum: ['today', '7days', '30days', 'all'],
+          description: 'Periode data'
+        }
+      },
+      required: ['period']
+    }
+  },
+  {
+    name: 'get_low_stock',
+    description: 'Ambil daftar bahan yang stoknya di bawah minimum (kritis)',
+    input_schema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'get_recipes',
+    description: 'Ambil daftar resep dan menu aktif restoran',
+    input_schema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'restock_ingredient',
+    description: 'Tambah stok bahan baku ke database',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ingredient_name: { type: 'string', description: 'Nama bahan' },
+        amount: { type: 'number', description: 'Jumlah yang ditambah' },
+        unit: { type: 'string', description: 'Satuan: kg, g, gram, liter, l, ml, pcs' },
+        unit_price: { type: 'number', description: 'Total harga beli dalam Rupiah (opsional)' }
+      },
+      required: ['ingredient_name', 'amount', 'unit']
+    }
+  },
+  {
+    name: 'create_recipe',
+    description: 'Buat resep menu baru di database',
+    input_schema: {
+      type: 'object',
+      properties: {
+        menu_name: { type: 'string', description: 'Nama menu' },
+        category: { type: 'string', description: 'Kategori: Makanan atau Minuman' },
+        items: {
+          type: 'array',
+          description: 'Daftar bahan resep',
+          items: {
+            type: 'object',
+            properties: {
+              ingredient_name: { type: 'string' },
+              amount: { type: 'number' }
+            }
+          }
+        }
+      },
+      required: ['menu_name', 'category', 'items']
+    }
+  }
+];
+
+// ── Tool executor ──────────────────────────────────────────────
+const executeTool = async (toolName: string, toolInput: any, restaurantId: number): Promise<{ result: string; actions: any[] }> => {
+  const actions: any[] = [];
+
+  try {
+    if (toolName === 'get_ingredients') {
+      const res = await selectIngredientsForRestaurant(restaurantId);
+      const rows = res.rows;
+      if (!rows.length) return { result: 'Belum ada bahan baku terdaftar.', actions };
+      const list = rows.map(i =>
+        `- ${i.name}: stok ${i.stock} ${i.base_unit}, min ${i.min_stock} ${i.base_unit}, status ${Number(i.stock) <= Number(i.min_stock) ? 'KRITIS' : 'Aman'}`
+      ).join('\n');
+      return { result: `${rows.length} bahan baku:\n${list}`, actions };
+    }
+
+    if (toolName === 'get_sales_summary') {
+      const period = toolInput.period || '7days';
+      const intervalMap: Record<string, string> = {
+        today: "created_at::date = CURRENT_DATE",
+        '7days': "created_at >= NOW() - INTERVAL '7 days'",
+        '30days': "created_at >= NOW() - INTERVAL '30 days'",
+        all: '1=1'
+      };
+      const where = intervalMap[period] || intervalMap['7days'];
+      const res = await db.query(
+        `SELECT menu_name, SUM(quantity) as total_qty, SUM(total_price) as revenue
+         FROM sales WHERE restaurant_id = $1 AND ${where}
+         GROUP BY menu_name ORDER BY revenue DESC LIMIT 15`,
+        [restaurantId]
+      );
+      if (!res.rows.length) return { result: `Tidak ada data penjualan untuk periode ${period}.`, actions };
+      const totalOmset = res.rows.reduce((s: number, r: any) => s + Number(r.revenue), 0);
+      const totalQty = res.rows.reduce((s: number, r: any) => s + Number(r.total_qty), 0);
+      const list = res.rows.map((r: any) => `- ${r.menu_name}: ${r.total_qty} porsi, Rp ${Number(r.revenue).toLocaleString()}`).join('\n');
+      return {
+        result: `Penjualan (${period}):\nTotal omset: Rp ${totalOmset.toLocaleString()}\nTotal porsi: ${totalQty}\n\nPer menu:\n${list}`,
+        actions
+      };
+    }
+
+    if (toolName === 'get_payment_summary') {
+      const period = toolInput.period || '7days';
+      const intervalMap: Record<string, string> = {
+        today: "created_at::date = CURRENT_DATE",
+        '7days': "created_at >= NOW() - INTERVAL '7 days'",
+        '30days': "created_at >= NOW() - INTERVAL '30 days'",
+        all: '1=1'
+      };
+      const where = intervalMap[period] || intervalMap['7days'];
+      const res = await db.query(
+        `SELECT payment_method, COUNT(*) as count, SUM(total_price) as revenue
+         FROM sales WHERE restaurant_id = $1 AND ${where}
+         GROUP BY payment_method ORDER BY revenue DESC`,
+        [restaurantId]
+      );
+      if (!res.rows.length) return { result: `Tidak ada data pembayaran untuk periode ${period}.`, actions };
+      const list = res.rows.map((r: any) => `- ${r.payment_method}: ${r.count} transaksi, Rp ${Number(r.revenue).toLocaleString()}`).join('\n');
+      return { result: `Pembayaran (${period}):\n${list}`, actions };
+    }
+
+    if (toolName === 'get_low_stock') {
+      const res = await selectIngredientsForRestaurant(restaurantId);
+      const low = res.rows.filter(i => Number(i.stock) <= Number(i.min_stock));
+      if (!low.length) return { result: 'Semua stok aman, tidak ada yang kritis.', actions };
+      const list = low.map(i => `- ${i.name}: sisa ${i.stock} ${i.base_unit} (min ${i.min_stock} ${i.base_unit})`).join('\n');
+      return { result: `${low.length} bahan kritis:\n${list}`, actions };
+    }
+
+    if (toolName === 'get_recipes') {
+      const res = await db.query(
+        `SELECT r.menu_name, r.category, i.name as ingredient_name, r.amount, i.base_unit
+         FROM recipes r JOIN ingredients i ON r.ingredient_id = i.id
+         WHERE r.restaurant_id = $1 ORDER BY r.menu_name`,
+        [restaurantId]
+      );
+      if (!res.rows.length) return { result: 'Belum ada resep terdaftar.', actions };
+      const grouped: Record<string, string[]> = {};
+      res.rows.forEach((r: any) => {
+        if (!grouped[r.menu_name]) grouped[r.menu_name] = [];
+        grouped[r.menu_name].push(`${r.ingredient_name} ${r.amount} ${r.base_unit}`);
+      });
+      const list = Object.entries(grouped).map(([menu, items]) => `- ${menu}: ${items.join(', ')}`).join('\n');
+      return { result: `${Object.keys(grouped).length} resep aktif:\n${list}`, actions };
+    }
+
+    if (toolName === 'restock_ingredient') {
+      const { ingredient_name, amount, unit, unit_price = 0 } = toolInput;
+      const ingRes = await selectIngredientsForRestaurant(restaurantId);
+      const ingredientsList = ingRes.rows;
+      const mappedId = findMappedIngredient(ingredient_name, ingredientsList);
+
+      if (mappedId) {
+        const ing = ingredientsList.find(i => i.id === mappedId);
+        const converted = convertToUnit(amount, unit, ing.base_unit);
+        const nextStock = Number(ing.stock) + converted;
+        const pricePerBaseUnit = unit_price ? (unit_price / converted) : (ing.unit_price || 0);
+
+        await db.query(
+          'UPDATE ingredients SET stock = $1, unit_price = $2 WHERE id = $3 AND restaurant_id = $4',
+          [nextStock, pricePerBaseUnit, mappedId, restaurantId]
+        );
+        await db.query(
+          `INSERT INTO movement_log (restaurant_id, ingredient_id, type, amount, balance, notes, unit_price, total_price)
+           VALUES ($1, $2, 'IN', $3, $4, $5, $6, $7)`,
+          [restaurantId, mappedId, converted, nextStock, `Restock via AI: ${amount} ${unit}`, pricePerBaseUnit, unit_price]
+        );
+        actions.push({ type: 'REFRESH_DATA' });
+        return { result: `Stok ${ing.name} berhasil ditambah ${amount} ${unit}. Stok baru: ${nextStock} ${ing.base_unit}.`, actions };
+      } else {
+        // Auto-provision bahan baru
+        const lowUnit = (unit || '').toLowerCase();
+        const baseUnit = ['liter', 'l', 'ml'].includes(lowUnit) ? 'ml' : 'gram';
+        const converted = convertToUnit(amount, unit, baseUnit);
+        const pricePerBaseUnit = unit_price ? (unit_price / converted) : 0;
+        const insertQuery = await buildIngredientInsertQuery(restaurantId, ingredient_name, 'Bahan Pokok', 'AI Auto', converted, baseUnit, 0, pricePerBaseUnit);
+        const insertRes = await db.query(insertQuery.text, insertQuery.values);
+        const newId = insertRes.rows[0].id;
+        await db.query(
+          `INSERT INTO movement_log (restaurant_id, ingredient_id, type, amount, balance, notes, unit_price, total_price)
+           VALUES ($1, $2, 'IN', $3, $4, $5, $6, $7)`,
+          [restaurantId, newId, converted, converted, `Bahan baru + restock via AI: ${amount} ${unit}`, pricePerBaseUnit, unit_price]
+        );
+        actions.push({ type: 'REFRESH_DATA' });
+        return { result: `Bahan baru "${ingredient_name}" ditambahkan ke database dengan stok ${amount} ${unit}.`, actions };
+      }
+    }
+
+    if (toolName === 'create_recipe') {
+      const { menu_name, category, items } = toolInput;
+      const ingRes = await selectIngredientsForRestaurant(restaurantId);
+      const ingredientsList = ingRes.rows;
+
+      await db.query('DELETE FROM recipes WHERE menu_name = $1 AND restaurant_id = $2', [menu_name, restaurantId]);
+
+      for (const item of items) {
+        let mappedId = findMappedIngredient(item.ingredient_name, ingredientsList);
+        if (!mappedId) {
+          const insertQuery = await buildIngredientInsertQuery(restaurantId, item.ingredient_name, 'Bahan Pokok', 'AI Chat', 0, 'gram', 0, 0);
+          const insertIng = await db.query(insertQuery.text, insertQuery.values);
+          mappedId = insertIng.rows[0].id;
+        }
+        await db.query(
+          `INSERT INTO recipes (restaurant_id, menu_name, category, ingredient_id, amount) VALUES ($1, $2, $3, $4, $5)`,
+          [restaurantId, menu_name, category || 'Makanan', mappedId, item.amount]
+        );
+      }
+      actions.push({ type: 'REFRESH_DATA' });
+      return { result: `Resep "${menu_name}" (${category}) berhasil disimpan dengan ${items.length} bahan.`, actions };
+    }
+
+    return { result: `Tool "${toolName}" tidak dikenali.`, actions };
+  } catch (err: any) {
+    console.error(`Tool ${toolName} error:`, err);
+    return { result: `Gagal eksekusi ${toolName}: ${err.message}`, actions };
+  }
+};
+
+// ── Main route ─────────────────────────────────────────────────
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   const restaurantId = req.user!.restaurant_id;
   const { message, history } = req.body;
-  if (!message) return res.status(400).json({ error: "Message payload is required" });
-  console.log("MSG SIZE:", JSON.stringify(message).length, "HISTORY SIZE:", JSON.stringify(history||[]).length, "HISTORY LEN:", (history||[]).length);
+  if (!message) return res.status(400).json({ error: 'Message payload is required' });
 
-  let ingredientsList: any[] = [];
-  let recipesList: any[] = [];
-  let salesSummary: any[] = [];
-  let salesList: any[] = [];
-  let paymentSummary: any[] = [];
+  const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const todayISO = new Date().toISOString().split('T')[0];
 
-  try {
-    const ingRes = await selectIngredientsForRestaurant(restaurantId);
-    ingredientsList = ingRes.rows;
+  const SYSTEM_PROMPT = `Kamu adalah AI Asisten Manajer Restoran untuk aplikasi RestoFlow. Jawab dalam Bahasa Indonesia yang ramah dan profesional.
 
-    const recRes = await db.query(`
-      SELECT r.menu_name, r.category, i.name as ingredient_name, r.amount, i.base_unit
-      FROM recipes r JOIN ingredients i ON r.ingredient_id = i.id
-      WHERE r.restaurant_id = $1
-    `, [restaurantId]);
-    recipesList = recRes.rows;
+Hari ini: ${today} (${todayISO})
 
-    const salesRes = await db.query(
-      'SELECT menu_name, quantity, total_price, payment_method, created_at FROM sales WHERE restaurant_id = $1 ORDER BY created_at DESC LIMIT 100',
-      [restaurantId]
-    );
-    salesList = salesRes.rows;
+Kamu punya akses ke database restoran melalui tools. SELALU gunakan tools untuk mendapatkan data terbaru sebelum menjawab — jangan mengarang data.
 
-    const summaryRes = await db.query(
-      `SELECT menu_name, SUM(quantity) as total_qty, SUM(total_price) as revenue 
-       FROM sales WHERE restaurant_id = $1 
-       AND created_at >= NOW() - INTERVAL '7 days'
-       GROUP BY menu_name ORDER BY revenue DESC LIMIT 10`,
-      [restaurantId]
-    );
-    salesSummary = summaryRes.rows;
+Panduan penggunaan tools:
+- Pertanyaan stok/bahan → get_ingredients atau get_low_stock
+- Pertanyaan penjualan/omset → get_sales_summary (pilih period yang sesuai)
+- Pertanyaan pembayaran → get_payment_summary
+- Pertanyaan resep/menu → get_recipes
+- Perintah tambah stok → restock_ingredient
+- Perintah buat resep → create_recipe
 
-    const payRes = await db.query(
-      `SELECT payment_method, COUNT(*) as count, SUM(total_price) as revenue 
-       FROM sales WHERE restaurant_id = $1 
-       AND created_at >= NOW() - INTERVAL '7 days'
-       GROUP BY payment_method`,
-      [restaurantId]
-    );
-    paymentSummary = payRes.rows;
-  } catch (err: any) {
-    console.error('Database pre-fetch failed:', err);
+Untuk pertanyaan "hari ini" gunakan period: "today", "minggu ini" gunakan "7days", dst.`;
+
+  // ── Offline fallback (tanpa API key) ──────────────────────────
+  if (!process.env.ANTHROPIC_API_KEY) {
+    try {
+      const ingRes = await selectIngredientsForRestaurant(restaurantId);
+      const ingredientsList = ingRes.rows;
+      const msgLow = message.toLowerCase();
+      let replyText = '';
+      const clientActionsToTrigger: any[] = [];
+
+      if (msgLow.includes('tambah') || msgLow.includes('restock') || msgLow.includes('isi stok')) {
+        const match = message.match(/(?:tambah|tambahkan|isi|restock)\s+stoc?k?\s+([a-zA-Z\s]+?)\s+(?:sebanyak\s+)?(\d+(?:\.\d+)?)\s*(kg|g|gram|liter|l|ml|pcs|butir)/i);
+        if (match) {
+          const { result, actions } = await executeTool('restock_ingredient', {
+            ingredient_name: match[1].trim(),
+            amount: parseFloat(match[2]),
+            unit: match[3].trim(),
+            unit_price: 0
+          }, restaurantId);
+          replyText = result;
+          clientActionsToTrigger.push(...actions);
+        } else {
+          replyText = 'Format tidak dikenali. Coba: *"tambah stock Cabai Merah sebanyak 2 kg"*';
+        }
+      } else if (msgLow.includes('kritis') || msgLow.includes('hampir habis') || msgLow.includes('stok lemah')) {
+        const { result } = await executeTool('get_low_stock', {}, restaurantId);
+        replyText = result;
+      } else if (msgLow.includes('pembayaran') || msgLow.includes('cash') || msgLow.includes('qris')) {
+        const { result } = await executeTool('get_payment_summary', { period: '7days' }, restaurantId);
+        replyText = result;
+      } else if (msgLow.includes('penjualan') || msgLow.includes('omset')) {
+        const period = msgLow.includes('hari ini') ? 'today' : msgLow.includes('30') ? '30days' : '7days';
+        const { result } = await executeTool('get_sales_summary', { period }, restaurantId);
+        replyText = result;
+      } else {
+        const { result } = await executeTool('get_ingredients', {}, restaurantId);
+        replyText = `Halo! Saya AI Asisten RestoFlow.\n\n${result}\n\nContoh perintah:\n- *"tambah stock Beras 5kg"*\n- *"bahan apa yang kritis?"*\n- *"penjualan hari ini"*`;
+      }
+
+      return res.json({ text: replyText, actions: clientActionsToTrigger });
+    } catch (err: any) {
+      return res.json({ text: `Error offline mode: ${err.message}`, actions: [] });
+    }
   }
 
-  const snapshot = {
-    ingredients: ingredientsList.map(i => ({
-      id: i.id,
-      name: i.name,
-      stock: i.stock,
-      base_unit: i.base_unit,
-      min_stock: i.min_stock,
-      unit_price: i.unit_price,
-      status: i.stock <= i.min_stock ? 'KRITIS' : 'Aman'
-    })),
-    recipes: recipesList.reduce((acc: any, r: any) => {
-      if (!acc[r.menu_name]) acc[r.menu_name] = { category: r.category, items: [] };
-      acc[r.menu_name].items.push(`${r.ingredient_name}: ${r.amount} ${r.base_unit}`);
-      return acc;
-    }, {}),
-    top_sales: salesSummary.map(s => `${s.menu_name}: ${s.total_qty} porsi, Rp ${Number(s.revenue).toLocaleString()}`),
-    payment_summary: paymentSummary.map(p => `${p.payment_method}: ${p.count} tx, Rp ${Number(p.revenue).toLocaleString()}`),
-  };
-
-  const runSimulation = async (extraNotice: string = "") => {
-    const msgLow = message.toLowerCase();
-    let replyText = "";
-    const clientActionsToTrigger: any[] = [];
-
-    if (msgLow.includes('tambah stock') || msgLow.includes('restock') || msgLow.includes('tambahkan stock') || msgLow.includes('tambah stok') || msgLow.includes('isi stok')) {
-      const match = message.match(/(?:tambah|tambahkan|isi|restock)\s+stoc?k?\s+([a-zA-Z\s]+?)\s+(?:sebanyak\s+)?(\d+(?:\.\d+)?)\s*(kg|g|gram|liter|l|ml|pcs|butir)/i);
-      if (match) {
-        const ingNameRaw = match[1].trim();
-        const amount = parseFloat(match[2]);
-        const unit = match[3].trim();
-        const mappedId = findMappedIngredient(ingNameRaw, ingredientsList);
-        if (mappedId) {
-          const ing = ingredientsList.find(i => i.id === mappedId);
-          const converted = convertToUnit(amount, unit, ing.base_unit);
-          const nextStock = ing.stock + converted;
-          await db.query('UPDATE ingredients SET stock = $1 WHERE id = $2 AND restaurant_id = $3', [nextStock, mappedId, restaurantId]);
-          await db.query(
-            `INSERT INTO movement_log (restaurant_id, ingredient_id, type, amount, balance, notes) VALUES ($1, $2, 'IN', $3, $4, $5)`,
-            [restaurantId, mappedId, converted, nextStock, `Restock via AI Chat (Offline): ${amount} ${unit}`]
-          );
-          replyText = `Stok **${ing.name}** berhasil ditambahkan:\n- Jumlah: +${amount} ${unit}\n- Stok baru: **${nextStock} ${ing.base_unit}**`;
-          clientActionsToTrigger.push({ type: 'REFRESH_DATA' });
-        } else {
-          replyText = `Bahan "${ingNameRaw}" tidak ditemukan.`;
-        }
-      } else {
-        replyText = `Format tidak dikenali. Coba: *"tambah stock Cabai Merah sebanyak 2 kg"*`;
-      }
-    } else if (msgLow.includes('cash') || msgLow.includes('qris') || msgLow.includes('pembayaran')) {
-      const cashSales = salesList.filter(s => (s.payment_method || '').toUpperCase() === 'CASH');
-      const qrisSales = salesList.filter(s => (s.payment_method || '').toUpperCase() === 'QRIS');
-      const cashTotal = cashSales.reduce((sum, s) => sum + (Number(s.total_price) || 0), 0);
-      const qrisTotal = qrisSales.reduce((sum, s) => sum + (Number(s.total_price) || 0), 0);
-      replyText = `Status pembayaran:\n- CASH: ${cashSales.length} transaksi, Rp ${cashTotal.toLocaleString()}\n- QRIS: ${qrisSales.length} transaksi, Rp ${qrisTotal.toLocaleString()}`;
-    } else if (msgLow.includes('hampir habis') || msgLow.includes('kritis') || msgLow.includes('stok lemah')) {
-      const lowStocks = ingredientsList.filter(i => Number(i.stock) <= Number(i.min_stock));
-      if (lowStocks.length > 0) {
-        replyText = `Bahan kritis:\n${lowStocks.map(i => `- **${i.name}**: Sisa ${i.stock} ${i.base_unit}`).join('\n')}`;
-      } else {
-        replyText = `Semua stok aman (${ingredientsList.length} bahan dipantau).`;
-      }
-    } else {
-      replyText = `Halo! Data saat ini:\n- Total bahan: ${ingredientsList.length} jenis\n- Bahan kritis: ${ingredientsList.filter(i => Number(i.stock) <= Number(i.min_stock)).length}\n- Menu aktif: ${Object.keys(snapshot.recipes).length} resep`;
-    }
-
-    if (extraNotice) replyText = `${extraNotice}\n\n${replyText}`;
-    return res.json({ text: replyText, actions: clientActionsToTrigger });
-  };
-
-  if (!process.env.ANTHROPIC_API_KEY) return await runSimulation();
-
+  // ── Claude Tool Calling ────────────────────────────────────────
   try {
-    const ingList = snapshot.ingredients.map(i => `- ${i.name}: ${i.stock} ${i.base_unit} (min ${i.min_stock}) [${i.status}]`).join('\n');
-    const menuList = Object.keys(snapshot.recipes).join(', ');
-    const topSales = snapshot.top_sales.join('\n');
-    const payList = snapshot.payment_summary.join('\n');
-    const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const todayISO = new Date().toISOString().split('T')[0];
-
-    const systemPrompt = `Kamu adalah AI Asisten Manajer Restoran RestoFlow. Jawab dalam Bahasa Indonesia.
-
-TANGGAL HARI INI: ${today} (${todayISO})
-Data penjualan = 7 hari terakhir (bukan akumulatif).
-
-INGREDIENTS (${snapshot.ingredients.length} bahan):
-${ingList}
-
-MENU AKTIF: ${menuList}
-
-TOP PENJUALAN:
-${topSales}
-
-PAYMENT:
-${payList}
-
-ATURAN:
-1. Restock → sertakan <action>{"type":"RESTOCK","ingredient_name":"...","amount":1000,"unit":"gram","unit_price":0}</action>
-2. Buat resep → sertakan <action>{"type":"CREATE_RECIPE","menu_name":"...","category":"Makanan","items":[{"ingredient_name":"...","amount":20}]}</action>
-3. Tanpa action tag = tidak ada yang berubah di database
-4. unit_price = total harga beli dalam Rupiah`;
-
-    const trimmedHistory = (history || []).slice(-4);
-    const messages = [
+    const trimmedHistory = (history || []).slice(-6);
+    let messages: any[] = [
       ...trimmedHistory.map((h: any) => ({
         role: h.role === 'assistant' ? 'assistant' : 'user',
         content: h.text
@@ -188,88 +352,87 @@ ATURAN:
       { role: 'user', content: message }
     ];
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY!,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, system: systemPrompt, messages })
-    });
+    const allClientActions: any[] = [];
+    let finalText = '';
 
-    const data = await response.json() as any;
-    if (!response.ok) {
-      console.warn('Claude API error, falling back to offline:', data?.error?.message);
-      return runSimulation('*(Mode cadangan aktif)*');
-    }
+    // Agentic loop — max 5 iterasi
+    for (let iteration = 0; iteration < 5; iteration++) {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY!,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          tools: TOOLS,
+          messages
+        })
+      });
 
-    const fullText = data.content?.[0]?.text || '';
-    const clientActionsToTrigger: any[] = [];
-    const actionMatches = fullText.matchAll(/<action>(.*?)<\/action>/gs);
+      const data = await response.json() as any;
 
-    for (const match of actionMatches) {
-      try {
-        const action = JSON.parse(match[1]);
-
-        if (action.type === 'RESTOCK') {
-          const { ingredient_name, amount, unit, unit_price } = action;
-          const mappedId = findMappedIngredient(ingredient_name, ingredientsList);
-          if (mappedId) {
-            const ing = ingredientsList.find(i => i.id === mappedId);
-            const converted = convertToUnit(amount, unit, ing.base_unit);
-            const nextStock = ing.stock + converted;
-            const pricePerBaseUnit = unit_price ? (unit_price / converted) : (ing.unit_price || 0);
-            await db.query('UPDATE ingredients SET stock = $1, unit_price = $2 WHERE id = $3 AND restaurant_id = $4', [nextStock, pricePerBaseUnit, mappedId, restaurantId]);
-            await db.query(
-              `INSERT INTO movement_log (restaurant_id, ingredient_id, type, amount, balance, notes, unit_price, total_price) VALUES ($1, $2, 'IN', $3, $4, $5, $6, $7)`,
-              [restaurantId, mappedId, converted, nextStock, `Restock via AI: ${amount} ${unit}`, pricePerBaseUnit, unit_price || 0]
-            );
-          } else {
-            const lowUnit = (unit || '').toLowerCase();
-            const baseUnit = (lowUnit === 'liter' || lowUnit === 'l' || lowUnit === 'ml') ? 'ml' : 'gram';
-            const converted = convertToUnit(amount, unit, baseUnit);
-            const pricePerBaseUnit = unit_price ? (unit_price / converted) : 0;
-            const insertQuery = await buildIngredientInsertQuery(restaurantId, ingredient_name, 'Bahan Pokok', 'AI Auto', 0, baseUnit, 0, pricePerBaseUnit);
-            const insertRes = await db.query(insertQuery.text, insertQuery.values);
-            const newId = insertRes.rows[0].id;
-            await db.query('UPDATE ingredients SET stock = $1 WHERE id = $2', [converted, newId]);
-            await db.query(
-              `INSERT INTO movement_log (restaurant_id, ingredient_id, type, amount, balance, notes, unit_price, total_price) VALUES ($1, $2, 'IN', $3, $4, $5, $6, $7)`,
-              [restaurantId, newId, converted, converted, `Bahan baru + restock via AI: ${amount} ${unit}`, pricePerBaseUnit, unit_price || 0]
-            );
-          }
-          clientActionsToTrigger.push({ type: 'REFRESH_DATA' });
-        }
-
-        if (action.type === 'CREATE_RECIPE') {
-          const { menu_name, category, items } = action;
-          await db.query('DELETE FROM recipes WHERE menu_name = $1 AND restaurant_id = $2', [menu_name, restaurantId]);
-          for (const item of items) {
-            let mappedId = findMappedIngredient(item.ingredient_name, ingredientsList);
-            if (!mappedId) {
-              const insertQuery = await buildIngredientInsertQuery(restaurantId, item.ingredient_name, 'Bahan Pokok', 'AI Chat', 0, 'gram', 0, 0);
-              const insertIng = await db.query(insertQuery.text, insertQuery.values);
-              mappedId = insertIng.rows[0].id;
-            }
-            await db.query(
-              `INSERT INTO recipes (restaurant_id, menu_name, category, ingredient_id, amount) VALUES ($1, $2, $3, $4, $5)`,
-              [restaurantId, menu_name, category || 'Makanan', mappedId, item.amount]
-            );
-          }
-          clientActionsToTrigger.push({ type: 'REFRESH_DATA' });
-        }
-      } catch (e) {
-        console.error('Action parse error:', e);
+      if (!response.ok) {
+        console.warn('Claude API error:', data?.error?.message);
+        return res.json({ text: '*(Mode offline aktif)* Maaf, terjadi kendala koneksi ke AI.', actions: [] });
       }
+
+      // Kalau stop_reason = end_turn → Claude selesai jawab
+      if (data.stop_reason === 'end_turn') {
+        finalText = data.content
+          .filter((b: any) => b.type === 'text')
+          .map((b: any) => b.text)
+          .join('\n')
+          .trim();
+        break;
+      }
+
+      // Kalau stop_reason = tool_use → eksekusi tools
+      if (data.stop_reason === 'tool_use') {
+        const toolUseBlocks = data.content.filter((b: any) => b.type === 'tool_use');
+        const toolResultContents: any[] = [];
+
+        for (const toolUse of toolUseBlocks) {
+          console.log(`🔧 Tool call: ${toolUse.name}`, toolUse.input);
+          const { result, actions } = await executeTool(toolUse.name, toolUse.input, restaurantId);
+          allClientActions.push(...actions);
+          toolResultContents.push({
+            type: 'tool_result',
+            tool_use_id: toolUse.id,
+            content: result
+          });
+        }
+
+        // Tambah assistant response + tool results ke messages
+        messages = [
+          ...messages,
+          { role: 'assistant', content: data.content },
+          { role: 'user', content: toolResultContents }
+        ];
+
+        continue; // lanjut iterasi berikutnya
+      }
+
+      // Fallback kalau stop reason lain
+      finalText = data.content
+        .filter((b: any) => b.type === 'text')
+        .map((b: any) => b.text)
+        .join('\n')
+        .trim();
+      break;
     }
 
-    const cleanText = fullText.replace(/<action>.*?<\/action>/gs, '').trim();
-    return res.json({ text: cleanText, actions: clientActionsToTrigger });
+    return res.json({
+      text: finalText || 'Maaf, tidak ada respons dari AI.',
+      actions: allClientActions
+    });
 
   } catch (err: any) {
     console.error('Claude Chat error:', err);
-    return runSimulation('*(Terjadi kendala koneksi)*');
+    return res.json({ text: '*(Terjadi kendala koneksi)* Silakan coba lagi.', actions: [] });
   }
 });
 
