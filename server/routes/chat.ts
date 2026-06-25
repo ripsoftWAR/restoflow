@@ -58,13 +58,19 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     salesList = salesRes.rows;
 
     const summaryRes = await db.query(
-      'SELECT menu_name, SUM(quantity) as total_qty, SUM(total_price) as revenue FROM sales WHERE restaurant_id = $1 GROUP BY menu_name ORDER BY revenue DESC LIMIT 10',
+      `SELECT menu_name, SUM(quantity) as total_qty, SUM(total_price) as revenue 
+       FROM sales WHERE restaurant_id = $1 
+       AND created_at >= NOW() - INTERVAL '7 days'
+       GROUP BY menu_name ORDER BY revenue DESC LIMIT 10`,
       [restaurantId]
     );
     salesSummary = summaryRes.rows;
 
     const payRes = await db.query(
-      'SELECT payment_method, COUNT(*) as count, SUM(total_price) as revenue FROM sales WHERE restaurant_id = $1 GROUP BY payment_method',
+      `SELECT payment_method, COUNT(*) as count, SUM(total_price) as revenue 
+       FROM sales WHERE restaurant_id = $1 
+       AND created_at >= NOW() - INTERVAL '7 days'
+       GROUP BY payment_method`,
       [restaurantId]
     );
     paymentSummary = payRes.rows;
@@ -148,8 +154,13 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     const menuList = Object.keys(snapshot.recipes).join(', ');
     const topSales = snapshot.top_sales.join('\n');
     const payList = snapshot.payment_summary.join('\n');
+    const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const todayISO = new Date().toISOString().split('T')[0];
 
     const systemPrompt = `Kamu adalah AI Asisten Manajer Restoran RestoFlow. Jawab dalam Bahasa Indonesia.
+
+TANGGAL HARI INI: ${today} (${todayISO})
+Data penjualan = 7 hari terakhir (bukan akumulatif).
 
 INGREDIENTS (${snapshot.ingredients.length} bahan):
 ${ingList}
