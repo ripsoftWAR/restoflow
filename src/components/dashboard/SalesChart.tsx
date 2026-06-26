@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Lightbulb } from 'lucide-react';
+import { formatIDRCompact } from './shared/utils';
 
 const formatIDR = (num: number) =>
   new Intl.NumberFormat('id-ID', {
@@ -10,18 +11,13 @@ const formatIDR = (num: number) =>
     maximumFractionDigits: 0,
   }).format(num);
 
-const formatIDRCompact = (num: number) => {
-  if (num >= 1_000_000) return `Rp${(num / 1_000_000).toFixed(1)}jt`;
-  if (num >= 1_000) return `Rp${(num / 1_000).toFixed(0)}rb`;
-  return formatIDR(num);
-};
-
 interface Props {
   chartData: { time: string; val: number; date: string }[];
   dateRangeLabel: string;
+  isHourly?: boolean;
 }
 
-export default function SalesChart({ chartData, dateRangeLabel }: Props) {
+export default function SalesChart({ chartData, dateRangeLabel, isHourly = false }: Props) {
   // Auto-generate insight
   const insight = useMemo(() => {
     if (chartData.length < 2) {
@@ -40,8 +36,8 @@ export default function SalesChart({ chartData, dateRangeLabel }: Props) {
     if (pctAbove >= 15) {
       return `Penjualan tertinggi di ${maxLabel}, ${formatIDRCompact(max)} — ${pctAbove}% di atas rata-rata`;
     }
-    return `Rata-rata penjualan ${formatIDRCompact(avg)} per hari`;
-  }, [chartData]);
+    return `Rata-rata penjualan ${formatIDRCompact(avg)} ${isHourly ? 'per jam' : 'per hari'}`;
+  }, [chartData, isHourly]);
 
   return (
     <div className="bg-white h-full flex flex-col">
@@ -50,10 +46,10 @@ export default function SalesChart({ chartData, dateRangeLabel }: Props) {
         <div>
           <h3 className="text-[13px] font-medium text-slate-800">Penjualan</h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Omset per hari · <span className="text-slate-500 font-medium">{dateRangeLabel}</span>
+            Omset {isHourly ? 'per jam' : 'per hari'} · <span className="text-slate-500 font-medium">{dateRangeLabel}</span>
           </p>
         </div>
-        <span className="text-[11px] text-slate-400 cursor-pointer hover:text-slate-600">
+        <span className="text-[11px] text-slate-400 cursor-pointer hover:text-slate-600 transition-colors">
           Explore ›
         </span>
       </div>

@@ -23,7 +23,7 @@ export default function AdjustModal({
   const handleAdjust = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adjValue) return;
-    const val = parseFloat(adjValue);
+    const val = Math.round(parseFloat(adjValue) * 1000) / 1000;
     if (isNaN(val)) return;
     setIsSubmitting(true);
     try {

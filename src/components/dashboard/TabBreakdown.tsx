@@ -1,11 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Sale } from '../../types';
-
-const formatIDRCompact = (num: number) => {
-  if (num >= 1_000_000) return `Rp${(num / 1_000_000).toFixed(1)}jt`;
-  if (num >= 1_000) return `Rp${(num / 1_000).toFixed(0)}rb`;
-  return `Rp${num.toLocaleString('id-ID')}`;
-};
+import { formatIDRCompact } from './shared/utils';
 
 const formatIDRFull = (num: number) =>
   `Rp${Math.round(num).toLocaleString('id-ID')}`;

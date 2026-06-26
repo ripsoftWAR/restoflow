@@ -188,12 +188,14 @@ export default function TableSection({
 
                     {/* Stok (raw, dalam base unit) */}
                     <td className={`p-3 text-right align-middle text-[12.5px] font-semibold font-mono ${isLow ? 'text-red-600' : 'text-slate-800'}`}>
-                      {formatStockRaw(ing.stock)}
+                      {ing.conversion_factor && ing.buy_unit && ing.buy_unit !== ing.base_unit
+  ? `${formatStockRaw(Math.round(ing.stock / ing.conversion_factor * 100) / 100)}`
+  : formatStockRaw(ing.stock)}
                     </td>
 
                     {/* Satuan */}
                     <td className="p-3 text-center text-[11px] text-slate-400 align-middle">
-                      {ing.base_unit}
+                      {ing.buy_unit && ing.buy_unit !== ing.base_unit ? ing.buy_unit : ing.base_unit}
                     </td>
 
                     {/* Harga beli */}

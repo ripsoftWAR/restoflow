@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Ingredient } from '../../../types';
+import { preciseMultiply, validatePositive } from '../../../utils/mathHelper';
 
 type ModalType = 'add' | 'edit' | 'adjust' | 'delete' | null;
 
@@ -40,9 +41,9 @@ export function useInventoryState(ingredients: Ingredient[]) {
 
   const stats = useMemo(() => ({
     totalItem:   ingredients.length,
-    totalNilai:  ingredients.reduce((acc, i) => acc + i.stock * i.unit_price, 0),
-    kritisCount: ingredients.filter(i => i.stock <= i.min_stock).length,
-    akanHabis:   ingredients.filter(i => i.stock <= i.min_stock * 1.5 && i.stock > i.min_stock).length,
+    totalNilai:  ingredients.reduce((acc, i) => acc + preciseMultiply(Math.max(0, i.stock), i.unit_price), 0),
+    kritisCount: ingredients.filter(i => i.stock >= 0 && i.stock <= i.min_stock).length,
+    akanHabis:   ingredients.filter(i => i.stock >= 0 && i.stock <= i.min_stock * 1.5 && i.stock > i.min_stock).length,
   }), [ingredients]);
 
   return {

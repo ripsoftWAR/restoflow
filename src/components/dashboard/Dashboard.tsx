@@ -244,8 +244,8 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
           ═══════════════════════════════════════════════════════════ */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-medium text-slate-800">Overview</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">
+          <h1 className="font-2xl text-primary">Overview</h1>
+          <p className="text-sm text-slate-600 mt-1">
             Ringkasan operasional · Shift 1 · Budi
           </p>
         </div>
@@ -258,7 +258,7 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
               <button
                 key={key}
                 onClick={() => handleRangeClick(key)}
-                className={`text-[11px] px-3 py-1.5 rounded-md transition-all cursor-pointer whitespace-nowrap ${
+                className={`font-sm px-4 py-2 rounded-md transition-all cursor-pointer whitespace-nowrap ${
                   dateRange === key && key !== 'custom'
                     ? 'bg-white text-slate-800 shadow-sm font-medium'
                     : key === 'custom' && showCalendar
@@ -376,7 +376,7 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
           {/* Row 2: Sales Chart + Menu Terlaris */}
           <div className="grid lg:grid-cols-12 gap-3">
             <div className="lg:col-span-8 bg-white border border-slate-200 rounded-xl overflow-hidden">
-              <SalesChart chartData={chartData} dateRangeLabel={dateRangeLabel} />
+              <SalesChart chartData={chartData} dateRangeLabel={dateRangeLabel} isHourly={dateRange === 'today'} />
             </div>
             <div className="lg:col-span-4 bg-white border border-slate-200 rounded-xl overflow-hidden">
               <MenuTerlaris sales={filteredSales} dateRangeLabel={dateRangeLabel} />
@@ -409,7 +409,7 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
           TAB: TREN
           ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'tren' && (
-        <TabTren sales={filteredSales} dateRangeLabel={dateRangeLabel} />
+        <TabTren sales={filteredSales} dateRangeLabel={dateRangeLabel} dateRange={dateRange} />
       )}
 
       {/* ═══════════════════════════════════════════════════════════

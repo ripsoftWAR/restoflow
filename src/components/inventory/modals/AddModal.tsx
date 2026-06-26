@@ -44,13 +44,13 @@ export default function AddModal({ ingredients, onClose, onAddIngredient }: AddM
       // 🔑 Konversi harga: dari per-unit-beli → per-base-unit
       // Contoh: Rp 50.000/kaleng ÷ 400 gram/kaleng = Rp 125/gram
       const rawPrice = parseFloat(newPrice) || 0;
-      const pricePerBaseUnit = effectiveFactor > 0 ? rawPrice / effectiveFactor : rawPrice;
+      const pricePerBaseUnit = effectiveFactor > 0 ? Math.round(rawPrice / effectiveFactor * 1000) / 1000 : Math.round(rawPrice);
 
       await onAddIngredient({
         name: newName,
         category: newCategory,
         supplier: newSupplier,
-        stock: stockInBaseUnit,
+        stock: Math.round(stockInBaseUnit * 1000) / 1000,
         base_unit: newUnit,
         min_stock: parseFloat(newMin) || 0,
         unit_price: pricePerBaseUnit,

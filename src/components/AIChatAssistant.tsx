@@ -313,10 +313,10 @@ export default function AIChatAssistant({ ingredients, recipes, onRefreshData, e
                   </form>
                   
                   <div className="flex justify-center mt-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold opacity-40 flex items-center gap-2">
+                    <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold opacity-40 flex items-center gap-2">
                       <div className="w-1 h-1 bg-emerald-500 rounded-full"></div>
                       RestoFlow AI System Active
-                    </p>
+                    </div>
                   </div>
                 </div>
               </div>

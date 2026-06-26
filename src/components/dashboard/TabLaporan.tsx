@@ -1,12 +1,7 @@
 import { useMemo } from 'react';
 import { Sale } from '../../types';
 import { FileText, Download } from 'lucide-react';
-
-const formatIDRCompact = (num: number) => {
-  if (num >= 1_000_000) return `Rp${(num / 1_000_000).toFixed(1)}jt`;
-  if (num >= 1_000) return `Rp${(num / 1_000).toFixed(0)}rb`;
-  return `Rp${num.toLocaleString('id-ID')}`;
-};
+import { formatIDRCompact } from './shared/utils';
 
 interface Props {
   sales: Sale[];

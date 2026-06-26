@@ -1,7 +1,7 @@
 import { BaseUnit } from '../../../types';
 
 export const formatIDR = (n: number) =>
-  new Intl.NumberFormat('id-ID').format(n);
+  new Intl.NumberFormat('id-ID').format(Math.round(n));
 
 export const formatStock = (amount: number, unit: BaseUnit) => {
   if (unit === 'gram' && amount >= 1000)

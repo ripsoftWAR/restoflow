@@ -74,34 +74,48 @@ router.put('/:id', async (req, res) => {
   const { name, category, supplier, min_stock, unit_price, buy_unit, conversion_factor } = req.body;
   try {
     const hasCategory = await hasColumn('ingredients', 'category');
-    const setClauses = ['name = $1', 'supplier = $2', 'min_stock = $3', 'unit_price = $4'];
-    const values: any[] = [name, supplier, min_stock, unit_price || 0];
-    
+
+    let query: string;
+    let values: any[];
+
     if (hasCategory) {
-      setClauses.splice(1, 0, 'category = $2');
-      values.splice(1, 0, category || 'Lainnya');
+      query = `
+        UPDATE ingredients
+        SET name = $1, category = $2, supplier = $3, min_stock = $4, unit_price = $5,
+            buy_unit = $6::text, conversion_factor = $7::numeric
+        WHERE id = $8 AND restaurant_id = $9
+        RETURNING *
+      `;
+      values = [
+        name,
+        category || 'Lainnya',
+        supplier,
+        Number(min_stock) || 0,
+        Number(unit_price) || 0,
+        buy_unit ?? null,
+        Number(conversion_factor) || 1,
+        id,
+        restaurantId,
+      ];
+    } else {
+      query = `
+        UPDATE ingredients
+        SET name = $1, supplier = $2, min_stock = $3, unit_price = $4,
+            buy_unit = $5::text, conversion_factor = $6::numeric
+        WHERE id = $7 AND restaurant_id = $8
+        RETURNING *
+      `;
+      values = [
+        name,
+        supplier,
+        Number(min_stock) || 0,
+        Number(unit_price) || 0,
+        buy_unit ?? null,
+        Number(conversion_factor) || 1,
+        id,
+        restaurantId,
+      ];
     }
-
-    // Update unit beli & faktor konversi jika dikirim
-    let paramIdx = values.length;
-    if (buy_unit !== undefined) {
-      paramIdx++;
-      setClauses.push(`buy_unit = $${paramIdx}`);
-      values.push(buy_unit);
-    }
-    if (conversion_factor !== undefined) {
-      paramIdx++;
-      setClauses.push(`conversion_factor = $${paramIdx}`);
-      values.push(Number(conversion_factor) || 1);
-    }
-
-    values.push(id, restaurantId);
-    const query = `
-      UPDATE ingredients
-      SET ${setClauses.join(', ')}
-      WHERE id = ${values.length - 1} AND restaurant_id = ${values.length}
-      RETURNING *
-    `;
 
     const result = await db.query(query, values);
 

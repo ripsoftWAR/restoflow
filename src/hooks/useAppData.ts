@@ -180,7 +180,10 @@ export function useAppData() {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Gagal memperbarui bahan.');
+    if (!res.ok) {
+  const err = await res.json().catch(() => null);
+  throw new Error(err?.error || `Gagal memperbarui bahan. (${res.status})`);
+}
     await fetchAllData(authSession, true);
   };
 

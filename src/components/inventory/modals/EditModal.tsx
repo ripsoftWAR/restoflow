@@ -47,7 +47,7 @@ export default function EditModal({
     try {
       // 🔑 Konversi harga: dari per-unit-beli → per-base-unit
       const rawPrice = parseFloat(editPrice) || 0;
-      const pricePerBaseUnit = effectiveFactor > 0 ? rawPrice / effectiveFactor : rawPrice;
+      const pricePerBaseUnit = effectiveFactor > 0 ? Math.round(rawPrice / effectiveFactor * 1000) / 1000 : Math.round(rawPrice);
 
       await onEditIngredient(ingredient.id, {
         name: editName,
@@ -168,7 +168,7 @@ export default function EditModal({
                 {' · '}
               </>
             ) : null}
-            = Rp {formatIDR(pricePerBulk(parseFloat(editPrice) || 0, ingredient.base_unit))} per {bulkLabel(ingredient.base_unit)}
+            = Rp {formatIDR(pricePerBulk((parseFloat(editPrice) || 0) / effectiveFactor, ingredient.base_unit))} per {bulkLabel(ingredient.base_unit)}
           </p>
         )}
 

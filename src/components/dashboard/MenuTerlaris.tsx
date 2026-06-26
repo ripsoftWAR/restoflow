@@ -1,11 +1,6 @@
 import { useMemo } from 'react';
 import { Sale } from '../../types';
-
-const formatIDRCompact = (num: number) => {
-  if (num >= 1_000_000) return `Rp${(num / 1_000_000).toFixed(0)}rb`;
-  if (num >= 1_000) return `Rp${(num / 1_000).toFixed(0)}rb`;
-  return `Rp${num.toLocaleString('id-ID')}`;
-};
+import { formatIDRCompact } from './shared/utils';
 
 interface Props {
   sales: Sale[];
@@ -42,7 +37,7 @@ export default function MenuTerlaris({ sales, dateRangeLabel }: Props) {
             <span className="text-slate-500 font-medium">{dateRangeLabel}</span>
           </p>
         </div>
-        <span className="text-[11px] text-slate-400 cursor-pointer hover:text-slate-600">
+        <span className="text-[11px] text-slate-400 cursor-pointer hover:text-slate-600 transition-colors">
           Explore ›
         </span>
       </div>
@@ -72,7 +67,7 @@ export default function MenuTerlaris({ sales, dateRangeLabel }: Props) {
                   </div>
                 </div>
               </div>
-              <span className="text-[11px] font-medium text-slate-500 font-mono">
+              <span className="text-[11px] font-medium text-slate-500 tabular-nums tracking-[-0.03em]">
                 {formatIDRCompact(menu.revenue)}
               </span>
             </div>
