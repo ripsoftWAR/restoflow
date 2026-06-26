@@ -161,7 +161,11 @@ export default function TableSection({
             {filtered.length > 0 ? (
               filtered.map((ing, idx) => {
                 const isLow = ing.stock <= ing.min_stock;
-                const nilai = ing.stock * ing.unit_price;
+                const stockInBuyUnit =
+                  ing.conversion_factor && ing.buy_unit && ing.buy_unit !== ing.base_unit
+                    ? ing.stock / ing.conversion_factor
+                    : ing.stock;
+                const nilai = stockInBuyUnit * ing.unit_price;
 
                 return (
                   <tr

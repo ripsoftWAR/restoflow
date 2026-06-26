@@ -41,7 +41,13 @@ export function useInventoryState(ingredients: Ingredient[]) {
 
   const stats = useMemo(() => ({
     totalItem:   ingredients.length,
-    totalNilai:  ingredients.reduce((acc, i) => acc + preciseMultiply(Math.max(0, i.stock), i.unit_price), 0),
+    totalNilai:  ingredients.reduce((acc, i) => {
+      const stockInBuyUnit =
+        i.conversion_factor && i.buy_unit && i.buy_unit !== i.base_unit
+          ? i.stock / i.conversion_factor
+          : i.stock;
+      return acc + preciseMultiply(Math.max(0, stockInBuyUnit), i.unit_price);
+    }, 0),
     kritisCount: ingredients.filter(i => i.stock >= 0 && i.stock <= i.min_stock).length,
     akanHabis:   ingredients.filter(i => i.stock >= 0 && i.stock <= i.min_stock * 1.5 && i.stock > i.min_stock).length,
   }), [ingredients]);
