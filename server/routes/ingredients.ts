@@ -86,12 +86,12 @@ router.put('/:id', async (req, res) => {
     let paramIdx = values.length;
     if (buy_unit !== undefined) {
       paramIdx++;
-      setClauses.push(`buy_unit = ${paramIdx}`);
+      setClauses.push(`buy_unit = $${paramIdx}`);
       values.push(buy_unit);
     }
     if (conversion_factor !== undefined) {
       paramIdx++;
-      setClauses.push(`conversion_factor = ${paramIdx}`);
+      setClauses.push(`conversion_factor = $${paramIdx}`);
       values.push(Number(conversion_factor) || 1);
     }
 
