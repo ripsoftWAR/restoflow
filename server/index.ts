@@ -22,6 +22,11 @@ import voucherRoutes from './routes/vouchers';
 dotenv.config();
 
 const app = express();
+
+// Railway menggunakan reverse proxy — Express harus percaya header X-Forwarded-For
+// Nilai 1 = percaya 1 proxy pertama (Railway load balancer)
+app.set('trust proxy', 1);
+
 // Railway biasanya memberikan port otomatis lewat process.env.PORT
 const PORT = process.env.PORT || 8080;
 
