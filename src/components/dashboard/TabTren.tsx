@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Sale } from '../../types';
-import { formatIDRCompact } from './shared/utils';
+import { formatIDRCompact, parseDashboardDate } from './shared/utils';
 import StatCard from './shared/StatCard';
 
 interface Props {
@@ -32,8 +32,8 @@ export default function TabTren({ sales, dateRangeLabel, dateRange }: Props) {
       // Aggregate per jam
       const hourMap: Record<string, number> = {};
       sales.forEach(s => {
-        const d = new Date(s.created_at ?? '');
-        if (isNaN(d.getTime())) return;
+        const d = parseDashboardDate(s.created_at);
+        if (!d) return;
         const key = `${String(d.getHours()).padStart(2, '0')}:00`;
         hourMap[key] = (hourMap[key] || 0) + (Number(s.total_price) || 0);
       });
@@ -49,8 +49,8 @@ export default function TabTren({ sales, dateRangeLabel, dateRange }: Props) {
     // Aggregate per hari
     const dayMap: Record<string, number> = {};
     sales.forEach(s => {
-      const d = new Date(s.created_at ?? '');
-      if (isNaN(d.getTime())) return;
+      const d = parseDashboardDate(s.created_at);
+      if (!d) return;
       const key = d.toISOString().split('T')[0];
       dayMap[key] = (dayMap[key] || 0) + (Number(s.total_price) || 0);
     });

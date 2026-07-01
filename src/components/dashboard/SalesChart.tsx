@@ -55,7 +55,7 @@ export default function SalesChart({ chartData, dateRangeLabel, isHourly = false
       </div>
 
       {/* CHART */}
-      <div className="flex-1 px-4 pt-2 pb-1 min-h-[160px]">
+      <div className="flex-1 px-4 pt-2 pb-1 min-h-[220px] h-[220px]">
         {chartData.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <p className="text-xs text-slate-400">Belum ada data penjualan untuk periode ini</p>

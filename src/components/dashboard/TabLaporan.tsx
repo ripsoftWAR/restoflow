@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Sale } from '../../types';
 import { FileText, Download } from 'lucide-react';
-import { formatIDRCompact } from './shared/utils';
+import { formatIDRCompact, parseDashboardDate } from './shared/utils';
 
 interface Props {
   sales: Sale[];
@@ -13,10 +13,9 @@ export default function TabLaporan({ sales, dateRangeLabel }: Props) {
     const dayMap: Record<string, { tx: number; omset: number; profit: number }> = {};
 
     sales.forEach(s => {
-      const dateStr = s.created_at
-        ? String(s.created_at).split('T')[0]
-        : '';
-      if (!dateStr) return;
+      const d = parseDashboardDate(s.created_at);
+      if (!d) return;
+      const dateStr = d.toISOString().split('T')[0];
 
       if (!dayMap[dateStr]) {
         dayMap[dateStr] = { tx: 0, omset: 0, profit: 0 };

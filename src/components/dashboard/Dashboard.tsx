@@ -10,6 +10,7 @@ import TabBreakdown from './TabBreakdown';
 import TabAlerts from './TabAlerts';
 import TabLaporan from './TabLaporan';
 import { AlertTriangle, ChevronRight, Calendar, Clock, ChevronDown, X } from 'lucide-react';
+import { parseDashboardDate, buildSalesChartData } from './shared/utils';
 
 interface DashboardProps {
   stats: DashboardStats;
@@ -115,7 +116,7 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
   // ── Filtered sales ──────────────────────────────────────────────
   const filteredSales = useMemo(() => {
     return sales.filter(s => {
-      const d = parseDate(s.created_at);
+      const d = parseDashboardDate(s.created_at);
       if (!d) return false;
       return d >= startDate && d <= endDate;
     });
@@ -124,65 +125,53 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
   // ── Filtered movements ──────────────────────────────────────────
   const filteredMovements = useMemo(() => {
     return movements.filter(m => {
-      const d = parseDate(m.created_at);
+      const d = parseDashboardDate(m.created_at);
       if (!d) return false;
       return d >= startDate && d <= endDate;
     });
   }, [movements, startDate, endDate]);
 
   // ── Computed stats dari filtered sales ──────────────────────────
+  const fallbackTrend = useMemo(() => {
+    if (!Array.isArray(stats?.salesTrend)) return [];
+    return stats.salesTrend.map(item => ({
+      date: String(item?.date || '').trim(),
+      amount: Number(item?.amount) || 0,
+    })).filter(item => item.date);
+  }, [stats]);
+
   const filteredStats = useMemo(() => {
-    const totalOmset = filteredSales.reduce((sum, s) => sum + (Number(s.total_price) || 0), 0);
-    const totalTx = filteredSales.length;
-    const totalQty = filteredSales.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0);
+    const totalOmsetFromSales = filteredSales.reduce((sum, s) => sum + (Number(s.total_price) || 0), 0);
+    const totalOmset = totalOmsetFromSales > 0 ? totalOmsetFromSales : fallbackTrend.reduce((sum, item) => sum + item.amount, 0);
+    const totalTx = filteredSales.length > 0 ? filteredSales.length : (stats?.totalTransactionsByDay || 0);
+    const totalQty = filteredSales.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0) || (stats?.totalItemsSoldByDay || 0);
     const profit = Math.round(totalOmset * 0.42);
 
     // Aggregate per day for sparkline
     const dayMap: Record<string, number> = {};
-    filteredSales.forEach(s => {
-      const dateStr = parseDate(s.created_at)?.toISOString().split('T')[0];
-      if (dateStr) {
-        dayMap[dateStr] = (dayMap[dateStr] || 0) + (Number(s.total_price) || 0);
-      }
-    });
+    if (filteredSales.length > 0) {
+      filteredSales.forEach(s => {
+        const dateStr = parseDashboardDate(s.created_at)?.toISOString().split('T')[0];
+        if (dateStr) {
+          dayMap[dateStr] = (dayMap[dateStr] || 0) + (Number(s.total_price) || 0);
+        }
+      });
+    } else {
+      fallbackTrend.forEach(item => {
+        dayMap[item.date] = (dayMap[item.date] || 0) + item.amount;
+      });
+    }
     const sparkline = Object.entries(dayMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([, v]) => v);
 
     return { totalOmset, totalTx, totalQty, profit, sparkline };
-  }, [filteredSales]);
+  }, [filteredSales, fallbackTrend, stats]);
 
   // ── Chart data dari filtered sales (aggregate per day) ──────────
   const chartData = useMemo(() => {
-    const dayMap: Record<string, number> = {};
-    filteredSales.forEach(s => {
-      const d = parseDate(s.created_at);
-      if (!d) return;
-      const key = dateRange === 'today'
-        ? d.toISOString().slice(0, 13)
-        : d.toISOString().split('T')[0];
-      dayMap[key] = (dayMap[key] || 0) + (Number(s.total_price) || 0);
-    });
-    return Object.entries(dayMap)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, val]) => {
-        const d = new Date(date);
-        const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-        let label: string;
-        if (dateRange === 'today') {
-          label = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-        } else if (dateRange === '7d') {
-          label = dayNames[d.getDay()];
-        } else {
-          label = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-        }
-        return {
-          time: label,
-          val,
-          date,
-        };
-      });
-  }, [filteredSales]);
+    return buildSalesChartData(filteredSales, dateRange, fallbackTrend);
+  }, [filteredSales, dateRange, fallbackTrend]);
 
   // ── Critical items ──────────────────────────────────────────────
   const criticalItems = useMemo(
