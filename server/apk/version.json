@@ -1,0 +1,13 @@
+{
+  "latest_version": "1.0.0",
+  "version_code": 1,
+  "pwa_enabled": true,
+  "flutter_enabled": true,
+  "file_name": "restoflow-kasir-v1.0.0.apk",
+  "release_date": "2025-06-15",
+  "changelog": "Native Android APK (Flutter) — login PIN, POS dengan menu grid, keranjang, voucher, riwayat transaksi, Bluetooth thermal printer, dan kamera OCR. Sinkronisasi real-time dengan backend RestoFlow.",
+  "file_size": 0,
+  "min_os": "Android 5.0+ (API 21)",
+  "download_url": "/apk/restoflow-kasir-v1.0.0.apk",
+  "install_note": "Download APK, buka file, izinkan 'Install from Unknown Sources', lalu buka RestoFlow Kasir."
+}

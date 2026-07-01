@@ -1,0 +1,45 @@
+{
+  "name": "RestoFlow — Restaurant Management",
+  "short_name": "RestoFlow",
+  "description": "Sistem manajemen restoran all-in-one: inventori, resep, penjualan, dan AI asisten.",
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#FAFAFA",
+  "theme_color": "#5B5BED",
+  "categories": ["business", "productivity", "food"],
+  "lang": "id-ID",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dasbor",
+      "description": "Lihat metrik bisnis hari ini",
+      "url": "/?tab=home",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Penjualan",
+      "short_name": "POS",
+      "description": "Proses transaksi & laporan",
+      "url": "/?tab=sales",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import db from '../db/database'; // Pastikan ini mengarah ke file pool pg Anda
+import db from '../db/database';
+import { verifyToken, JwtPayload } from './jwt';
 
 declare global {
   namespace Express {
@@ -9,70 +10,88 @@ declare global {
         username: string;
         role: string;
         nama: string;
-        restaurant_id: number; // Kunci utama SaaS
+        restaurant_id: number;
         created_at?: string;
       };
       sessionId?: number;
+      shiftId?: number;
     }
   }
 }
 
-const parseSessionId = (req: Request) => {
+/**
+ * Extract Bearer token dari Authorization header.
+ */
+const extractToken = (req: Request): string | null => {
   const authHeader = String(req.headers.authorization || '');
   if (!authHeader.startsWith('Bearer ')) return null;
-  const token = authHeader.replace('Bearer ', '').trim();
-  const sessionId = Number(token);
-  return Number.isInteger(sessionId) ? sessionId : null;
+  return authHeader.replace('Bearer ', '').trim();
 };
 
+/**
+ * Middleware: Verifikasi JWT + cek session masih aktif.
+ * 
+ * Flow:
+ * 1. Extract JWT dari Authorization header
+ * 2. Verify signature → dapatkan payload (user data + session_id)
+ * 3. Cek ke DB: session masih aktif? (logout_at IS NULL)
+ * 4. Inject req.user + req.sessionId + req.shiftId
+ */
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const sessionId = parseSessionId(req);
-  if (!sessionId) {
-    return res.status(401).json({ error: 'Authorization header invalid atau session tidak diberikan' });
+  const token = extractToken(req);
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Token tidak ditemukan. Silakan login ulang.' });
   }
 
+  // 1. Verify JWT
+  const payload: JwtPayload | null = verifyToken(token);
+  
+  if (!payload) {
+    return res.status(401).json({ error: 'Token tidak valid atau sudah kadaluarsa. Silakan login ulang.' });
+  }
+
+  // 2. Cek session masih aktif di DB (logout_at IS NULL)
   try {
-    // 1. Ganti ke PostgreSQL Query dengan $1
-    // 2. Tambahkan u.restaurant_id ke dalam SELECT
     const result = await db.query(
-      `SELECT ss.id as session_id, u.id as user_id, u.username, u.role, u.nama, u.restaurant_id, u.created_at as user_created_at
-       FROM shift_sessions ss
-       JOIN users u ON ss.user_id = u.id
-       WHERE ss.id = $1 AND ss.logout_at IS NULL`,
-      [sessionId]
+      `SELECT id FROM shift_sessions 
+       WHERE id = $1 AND logout_at IS NULL`,
+      [payload.session_id]
     );
 
-    const session = result.rows[0];
-
-    if (!session) {
-      return res.status(401).json({ error: 'Session tidak aktif atau tidak ditemukan' });
+    if (!result.rows[0]) {
+      return res.status(401).json({ error: 'Sesi telah berakhir. Silakan login ulang.' });
     }
 
-    // 3. Masukkan restaurant_id ke dalam req.user agar bisa dipakai di rute lain
+    // 3. Inject user data dari JWT payload
     req.user = {
-      id: session.user_id,
-      username: session.username,
-      role: session.role,
-      nama: session.nama,
-      restaurant_id: session.restaurant_id, 
-      created_at: session.user_created_at,
+      id: payload.user_id,
+      username: payload.username,
+      role: payload.role,
+      nama: payload.nama,
+      restaurant_id: payload.restaurant_id,
     };
-    
-    req.sessionId = session.session_id;
+    req.sessionId = payload.session_id;
+    req.shiftId = payload.shift_id;
+
     next();
   } catch (err) {
-    console.error('Auth Error:', err);
-    return res.status(500).json({ error: 'Database error pada saat autentikasi' });
+    console.error('Auth DB Error:', err);
+    return res.status(500).json({ error: 'Gagal memverifikasi sesi.' });
   }
 };
 
+/**
+ * Middleware: Role-based access control.
+ * Pemilik selalu lolos.
+ */
 export const requireRole = (...roles: string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     const run = () => {
       if (!req.user) {
         return res.status(401).json({ error: 'Akses ditolak, user belum terautentikasi' });
       }
-      // Pemilik selalu lolos — bypass role check
+      // Pemilik selalu lolos
       if (req.user.role === 'Pemilik') return next();
       if (!roles.includes(req.user.role)) {
         return res.status(403).json({ error: 'Akses dilarang untuk role ini' });
@@ -95,10 +114,11 @@ export const requireRole = (...roles: string[]) => {
   };
 };
 
-// ── Feature-based middleware (granular) ───────────────────────────────────────
+/**
+ * Middleware: Feature-based access control (granular).
+ */
 export const requireFeature = (featureKey: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
-    // Pastikan user sudah terautentikasi
     if (!req.user) {
       try {
         await requireAuth(req, res, (err?: any) => {
@@ -116,7 +136,6 @@ export const requireFeature = (featureKey: string) => {
 
 const checkFeature = async (req: Request, res: Response, next: NextFunction, featureKey: string) => {
   try {
-    // Pemilik selalu punya semua akses
     if (req.user?.role === 'Pemilik') return next();
 
     const result = await db.query(

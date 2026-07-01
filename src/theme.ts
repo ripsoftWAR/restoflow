@@ -1,41 +1,42 @@
-// src/theme.ts
+// src/theme.ts — PilotPOS Brand Colors
 export const theme = {
-  // 🎨 Warna Utama (dari palette yang sudah dipakai di seluruh project)
   colors: {
-    primary: '#378ADD',       // Biru utama (digunakan di semua chart & buttons)
-    secondary: '#1D9E75',     // Hijau sekunder (untuk highlight)
-    accent: '#7C3AED',        // Ungu (untuk icon & accent)
-    success: '#10B981',       // Hijau success
-    warning: '#F59E0B',       // Kuning warning
-    danger: '#EF4444',        // Merah danger
+    primary: '#2563EB',       // blue-600 — brand PilotPOS
+    primarySoft: '#EFF6FF',   // blue-50
+    primaryHover: '#1D4ED8',  // blue-700
+    success: '#059669',       // emerald-600
+    successSoft: '#ECFDF5',   // emerald-50
+    warning: '#D97706',       // amber-600
+    warningSoft: '#FFFBEB',   // amber-50
+    danger: '#DC2626',        // red-600
+    dangerSoft: '#FEF2F2',    // red-50
+    info: '#7C3AED',          // violet-600
+    infoSoft: '#F5F3FF',      // violet-50
     neutral: {
-      100: '#F3F4F6',
-      200: '#E5E7EB',
-      300: '#D1D5DB',
-      400: '#9CA3AF',
-      500: '#6B7280',
-      600: '#4B5563',
-      700: '#374151',
-      800: '#1F2937',
-      900: '#111827',
+      50:  '#F8FAFC',
+      100: '#F1F5F9',
+      200: '#E2E8F0',
+      300: '#CBD5E1',
+      400: '#94A3B8',
+      500: '#64748B',
+      600: '#475569',
+      700: '#334155',
+      800: '#1E293B',
+      900: '#0F172A',
     },
   },
 
-  // 📏 Ukuran Font (standarisasi untuk semua komponen)
   fontSizes: {
-    xs: '0.75rem',   // 12px
-    sm: '0.875rem',  // 14px
-    base: '1rem',    // 16px
-    lg: '1.125rem',  // 18px
-    xl: '1.25rem',   // 20px
-    '2xl': '1.5rem', // 24px
-    '3xl': '1.875rem', // 30px
-    '4xl': '2.25rem', // 36px
-    '5xl': '3rem',   // 48px
-    '6xl': '3.75rem', // 60px
+    xs:   '0.75rem',    // 12px
+    sm:   '0.8125rem',  // 13px
+    base: '0.875rem',   // 14px
+    lg:   '1rem',       // 16px
+    xl:   '1.125rem',   // 18px
+    '2xl': '1.25rem',   // 20px
+    '3xl': '1.5rem',    // 24px
+    '4xl': '1.75rem',   // 28px
   },
 
-  // 📐 Spacing (untuk margin/padding konsisten)
   spacing: {
     0.5: '2px',
     1: '4px',
@@ -46,10 +47,5 @@ export const theme = {
     6: '32px',
     8: '48px',
     10: '64px',
-    12: '80px',
-    16: '96px',
-    20: '128px',
-    24: '160px',
-    32: '224px',
   },
 };

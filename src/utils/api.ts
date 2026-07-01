@@ -15,15 +15,15 @@ export const resolveApiUrl = (url: string) => {
   return safeApiUrl ? `${safeApiUrl}${url}` : url;
 };
 
-export const makeApiFetch = (sessionId: number | null) =>
+export const makeApiFetch = (authToken: string | null) =>
   (url: string, options: RequestInit = {}) => {
     
     // 1. Gabungkan Headers
     const headers = new Headers(options.headers || {});
 
-    // 2. Tambahkan Authorization jika ada session
-    if (sessionId) {
-      headers.set('Authorization', `Bearer ${sessionId}`);
+    // 2. Tambahkan Authorization jika ada token
+    if (authToken) {
+      headers.set('Authorization', `Bearer ${authToken}`);
     }
 
     // 3. Tambahkan Content-Type JSON jika ada body dan bukan kirim file (FormData)

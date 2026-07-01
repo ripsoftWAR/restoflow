@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" fill="none">
+  <!-- Background -->
+  <rect width="192" height="192" rx="40" fill="#5B5BED"/>
+  <!-- "R" letterform — bold geometric -->
+  <text x="96" y="124" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="96" font-weight="700" fill="white" letter-spacing="-0.04em">R</text>
+  <!-- Small dot accent -->
+  <circle cx="138" cy="58" r="8" fill="white" opacity="0.3"/>
+</svg>

@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import userRoutes from './routes/users';
 
 // Import Routes
@@ -14,6 +15,7 @@ import salesRoutes from './routes/sales';
 import ocrRoutes from './routes/ocr';
 import chatRoutes from './routes/chat';
 import authRoutes from './routes/auth';
+import appRoutes from './routes/app';
 import { requireAuth, requireRole } from './utils/authMiddleware';
 import voucherRoutes from './routes/vouchers';
 
@@ -69,21 +71,55 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '15mb' }));
 
+// ── Static: serve APK files publicly (for download button) ──
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use('/apk', express.static(path.join(__dirname, 'apk'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.apk')) {
+      res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+      res.setHeader('Content-Disposition', 'attachment; filename="RestoFlow-Kasir.apk"');
+    }
+  },
+}));
+
 // ==========================================
-// 3. API ROUTES
+// 3. RATE LIMITER (Hardening Step 1)
 // ==========================================
-app.use('/api/auth', authRoutes);
-app.use('/api/dashboard', requireAuth, requireRole('Pemilik'), dashboardRoutes);
-app.use('/api/ingredients', requireAuth, ingredientRoutes);
-app.use('/api/movements', requireAuth, movementRoutes);
-app.use('/api/recipes', requireAuth, recipeRoutes);
-app.use('/api/sales', requireAuth, requireRole('Kasir', 'Pemilik', 'Dapur'), salesRoutes);
-app.use('/api/ocr', requireAuth, requireRole('Kasir', 'Pemilik'), ocrRoutes);
-app.use('/api/gemini/chat', requireAuth, chatRoutes);
-app.use('/api/vouchers', requireAuth, requireRole('Pemilik', 'Kasir'), voucherRoutes);
-app.use('/api/users', requireAuth, requireRole('Pemilik'), userRoutes);
+// Limiter ketat untuk endpoint auth (cegah brute force)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  max: 20, // max 20 percobaan login/register per window
+  message: { error: 'Terlalu banyak percobaan. Coba lagi 15 menit lagi.', retryAfter: 15 },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Limiter umum untuk seluruh API
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  max: 300, // max 300 request per window (rata-rata 1 req/3 detik)
+  message: { error: 'Terlalu banyak request. Coba lagi nanti.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ==========================================
-// 4. HEALTH CHECK & ERROR HANDLING
+// 4. API ROUTES
+// ==========================================
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/app', apiLimiter, appRoutes);  // APK download + version check
+app.use('/api/dashboard', apiLimiter, requireAuth, requireRole('Pemilik'), dashboardRoutes);
+app.use('/api/ingredients', apiLimiter, requireAuth, ingredientRoutes);
+app.use('/api/movements', apiLimiter, requireAuth, movementRoutes);
+app.use('/api/recipes', apiLimiter, requireAuth, recipeRoutes);
+app.use('/api/sales', apiLimiter, requireAuth, requireRole('Kasir', 'Pemilik', 'Dapur'), salesRoutes);
+app.use('/api/ocr', apiLimiter, requireAuth, requireRole('Kasir', 'Pemilik'), ocrRoutes);
+app.use('/api/gemini/chat', apiLimiter, requireAuth, chatRoutes);
+app.use('/api/vouchers', apiLimiter, requireAuth, requireRole('Pemilik', 'Kasir'), voucherRoutes);
+app.use('/api/users', apiLimiter, requireAuth, requireRole('Pemilik'), userRoutes);
+// ==========================================
+// 5. HEALTH CHECK & ERROR HANDLING
 // ==========================================
 // Health check agar Railway tahu service ini berjalan
 app.get('/health', (req, res) => {
@@ -97,7 +133,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // ==========================================
-// 5. JALANKAN SERVER
+// 6. JALANKAN SERVER
 // ==========================================
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`

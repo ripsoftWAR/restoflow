@@ -44,6 +44,17 @@ export default function Inventory({
 
   return (
     <>
+      {/* ── Header with title and fullscreen toggle ── */}
+      <div className="flex items-center justify-between px-3 py-2 bg-white shadow-sm border-b">
+        <h1 className="text-xl font-semibold text-gray-800">Ingredient Management</h1>
+        <button
+          onClick={toggleFullscreen}
+          className="px-3 py-1 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700 transition"
+        >
+          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+        </button>
+      </div>
+
       <div
         className={
           forceFullscreen
@@ -57,6 +68,7 @@ export default function Inventory({
 
           {/* ── Left: main content ── */}
           <div className="w-full min-w-0 flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto">
+            {/* Stat cards and quick summary are hidden in fullscreen mode */}
             {!isFullscreen && (
               <>
                 <StatCards ingredients={ingredients} />

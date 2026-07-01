@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <!-- Background with subtle gradient feel via layered shapes -->
+  <rect width="512" height="512" rx="96" fill="#5B5BED"/>
+  <!-- Subtle inner glow -->
+  <rect width="512" height="512" rx="96" fill="url(#glow)" opacity="0.15"/>
+  <defs>
+    <radialGradient id="glow" cx="30%" cy="20%" r="70%">
+      <stop stop-color="white"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <!-- "R" letterform -->
+  <text x="256" y="332" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="256" font-weight="700" fill="white" letter-spacing="-0.04em">R</text>
+  <!-- Mini text -->
+  <text x="256" y="400" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="500" fill="white" opacity="0.5" letter-spacing="0.06em">FLOW</text>
+</svg>

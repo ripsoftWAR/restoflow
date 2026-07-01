@@ -133,11 +133,11 @@ export interface NavItem {
 }
 
 export interface AuthSession {
+  token: string;
   user: User;
   shift: Shift;
-  session_id: number;
-  login_at: string;
   features?: UserFeature[];
+  login_at: string;
 }
 
 export interface UserFeature {

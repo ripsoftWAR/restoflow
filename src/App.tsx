@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Layers, Utensils, ShoppingCart, Scan, ListOrdered, Zap, Users } from 'lucide-react';
+import { LayoutDashboard, Layers, Utensils, ShoppingCart, Scan, ListOrdered, MapPin, Users } from 'lucide-react';
 
 import Dashboard from './components/dashboard/Dashboard';
 import Inventory from './components/inventory';
@@ -35,9 +35,11 @@ const NAV_SECONDARY: NavItem[] = [
 ];
 
 const Spinner = ({ label }: { label: string }) => (
-  <div className="min-h-screen flex items-center justify-center bg-[e3e5e6]">
+  <div className="min-h-screen flex items-center justify-center bg-slate-50">
     <div className="flex items-center gap-3 text-slate-400">
-      <div className="bg-blue-600 p-2 rounded-xl animate-pulse"><Zap size={18} className="text-white" /></div>
+      <div className="bg-gradient-to-br from-blue-600 to-blue-500 p-2 rounded-2xl animate-pulse shadow-sm shadow-blue-200">
+        <MapPin size={18} fill="white" className="text-white" strokeWidth={1.5} />
+      </div>
       <span className="text-sm font-medium">{label}</span>
     </div>
   </div>
@@ -67,7 +69,7 @@ export default function App() {
       onRegister={handleRegister}
     />
   );
-  if (loading) return <Spinner label="Initializing RestFlow…" />;
+  if (loading) return <Spinner label="Memuat PilotPOS…" />;
 
   return (
     <FeaturesProvider
@@ -152,7 +154,7 @@ function AppContent(props: any) {
 
   // ─── Main content ──────────────────────────────────────────────────────────
   const Content = () => (
-    <main className="flex-1 overflow-y-auto p-3 md:p-4">
+    <main className="flex-1 overflow-y-auto p-4 md:p-6">
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
         {activeTab === 'home' && (
           stats

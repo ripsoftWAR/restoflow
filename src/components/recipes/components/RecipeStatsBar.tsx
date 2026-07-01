@@ -73,7 +73,7 @@ export default function RecipeStatsBar({ recipes, ingredients }: RecipeStatsBarP
       {/* AI Insight Banner */}
       <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl p-4 flex items-center gap-3 relative overflow-hidden col-span-1">
         <div className="flex-1 z-10">
-          <p className="text-[10px] font-bold text-purple-200 uppercase tracking-wide mb-1">Robot AI RestFlow</p>
+          <p className="text-[10px] font-bold text-purple-200 uppercase tracking-wide mb-1">AI PilotPOS</p>
           <p className="text-[11px] text-white/90 leading-relaxed line-clamp-3">
             "Harga Ayam Fillet naik 10% di nota terbaru. HPP Ayam Goreng Kari meningkat menjadi Rp 18.500."
           </p>
