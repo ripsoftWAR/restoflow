@@ -4,7 +4,7 @@ import { VoucherResult, generateVoucherCode, formatIDRShort } from '../utils/sal
 
 interface VoucherGeneratorProps {
   restaurantId: number;
-  sessionId: number;
+  sessionId: string;
   /** Parent passes a setter so generated codes are available for cart validation */
   onVoucherGenerated: (code: string, voucher: VoucherResult) => void;
 }

@@ -136,6 +136,7 @@ router.post('/login', async (req: Request, res: Response) => {
       success: true,
       token,
       refresh_token: refreshToken,
+      session_id: sessionId,
       user: {
         id: user.id,
         username: user.username,
@@ -250,6 +251,7 @@ router.post('/login-pin', async (req: Request, res: Response) => {
       success: true,
       token,
       refresh_token: refreshToken,
+      session_id: sessionId,
       user: {
         id: user.id,
         username: user.username,

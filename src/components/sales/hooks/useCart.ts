@@ -24,7 +24,7 @@ export function useCart(
   recipes: RecipeWithDetails[],
   ingredients: Ingredient[],
   generatedVouchers: Record<string, VoucherResult> = {},
-  sessionId: number = 0,
+  sessionId: string = '',
 ) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QRIS' | 'Debit' | 'Kredit'>('CASH');

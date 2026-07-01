@@ -112,7 +112,7 @@ export default function App() {
           onConfirmReceiptItems={handleConfirmReceiptItems}
           onAddOrUpdateRecipe={handleAddOrUpdateRecipe}
           onDeleteRecipe={handleDeleteRecipe}
-          user={{ ...authSession.user, sessionId: authSession.session_id }}
+          user={{ ...authSession.user, sessionId: authSession.token }}
         />
       )}
     </FeaturesProvider>
@@ -200,7 +200,7 @@ function AppContent(props: any) {
             onRefreshStats={() => fetchAllData(authSession, true)} onNavigateToKasir={() => setActiveTab('kasir')}
             user={{
               ...authSession.user,
-              sessionId: authSession.user.id
+              sessionId: authSession.token
             }}
           />
         )}
@@ -220,7 +220,7 @@ function AppContent(props: any) {
             onConfirmReceiptItems={handleConfirmReceiptItems}
             onAddOrUpdateRecipe={handleAddOrUpdateRecipe}
             onDeleteRecipe={handleDeleteRecipe}
-            user={{ ...authSession.user, sessionId: authSession.session_id }}
+            user={{ ...authSession.user, sessionId: authSession.token }}
           />
         )}
         {activeTab === 'ocr' && can('ocr.scan') && (
@@ -231,7 +231,7 @@ function AppContent(props: any) {
         )}
         {activeTab === 'logs' && can('inventory.view_logs') && <MovementLogs movements={movements} />}
         {activeTab === 'users' && can('users.view') && (
-          <UsersPage user={{ ...authSession.user, sessionId: authSession.session_id }} />
+          <UsersPage user={{ ...authSession.user, sessionId: authSession.token }} />
         )}
         {activeTab === 'settings' && can('settings.view') && (
           <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">

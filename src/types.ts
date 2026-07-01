@@ -134,6 +134,7 @@ export interface NavItem {
 
 export interface AuthSession {
   token: string;
+  session_id: number;
   user: User;
   shift: Shift;
   features?: UserFeature[];

@@ -11,7 +11,7 @@ export function useAppData() {
   const [loading,     setLoading]     = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
-  const [sessionId,   setSessionId]   = useState<number | null>(null);
+  const [sessionId,   setSessionId]   = useState<string | null>(null);
   const [authError,   setAuthError]   = useState<string | null>(null);
   const [authMode,    setAuthMode]    = useState<'landing' | 'login' | 'register'>('landing');
 
@@ -59,16 +59,15 @@ export function useAppData() {
   // ─── Restore session on mount ──────────────────────────────────────────────
   useEffect(() => {
     const restoreSession = async () => {
-      const storedId = localStorage.getItem('restoflow_session_id');
-      if (!storedId) { setAuthChecked(true); setLoading(false); return; }
+      const storedToken = localStorage.getItem('restoflow_session_id');
+      if (!storedToken) { setAuthChecked(true); setLoading(false); return; }
 
-      const numericId = Number(storedId);
-      setSessionId(numericId);
+      // storedToken adalah JWT, gunakan langsung sebagai Bearer token
+      setSessionId(storedToken);
 
       try {
-        // FIX: pakai fetch langsung, bukan apiFetch (sessionId state belum terupdate)
         const res = await fetch(resolveApiUrl('/api/auth/me'), {
-          headers: { 'Authorization': `Bearer ${numericId}` },
+          headers: { 'Authorization': `Bearer ${storedToken}` },
         });
         if (!res.ok) {
           localStorage.removeItem('restoflow_session_id');
@@ -112,8 +111,8 @@ export function useAppData() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || 'Login gagal');
       setAuthSession(data);
-      setSessionId(data.session_id);
-      localStorage.setItem('restoflow_session_id', String(data.session_id));
+      setSessionId(data.token);  // simpan JWT token, bukan session_id numeric
+      localStorage.setItem('restoflow_session_id', data.token);
     } catch (err: any) {
       setAuthError(err.message || 'Login gagal');
     }
@@ -142,7 +141,6 @@ export function useAppData() {
         await apiFetch('/api/auth/logout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId }),
         });
       }
     } catch (err) {
