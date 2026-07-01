@@ -42,6 +42,7 @@ type InstallMode = 'native' | 'ios-guide' | 'apk' | 'none';
 export default function InstallPWA({ variant = 'sidebar', compact = false }: InstallPWAProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [showBrowserGuide, setShowBrowserGuide] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [installMode, setInstallMode] = useState<InstallMode>('none');
@@ -134,6 +135,11 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
     setIsOpen(false);
   }, []);
 
+  const handleBrowserGuide = useCallback(() => {
+    setShowBrowserGuide(true);
+    setIsOpen(false);
+  }, []);
+
   const handleDownloadAPK = useCallback(() => {
     window.open('/apk/restoflow-kasir-v1.0.0.apk', '_blank');
     setIsOpen(false);
@@ -223,6 +229,132 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // Desktop Browser Guide Modal
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (showBrowserGuide) {
+    return (
+      <>
+        <div
+          className="fixed inset-0 bg-black/40 z-[100] animate-in fade-in duration-200"
+          onClick={() => setShowBrowserGuide(false)}
+        />
+        <div className="fixed inset-0 z-[101] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-[400px] shadow-[0_16px_48px_rgba(0,0,0,0.16)] animate-in zoom-in-95 fade-in duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#FFF7ED] flex items-center justify-center">
+                  <Monitor size={20} className="text-[#EA580C]" />
+                </div>
+                <div>
+                  <h3 className="text-[16px] font-semibold text-[#171717] tracking-[-0.01em]">
+                    Pasang via Browser
+                  </h3>
+                  <p className="text-[12px] text-[#A3A3A3] mt-0.5">
+                    Chrome / Edge / Brave
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBrowserGuide(false)}
+                className="w-8 h-8 rounded-full bg-[#F5F5F5] flex items-center justify-center hover:bg-[#E5E5E5] transition-colors"
+              >
+                <X size={16} className="text-[#737373]" />
+              </button>
+            </div>
+
+            {/* Steps */}
+            <div className="px-6 pb-6 space-y-4">
+              {/* Step 1 */}
+              <div className="flex items-start gap-4">
+                <div className="w-7 h-7 rounded-full bg-[#F3F3FF] text-[#5B5BED] text-[12px] font-bold flex items-center justify-center flex-shrink-0 border border-[#E8E7FF]">
+                  1
+                </div>
+                <div className="flex-1">
+                  <p className="text-[14px] font-medium text-[#171717]">
+                    Klik ikon di address bar
+                  </p>
+                  <p className="text-[13px] text-[#737373] mt-1 leading-relaxed">
+                    Cari ikon <code className="bg-[#F5F5F5] px-1.5 py-0.5 rounded text-[#5B5BED] text-[12px] font-mono font-semibold">⚙️</code> atau <code className="bg-[#F5F5F5] px-1.5 py-0.5 rounded text-[#5B5BED] text-[12px] font-mono font-semibold">⋮</code> di pojok kanan atas address bar browser kamu.
+                  </p>
+                  {/* Visual hint — address bar illustration */}
+                  <div className="mt-3 bg-[#FAFAFA] rounded-xl border border-[#F5F5F5] p-3 flex items-center gap-2">
+                    <div className="flex-1 h-2.5 bg-[#E5E5E5] rounded-full" />
+                    <div className="w-8 h-8 rounded-lg bg-[#FFF7ED] border border-[#FFEDD5] flex items-center justify-center flex-shrink-0">
+                      <span className="text-[14px] leading-none">⋮</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex items-start gap-4">
+                <div className="w-7 h-7 rounded-full bg-[#F3F3FF] text-[#5B5BED] text-[12px] font-bold flex items-center justify-center flex-shrink-0 border border-[#E8E7FF]">
+                  2
+                </div>
+                <div className="flex-1">
+                  <p className="text-[14px] font-medium text-[#171717]">
+                    Pilih "Pasang RestoFlow..."
+                  </p>
+                  <p className="text-[13px] text-[#737373] mt-1 leading-relaxed">
+                    Dari menu dropdown, cari dan klik opsi <span className="font-semibold text-[#171717]">"Pasang RestoFlow..."</span> atau <span className="font-semibold text-[#171717]">"Install RestoFlow..."</span>.
+                  </p>
+                  {/* Visual hint — menu dropdown */}
+                  <div className="mt-3 bg-[#FAFAFA] rounded-xl border border-[#F5F5F5] p-3 space-y-1.5">
+                    <div className="h-2 bg-[#E5E5E5] rounded w-2/3" />
+                    <div className="h-2 bg-[#E5E5E5] rounded w-1/2" />
+                    <div className="flex items-center gap-2 py-1">
+                      <Download size={13} className="text-[#5B5BED] flex-shrink-0" />
+                      <span className="text-[12px] font-semibold text-[#5B5BED]">Pasang RestoFlow...</span>
+                    </div>
+                    <div className="h-2 bg-[#E5E5E5] rounded w-3/4" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex items-start gap-4">
+                <div className="w-7 h-7 rounded-full bg-[#F0FDF4] text-[#16A34A] text-[12px] font-bold flex items-center justify-center flex-shrink-0 border border-[#DCFCE7]">
+                  <Check size={13} strokeWidth={3} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[14px] font-medium text-[#171717]">
+                    Konfirmasi & selesai
+                  </p>
+                  <p className="text-[13px] text-[#737373] mt-1 leading-relaxed">
+                    Klik <span className="font-semibold text-[#171717]">"Pasang"</span> di dialog konfirmasi. RestoFlow akan terbuka di jendela sendiri seperti aplikasi native.
+                  </p>
+                  {/* Visual hint — confirm dialog */}
+                  <div className="mt-3 bg-[#FAFAFA] rounded-xl border border-[#F5F5F5] p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-5 h-5 rounded bg-[#5B5BED]/10 flex items-center justify-center">
+                        <Smartphone size={12} className="text-[#5B5BED]" />
+                      </div>
+                      <span className="text-[12px] font-medium text-[#171717]">Pasang aplikasi?</span>
+                    </div>
+                    <p className="text-[11px] text-[#A3A3A3] mb-3">RestoFlow — Restaurant Management</p>
+                    <div className="flex justify-end gap-2">
+                      <div className="h-2.5 bg-[#E5E5E5] rounded w-16" />
+                      <div className="h-2.5 bg-[#5B5BED] rounded w-16" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowBrowserGuide(false)}
+                className="w-full py-3 rounded-xl bg-[#F5F5F5] text-[13px] font-medium text-[#737373] hover:bg-[#E5E5E5] transition-colors mt-2"
+              >
+                Mengerti
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // Compact mode — icon only, opens dropdown
   // ═══════════════════════════════════════════════════════════════════════════
   if (compact) {
@@ -245,6 +377,7 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
               canAPK={canAPK}
               onNativeInstall={handleNativeInstall}
               onIOSGuide={handleIOSGuide}
+              onBrowserGuide={handleBrowserGuide}
               onDownloadAPK={handleDownloadAPK}
               onDismiss={handleDismiss}
             />
@@ -277,6 +410,7 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
               canAPK={canAPK}
               onNativeInstall={handleNativeInstall}
               onIOSGuide={handleIOSGuide}
+              onBrowserGuide={handleBrowserGuide}
               onDownloadAPK={handleDownloadAPK}
               onDismiss={handleDismiss}
             />
@@ -308,6 +442,7 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
             canAPK={canAPK}
             onNativeInstall={handleNativeInstall}
             onIOSGuide={handleIOSGuide}
+            onBrowserGuide={handleBrowserGuide}
             onDownloadAPK={handleDownloadAPK}
             onDismiss={handleDismiss}
           />
@@ -324,6 +459,7 @@ function InstallDropdownContent({
   canAPK,
   onNativeInstall,
   onIOSGuide,
+  onBrowserGuide,
   onDownloadAPK,
   onDismiss,
 }: {
@@ -332,6 +468,7 @@ function InstallDropdownContent({
   canAPK: boolean;
   onNativeInstall: () => void;
   onIOSGuide: () => void;
+  onBrowserGuide: () => void;
   onDownloadAPK: () => void;
   onDismiss: () => void;
 }) {
@@ -380,19 +517,18 @@ function InstallDropdownContent({
 
       {/* Fallback: "install manually" for desktop browsers without beforeinstallprompt */}
       {!canNative && !canIOS && (
-        <div className="px-3 py-2.5">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#FFF7ED] flex items-center justify-center flex-shrink-0">
-              <Monitor size={16} className="text-[#EA580C]" />
-            </div>
-            <div>
-              <p className="text-[13px] font-medium text-[#171717]">Pasang via Browser</p>
-              <p className="text-[11px] text-[#A3A3A3] mt-0.5 leading-relaxed">
-                Klik ikon <code className="bg-[#F5F5F5] px-1 rounded text-[#737373] text-[10px]">⚙️ / ⋮</code> di address bar &rarr; pilih <span className="font-semibold text-[#171717]">"Install RestoFlow"</span>
-              </p>
-            </div>
+        <button
+          onClick={onBrowserGuide}
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] text-[#171717] hover:bg-[#F5F5F5] transition-colors text-left"
+        >
+          <div className="w-8 h-8 rounded-lg bg-[#FFF7ED] flex items-center justify-center flex-shrink-0">
+            <Monitor size={16} className="text-[#EA580C]" />
           </div>
-        </div>
+          <div>
+            <p className="font-medium text-[#171717]">Pasang via Browser</p>
+            <p className="text-[11px] text-[#A3A3A3] mt-0.5">Panduan langkah demi langkah</p>
+          </div>
+        </button>
       )}
 
       {/* Download APK */}
