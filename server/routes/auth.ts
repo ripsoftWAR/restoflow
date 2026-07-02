@@ -67,9 +67,9 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 
   try {
-    // Cari user
+    // Cari user (case-insensitive)
     const userSearch = await db.query(
-      'SELECT * FROM users WHERE username = $1 AND is_active = true',
+      'SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND is_active = true',
       [username]
     );
     const user = userSearch.rows[0];
@@ -170,9 +170,9 @@ router.post('/login-pin', async (req: Request, res: Response) => {
   }
 
   try {
-    // Cari user aktif
+    // Cari user aktif (case-insensitive)
     const userSearch = await db.query(
-      `SELECT * FROM users WHERE username = $1 AND is_active = true`,
+      `SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND is_active = true`,
       [username]
     );
     const user = userSearch.rows[0];
