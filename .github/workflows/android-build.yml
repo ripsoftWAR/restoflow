@@ -2,37 +2,64 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: "17"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.4'
-          channel: 'stable'
+          flutter-version: "stable"
 
-      - name: Install dependencies
-        run: cd flutter_kasir && flutter pub get
+      - name: Install Dependencies
+        run: |
+          cd flutter_kasir
+          flutter pub get
 
-      - name: Build APK
-        run: cd flutter_kasir && flutter build apk --release
+      - name: Build Release APK
+        run: |
+          cd flutter_kasir
+          flutter build apk --release
 
-      - name: Upload APK artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: restoflow-kasir-apk
+          name: app-release
           path: flutter_kasir/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Delete Existing Latest Release
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          delete_release: true
+          tag_name: latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Create Latest Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Build
+          body: |
+            🚀 Automatic APK build from GitHub Actions.
+          files: flutter_kasir/build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
