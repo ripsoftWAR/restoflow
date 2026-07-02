@@ -81,7 +81,7 @@ class AksiCepatScreen extends StatelessWidget {
                     Row(
                       children: const [
                         _ActionItem(icon: Icons.trending_up, label: 'Penjualan', sub: 'Laporan', color: Color(0xFF2563EB), bgColor: Color(0xFFEFF6FF)),
-                        _ActionItem(icon: Icons.pie_chart_outlined, label: 'Produk Terlaris', sub: 'Laporan', color: Color(0xFF3B82F6), bgColor: Color(0xFFEFF6FF)),
+                        _ActionItem(icon: Icons.pie_chart_outline, label: 'Produk Terlaris', sub: 'Laporan', color: Color(0xFF3B82F6), bgColor: Color(0xFFEFF6FF)),
                         _ActionItem(icon: Icons.bar_chart, label: 'Laba Rugi', sub: 'Keuangan', color: Color(0xFF16A34A), bgColor: Color(0xFFF0FDF4)),
                         _ActionItem(icon: Icons.storefront_outlined, label: 'Performa Outlet', sub: 'Semua', color: Color(0xFF9333EA), bgColor: Color(0xFFF3E8FF)),
                       ],
