@@ -41,15 +41,12 @@ class _SyncScreenState extends State<SyncScreen> {
 
   void _startSync() {
     const total = 5;
+
+    // 1. Jalankan animasi sync
     _timer = Timer.periodic(const Duration(milliseconds: 750), (timer) {
       if (_currentStep >= total) {
         timer.cancel();
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (!_navigated) {
-            _navigated = true;
-            widget.onDone();
-          }
-        });
+        _onSyncComplete();
         return;
       }
       setState(() {
@@ -61,9 +58,30 @@ class _SyncScreenState extends State<SyncScreen> {
       });
     });
 
-    // Safety net
-    Future.delayed(const Duration(seconds: 7), () {
+    // 2. Di background: fetch dashboard data real
+    _fetchRealData();
+
+    // Safety net: max 8 detik
+    Future.delayed(const Duration(seconds: 8), () {
       if (!_navigated) {
+        _navigated = true;
+        widget.onDone();
+      }
+    });
+  }
+
+  /// Fetch dashboard + transactions dari backend secara async
+  Future<void> _fetchRealData() async {
+    try {
+      await context.read<AppState>().fetchDashboardData();
+    } catch (_) {
+      // Data real gagal → fallback ke demo data di AppState
+    }
+  }
+
+  void _onSyncComplete() {
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (!_navigated && mounted) {
         _navigated = true;
         widget.onDone();
       }
@@ -78,6 +96,8 @@ class _SyncScreenState extends State<SyncScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+
     return Container(
       color: Colors.white,
       child: SafeArea(
@@ -86,32 +106,40 @@ class _SyncScreenState extends State<SyncScreen> {
           child: Column(
             children: [
               const SizedBox(height: 56),
+              // Header info
+              if (appState.authUser != null) ...[
+                Text(
+                  'Login sebagai ${appState.authUser!.nama}',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF2563EB)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Shift: ${appState.activeShift?.displayTime ?? "-"}',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                ),
+                const SizedBox(height: 16),
+              ],
               // Floating cards
               SizedBox(
                 height: 224,
                 child: Stack(
                   children: [
-                    // Top-left
                     Positioned(
                       top: 8, left: 0,
                       child: _FloatingCard(data: _floating[0]),
                     ),
-                    // Top-right
                     Positioned(
                       top: 8, right: 0,
                       child: _FloatingCard(data: _floating[3]),
                     ),
-                    // Bottom-left
                     Positioned(
                       bottom: 24, left: 0,
                       child: _FloatingCard(data: _floating[1]),
                     ),
-                    // Bottom-right
                     Positioned(
                       bottom: 24, right: 0,
                       child: _FloatingCard(data: _floating[2]),
                     ),
-                    // Center DB icon
                     Center(
                       child: Container(
                         width: 80, height: 96,
@@ -123,7 +151,11 @@ class _SyncScreenState extends State<SyncScreen> {
                             end: Alignment.bottomRight,
                           ),
                           boxShadow: [
-                            BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8)),
+                            BoxShadow(
+                              color: const Color(0xFF2563EB).withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
                           ],
                         ),
                         child: const Icon(Icons.dns_outlined, color: Colors.white, size: 36),
@@ -136,9 +168,11 @@ class _SyncScreenState extends State<SyncScreen> {
               // Title
               const Text('Sinkronisasi Data', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
               const SizedBox(height: 4),
-              const Text('Mohon tunggu, kami sedang menyiapkan\ndata terbaik untuk Anda.',
+              const Text(
+                'Mohon tunggu, kami sedang menyiapkan\ndata terbaik untuk Anda.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14, height: 1.5)),
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14, height: 1.5),
+              ),
               const SizedBox(height: 24),
               // Progress bar
               Container(
@@ -199,8 +233,10 @@ class _SyncScreenState extends State<SyncScreen> {
                         children: [
                           const Text('Jangan tutup aplikasi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8))),
                           const SizedBox(height: 2),
-                          Text('Proses sinkronisasi berjalan di latar belakang. Pastikan koneksi internet stabil.',
-                            style: TextStyle(fontSize: 12, color: Colors.blue.shade400)),
+                          Text(
+                            'Proses sinkronisasi berjalan di latar belakang. Pastikan koneksi internet stabil.',
+                            style: TextStyle(fontSize: 12, color: Colors.blue.shade400),
+                          ),
                         ],
                       ),
                     ),
@@ -215,6 +251,8 @@ class _SyncScreenState extends State<SyncScreen> {
     );
   }
 }
+
+// ── Data classes (sama seperti sebelumnya) ──
 
 class _SyncRowData {
   final String label;

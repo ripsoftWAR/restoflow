@@ -27,7 +27,7 @@ class PilotPOSApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => AppState(),
+      create: (_) => AppState()..init(),
       child: MaterialApp(
         title: 'PilotPOS',
         debugShowCheckedModeBanner: false,
@@ -68,6 +68,7 @@ class MainNavigator extends StatefulWidget {
 class _MainNavigatorState extends State<MainNavigator> {
   late final PageController _pageController;
   int _currentPage = 0;
+  bool _initialized = false;
 
   // Screen indices
   static const int SPLASH = 0;
@@ -82,10 +83,34 @@ class _MainNavigatorState extends State<MainNavigator> {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: SPLASH);
+
     // Auto-advance splash after 1.8s
     Future.delayed(const Duration(milliseconds: 1800), () {
-      if (mounted) _navigateTo(LOGIN);
+      if (!mounted) return;
+      _checkSessionAndNavigate();
     });
+  }
+
+  /// Cek apakah ada session tersimpan.
+  /// Kalau ada → langsung ke dashboard. Kalau tidak → ke login.
+  Future<void> _checkSessionAndNavigate() async {
+    final appState = context.read<AppState>();
+
+    // Tunggu sebentar biar init() selesai
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (!mounted) return;
+
+    if (appState.isLoggedIn) {
+      // Sudah login → langsung ke dashboard
+      appState.resetSync();
+      appState.updateSyncProgress(1.0);
+      _navigateTo(DASHBOARD);
+    } else {
+      _navigateTo(LOGIN);
+    }
+
+    setState(() => _initialized = true);
   }
 
   void _navigateTo(int page) {
@@ -109,10 +134,12 @@ class _MainNavigatorState extends State<MainNavigator> {
     return Scaffold(
       body: PageView(
         controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(), // Controlled navigation
+        physics: const NeverScrollableScrollPhysics(),
         children: [
           // 0 - Splash
-          SplashScreen(onDone: () => _navigateTo(LOGIN)),
+          SplashScreen(onDone: () {
+            // Already handled in initState delayed
+          }),
 
           // 1 - Login
           LoginScreen(onLogin: () => _navigateTo(SYNC)),

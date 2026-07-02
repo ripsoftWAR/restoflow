@@ -1,4 +1,5 @@
 /// PilotPOS — Data Models
+library;
 
 class PilotUser {
   final String name;
@@ -15,7 +16,8 @@ class PilotUser {
     this.roleColor = 'blue',
   });
 
-  String get avatarUrl => 'https://api.dicebear.com/7.x/avataaars/svg?seed=$seed';
+  String get avatarUrl =>
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=$seed';
 }
 
 class SyncItem {
@@ -40,4 +42,45 @@ class TransactionItem {
     required this.amount,
     this.status = 'Selesai',
   });
+}
+
+/// Data shift dari backend
+class Shift {
+  final int id;
+  final String nama;
+  final String? jamMulai;
+  final String? jamAkhir;
+
+  const Shift({
+    required this.id,
+    required this.nama,
+    this.jamMulai,
+    this.jamAkhir,
+  });
+
+  String get displayTime {
+    if (jamMulai != null && jamAkhir != null) {
+      return '$jamMulai - $jamAkhir';
+    }
+    return nama;
+  }
+}
+
+/// Ringkasan inventory item
+class InventorySummary {
+  final String name;
+  final double stock;
+  final double minStock;
+  final String unit;
+  final String? category;
+
+  const InventorySummary({
+    required this.name,
+    required this.stock,
+    required this.minStock,
+    required this.unit,
+    this.category,
+  });
+
+  bool get isLow => stock <= minStock;
 }

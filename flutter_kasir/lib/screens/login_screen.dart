@@ -1,11 +1,82 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_state.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   final VoidCallback onLogin;
   const LoginScreen({super.key, required this.onLogin});
 
   @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _usernameCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  bool _obscurePassword = true;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _usernameCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    final username = _usernameCtrl.text.trim();
+    final password = _passwordCtrl.text;
+
+    if (username.isEmpty || password.isEmpty) {
+      _showError('Username dan password wajib diisi');
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    final appState = context.read<AppState>();
+    appState.setLoginUsername(username);
+    appState.setLoginPassword(password);
+
+    // 1. Fetch shifts dulu
+    final hasShifts = await appState.fetchShifts(username);
+
+    if (!hasShifts) {
+      setState(() => _isSubmitting = false);
+      _showError('Username tidak ditemukan atau belum ada shift tersedia');
+      return;
+    }
+
+    // 2. Login
+    final success = await appState.doLogin();
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    if (success) {
+      widget.onLogin();
+    } else {
+      _showError(appState.errorMessage ?? 'Login gagal');
+    }
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: const Color(0xFFEF4444),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+
     return Container(
       color: Colors.white,
       child: SafeArea(
@@ -28,7 +99,11 @@ class LoginScreen extends StatelessWidget {
                           end: Alignment.bottomRight,
                         ),
                         boxShadow: [
-                          BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.25), blurRadius: 16, offset: const Offset(0, 4)),
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withOpacity(0.25),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
                         ],
                       ),
                       child: const Icon(Icons.location_on, color: Colors.white, size: 28),
@@ -60,15 +135,53 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              // Error message
+              if (appState.errorMessage != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(appState.errorMessage!, style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13)),
+                      ),
+                      GestureDetector(
+                        onTap: () => appState.clearError(),
+                        child: const Icon(Icons.close, color: Color(0xFF991B1B), size: 16),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               // Email field
               const _Label('Email atau Nomor HP'),
               const SizedBox(height: 6),
-              _InputBox(icon: Icons.mail_outline, hint: 'Masukkan email atau nomor HP'),
+              _RealInputBox(
+                controller: _usernameCtrl,
+                icon: Icons.mail_outline,
+                hint: 'Masukkan email atau nomor HP',
+                keyboardType: TextInputType.emailAddress,
+              ),
               const SizedBox(height: 16),
               // Password field
               const _Label('Password'),
               const SizedBox(height: 6),
-              _InputBox(icon: Icons.lock_outline, hint: 'Masukkan password', isPassword: true),
+              _RealInputBox(
+                controller: _passwordCtrl,
+                icon: Icons.lock_outline,
+                hint: 'Masukkan password',
+                isPassword: true,
+                obscureText: _obscurePassword,
+                onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
               const SizedBox(height: 8),
               const Align(
                 alignment: Alignment.centerRight,
@@ -80,15 +193,20 @@ class LoginScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: onLogin,
+                  onPressed: _isSubmitting ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFF93C5FD),
                     elevation: 0,
-                    shadowColor: const Color(0xFF2563EB).withOpacity(0.25),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: const Text('Masuk', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 22, height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : const Text('Masuk', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -104,12 +222,12 @@ class LoginScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              // Google button
+              // Google button (tetap demo)
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: OutlinedButton.icon(
-                  onPressed: onLogin,
+                  onPressed: () => _handleLogin(), // fallback ke login form
                   icon: _googleIcon(),
                   label: const Text('Lanjutkan dengan Google', style: TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w500)),
                   style: OutlinedButton.styleFrom(
@@ -138,9 +256,7 @@ class LoginScreen extends StatelessWidget {
   Widget _googleIcon() {
     return SizedBox(
       width: 18, height: 18,
-      child: CustomPaint(
-        painter: _GoogleLogoPainter(),
-      ),
+      child: CustomPaint(painter: _GoogleLogoPainter()),
     );
   }
 }
@@ -158,24 +274,25 @@ class _Label extends StatelessWidget {
   }
 }
 
-class _InputBox extends StatefulWidget {
+/// Real input box with TextEditingController
+class _RealInputBox extends StatelessWidget {
+  final TextEditingController controller;
   final IconData icon;
   final String hint;
   final bool isPassword;
-  const _InputBox({required this.icon, required this.hint, this.isPassword = false});
+  final bool obscureText;
+  final VoidCallback? onToggleObscure;
+  final TextInputType keyboardType;
 
-  @override
-  State<_InputBox> createState() => _InputBoxState();
-}
-
-class _InputBoxState extends State<_InputBox> {
-  bool _obscure = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _obscure = widget.isPassword;
-  }
+  const _RealInputBox({
+    required this.controller,
+    required this.icon,
+    required this.hint,
+    this.isPassword = false,
+    this.obscureText = true,
+    this.onToggleObscure,
+    this.keyboardType = TextInputType.text,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -189,20 +306,34 @@ class _InputBoxState extends State<_InputBox> {
         children: [
           Padding(
             padding: const EdgeInsets.only(left: 14),
-            child: Icon(widget.icon, size: 18, color: const Color(0xFF94A3B8)),
+            child: Icon(icon, size: 18, color: const Color(0xFF94A3B8)),
           ),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-              child: Text(widget.hint, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14)),
+            child: TextField(
+              controller: controller,
+              obscureText: isPassword && obscureText,
+              keyboardType: keyboardType,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {}, // handled by login button
+              style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+              ),
             ),
           ),
-          if (widget.isPassword)
+          if (isPassword)
             GestureDetector(
-              onTap: () => setState(() => _obscure = !_obscure),
+              onTap: onToggleObscure,
               child: Padding(
                 padding: const EdgeInsets.only(right: 14),
-                child: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 18, color: const Color(0xFF94A3B8)),
+                child: Icon(
+                  obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  size: 18,
+                  color: const Color(0xFF94A3B8),
+                ),
               ),
             ),
         ],
@@ -215,12 +346,7 @@ class _GoogleLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final blue = Paint()..color = const Color(0xFF4285F4);
-    final green = Paint()..color = const Color(0xFF34A853);
-    final yellow = Paint()..color = const Color(0xFFFBBC05);
-    final red = Paint()..color = const Color(0xFFEA4335);
-
     canvas.drawCircle(Offset(size.width * 0.5, size.height * 0.5), size.width * 0.5, blue);
-    // Simplified Google G
     final white = Paint()..color = Colors.white;
     canvas.drawRect(Rect.fromLTWH(size.width * 0.25, size.height * 0.25, size.width * 0.5, size.height * 0.15), white);
     canvas.drawRect(Rect.fromLTWH(size.width * 0.25, size.height * 0.45, size.width * 0.5, size.height * 0.3), white);

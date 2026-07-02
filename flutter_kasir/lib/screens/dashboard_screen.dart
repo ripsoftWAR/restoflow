@@ -11,13 +11,15 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final user = appState.selectedUser;
+    final authUser = appState.authUser;
+    final shift = appState.activeShift;
+    final stats = appState.dashboardStats;
 
     return Container(
       color: const Color(0xFFF8FAFF),
       child: SafeArea(
         child: Column(
           children: [
-            // Scrollable body
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -37,7 +39,10 @@ class DashboardScreen extends StatelessWidget {
                               Text.rich(
                                 TextSpan(
                                   children: [
-                                    TextSpan(text: user.name.split(' ').first, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+                                    TextSpan(
+                                      text: authUser?.nama ?? user.name.split(' ').first,
+                                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                                    ),
                                     const TextSpan(text: ' \u{1F44B}'),
                                   ],
                                 ),
@@ -45,9 +50,15 @@ class DashboardScreen extends StatelessWidget {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  _RoleBadge(role: user.role, color: _roleColor(user.roleColor)),
+                                  _RoleBadge(
+                                    role: authUser?.role ?? user.role,
+                                    color: _roleColor(user.roleColor),
+                                  ),
                                   const SizedBox(width: 8),
-                                  Text('• Shift ${user.shift}', style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                                  Text(
+                                    '• Shift ${shift?.displayTime ?? user.shift}',
+                                    style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                                  ),
                                 ],
                               ),
                             ],
@@ -112,7 +123,7 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Sales card
+                    // Sales card — REAL DATA kalau tersedia
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -153,7 +164,10 @@ class DashboardScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          const Text('Rp2.350.000', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: Colors.white)),
+                          Text(
+                            _formatRupiah(stats?.totalSalesByDay ?? 2350000),
+                            style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: Colors.white),
+                          ),
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -163,11 +177,22 @@ class DashboardScreen extends StatelessWidget {
                           const SizedBox(height: 16),
                           const Divider(color: Colors.white24),
                           const SizedBox(height: 12),
-                          const Row(
+                          Row(
                             children: [
-                              _SalesMiniStat(label: 'Transaksi', value: '42'),
-                              _SalesMiniStat(label: 'Average Order', value: 'Rp55.952'),
-                              _SalesMiniStat(label: 'Item Terjual', value: '128'),
+                              _SalesMiniStat(
+                                label: 'Transaksi',
+                                value: '${stats?.totalTransactionsByDay ?? 42}',
+                              ),
+                              _SalesMiniStat(
+                                label: 'Average Order',
+                                value: _formatRupiah(stats != null && stats.totalTransactionsByDay > 0
+                                    ? stats.totalSalesByDay / stats.totalTransactionsByDay
+                                    : 55952),
+                              ),
+                              _SalesMiniStat(
+                                label: 'Item Terjual',
+                                value: '${stats?.totalItemsSoldByDay ?? 128}',
+                              ),
                             ],
                           ),
                         ],
@@ -205,17 +230,41 @@ class DashboardScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        _SummaryCard(icon: Icons.inventory_2_outlined, label: 'Stok Hampir Habis', value: '12 item', color: const Color(0xFFEA580C), bgColor: const Color(0xFFFFF7ED)),
+                        _SummaryCard(
+                          icon: Icons.inventory_2_outlined,
+                          label: 'Stok Hampir Habis',
+                          value: '${stats?.criticalStockItems.count ?? 12} item',
+                          color: const Color(0xFFEA580C),
+                          bgColor: const Color(0xFFFFF7ED),
+                        ),
                         const SizedBox(width: 8),
-                        _SummaryCard(icon: Icons.shopping_bag_outlined, label: 'Pesanan Tertunda', value: '3 pesanan', color: const Color(0xFF2563EB), bgColor: const Color(0xFFEFF6FF)),
+                        _SummaryCard(
+                          icon: Icons.shopping_bag_outlined,
+                          label: 'Pesanan Tertunda',
+                          value: '3 pesanan',
+                          color: const Color(0xFF2563EB),
+                          bgColor: const Color(0xFFEFF6FF),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        _SummaryCard(icon: Icons.local_offer_outlined, label: 'Voucher Aktif', value: '5 voucher', color: const Color(0xFF16A34A), bgColor: const Color(0xFFF0FDF4)),
+                        _SummaryCard(
+                          icon: Icons.local_offer_outlined,
+                          label: 'Voucher Aktif',
+                          value: '5 voucher',
+                          color: const Color(0xFF16A34A),
+                          bgColor: const Color(0xFFF0FDF4),
+                        ),
                         const SizedBox(width: 8),
-                        _SummaryCard(icon: Icons.receipt_long_outlined, label: 'Penerimaan Hari Ini', value: 'Rp1.250.000', color: const Color(0xFF9333EA), bgColor: const Color(0xFFF3E8FF)),
+                        _SummaryCard(
+                          icon: Icons.receipt_long_outlined,
+                          label: 'Pengeluaran Hari Ini',
+                          value: _formatRupiah(stats?.dailyExpense ?? 0),
+                          color: const Color(0xFF9333EA),
+                          bgColor: const Color(0xFFF3E8FF),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -237,7 +286,19 @@ class DashboardScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    ...appState.recentTransactions.map((tx) => _TransactionCard(transaction: tx)),
+                    if (appState.recentTransactions.isNotEmpty)
+                      ...appState.recentTransactions.map((tx) => _TransactionCard(transaction: tx))
+                    else ...[
+                      // Demo transactions fallback
+                      _TransactionCard(transaction: appState.recentTransactions.isNotEmpty
+                          ? appState.recentTransactions.first
+                          : null),
+                    ],
+                    // Always show at least the demo ones if empty
+                    if (appState.recentTransactions.isEmpty) ...[
+                      _DemoTransactionCard(invoiceId: 'INV/2505/00124', time: '10:15 WIB', type: 'Dine In', amount: 125000),
+                      _DemoTransactionCard(invoiceId: 'INV/2505/00123', time: '10:02 WIB', type: 'Take Away', amount: 85000),
+                    ],
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -265,7 +326,16 @@ class DashboardScreen extends StatelessWidget {
       default: return const Color(0xFF2563EB);
     }
   }
+
+  String _formatRupiah(double amount) {
+    if (amount >= 1000000) {
+      return 'Rp${(amount / 1000000).toStringAsFixed(3)}'.replaceAll('.', ',');
+    }
+    return 'Rp${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}';
+  }
 }
+
+// ── Helper widgets ──
 
 class _RoleBadge extends StatelessWidget {
   final String role;
@@ -388,6 +458,31 @@ class _TransactionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (transaction == null) return const SizedBox.shrink();
+    return _DemoTransactionCard(
+      invoiceId: transaction.invoiceId,
+      time: transaction.time,
+      type: transaction.type,
+      amount: transaction.amount,
+    );
+  }
+}
+
+class _DemoTransactionCard extends StatelessWidget {
+  final String invoiceId;
+  final String time;
+  final String type;
+  final double amount;
+
+  const _DemoTransactionCard({
+    required this.invoiceId,
+    required this.time,
+    required this.type,
+    required this.amount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -407,15 +502,18 @@ class _TransactionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(transaction.invoiceId, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
-                Text('${transaction.time} • ${transaction.type}', style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                Text(invoiceId, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+                Text('$time • $type', style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Rp${_formatMoney(transaction.amount)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1E293B))),
+              Text(
+                'Rp${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(4)),
@@ -426,10 +524,6 @@ class _TransactionCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _formatMoney(double amount) {
-    return amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
   }
 }
 
