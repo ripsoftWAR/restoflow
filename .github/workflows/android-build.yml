@@ -26,13 +26,13 @@ jobs:
           channel: 'stable'
 
       - name: Install dependencies
-        run: flutter pub get
+        run: cd flutter_kasir && flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release
+        run: cd flutter_kasir && flutter build apk --release
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: restoflow-kasir-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: flutter_kasir/build/app/outputs/flutter-apk/app-release.apk
