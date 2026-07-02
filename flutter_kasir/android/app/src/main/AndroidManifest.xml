@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.restoflow.kasir">
+    package="com.restoflow.pilotpos">
 
     <!-- Internet untuk API calls -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -20,7 +20,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
-        android:label="RestoFlow Kasir"
+        android:label="PilotPOS"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
@@ -48,9 +48,4 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-
-    <!-- Target Android 5.0+ untuk kompatibilitas luas -->
-    <uses-sdk
-        android:minSdkVersion="21"
-        android:targetSdkVersion="34" />
 </manifest>
