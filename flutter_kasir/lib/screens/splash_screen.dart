@@ -81,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.location_on, color: Colors.white, size: 44),
+                    child: const Icon(Icons.restaurant, color: Colors.white, size: 44),
                   ),
                   const SizedBox(height: 20),
                   const Text.rich(

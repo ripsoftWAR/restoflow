@@ -34,7 +34,7 @@ class DashboardScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Selamat Pagi,', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
+                              Text(_greeting(), style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
                               const SizedBox(height: 2),
                               Text.rich(
                                 TextSpan(
@@ -308,8 +308,22 @@ class DashboardScreen extends StatelessWidget {
             _BottomNav(
               activeIndex: 0,
               onTap: (i) {
-                if (i == 1) onPOS();
-                if (i == 4) onAksiCepat();
+                if (i == 0) return; // already home
+                if (i == 1) {
+                  onPOS();
+                  return;
+                }
+                // Beri feedback jelas bahwa fitur belum tersedia
+                final labels = ['', 'POS', 'Inventory', 'Laporan', 'Lainnya'];
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Fitur "${labels[i]}" akan hadir di update berikutnya'),
+                    backgroundColor: const Color(0xFF2563EB),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
               },
             ),
           ],
@@ -327,11 +341,23 @@ class DashboardScreen extends StatelessWidget {
     }
   }
 
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 11) return 'Selamat Pagi,';
+    if (hour < 15) return 'Selamat Siang,';
+    if (hour < 18) return 'Selamat Sore,';
+    return 'Selamat Malam,';
+  }
+
   String _formatRupiah(double amount) {
-    if (amount >= 1000000) {
-      return 'Rp${(amount / 1000000).toStringAsFixed(3)}'.replaceAll('.', ',');
+    // Format: Rp1.234.567 atau Rp12.345
+    final parts = amount.toStringAsFixed(0).split('');
+    final buffer = StringBuffer('Rp');
+    for (int i = 0; i < parts.length; i++) {
+      if (i > 0 && (parts.length - i) % 3 == 0) buffer.write('.');
+      buffer.write(parts[i]);
     }
-    return 'Rp${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}';
+    return buffer.toString();
   }
 }
 

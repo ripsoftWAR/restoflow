@@ -3,9 +3,40 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 
-class PinScreen extends StatelessWidget {
+class PinScreen extends StatefulWidget {
   final VoidCallback onSuccess;
   const PinScreen({super.key, required this.onSuccess});
+
+  @override
+  State<PinScreen> createState() => _PinScreenState();
+}
+
+class _PinScreenState extends State<PinScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _shakeCtrl;
+  late Animation<double> _shakeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _shakeAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: -8), weight: 0.15),
+      TweenSequenceItem(tween: Tween(begin: -8, end: 8), weight: 0.3),
+      TweenSequenceItem(tween: Tween(begin: 8, end: -4), weight: 0.3),
+      TweenSequenceItem(tween: Tween(begin: -4, end: 0), weight: 0.25),
+    ]).animate(_shakeCtrl);
+  }
+
+  @override
+  void dispose() {
+    _shakeCtrl.dispose();
+    super.dispose();
+  }
+
+  void _triggerError() {
+    _shakeCtrl.forward(from: 0);
+    HapticFeedback.heavyImpact();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +49,14 @@ class PinScreen extends StatelessWidget {
       Future.microtask(() {
         appState.clearPin();
         onSuccess();
+      });
+    }
+
+    // Trigger shake if there was a previous error
+    if (appState.errorMessage != null && appState.errorMessage!.contains('PIN')) {
+      Future.microtask(() {
+        _triggerError();
+        appState.clearError();
       });
     }
 
@@ -46,7 +85,7 @@ class PinScreen extends StatelessWidget {
                           BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.25), blurRadius: 16, offset: const Offset(0, 4)),
                         ],
                       ),
-                      child: const Icon(Icons.location_on, color: Colors.white, size: 28),
+                      child: const Icon(Icons.restaurant, color: Colors.white, size: 28),
                     ),
                     const SizedBox(height: 8),
                     const Text.rich(
@@ -82,34 +121,63 @@ class PinScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              // PIN dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(6, (i) {
-                  final filled = i < pinLength;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 5),
-                    width: 14, height: 14,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: filled ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1), width: 2),
-                      color: filled ? const Color(0xFF2563EB) : Colors.transparent,
-                    ),
+              // PIN dots with shake animation
+              AnimatedBuilder(
+                animation: _shakeAnim,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(_shakeAnim.value, 0),
+                    child: child,
                   );
-                }),
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(6, (i) {
+                    final filled = i < pinLength;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 5),
+                      width: 14, height: 14,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: filled ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1), width: 2),
+                        color: filled ? const Color(0xFF2563EB) : Colors.transparent,
+                      ),
+                    );
+                  }),
+                ),
               ),
               const SizedBox(height: 32),
               // Keypad
               _Keypad(
-                onDigit: (d) => appState.addPinDigit(d),
-                onDelete: () => appState.removePinDigit(),
+                onDigit: (d) {
+                  HapticFeedback.lightImpact();
+                  appState.addPinDigit(d);
+                },
+                onDelete: () {
+                  HapticFeedback.selectionClick();
+                  appState.removePinDigit();
+                },
                 onBio: () {
+                  HapticFeedback.mediumImpact();
                   appState.fillPinDemo();
                 },
               ),
               const SizedBox(height: 20),
-              const Text('Lupa PIN?', style: TextStyle(color: Color(0xFF2563EB), fontSize: 14, fontWeight: FontWeight.w500)),
+              GestureDetector(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Hubungi admin untuk reset PIN'),
+                      backgroundColor: const Color(0xFF2563EB),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      margin: const EdgeInsets.all(16),
+                    ),
+                  );
+                },
+                child: const Text('Lupa PIN?', style: TextStyle(color: Color(0xFF2563EB), fontSize: 14, fontWeight: FontWeight.w500)),
+              ),
               const SizedBox(height: 20),
               // User card
               Container(

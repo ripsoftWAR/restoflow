@@ -6,8 +6,8 @@ class AuthService {
 
   /// Login dengan username + password + shift_id
   Future<AuthResult> login(String username, String password, int shiftId) async {
-    // 1. Sanitasi: username case-insensitive
-    username = username.trim().toLowerCase();
+    // 1. Sanitasi: trim whitespace saja (backend sudah handle case-insensitive)
+    username = username.trim();
 
     final response = await _api.post('/api/auth/login', body: {
       'username': username,
@@ -37,7 +37,7 @@ class AuthService {
 
   /// Login dengan PIN (untuk staff, bukan pemilik)
   Future<AuthResult> loginWithPin(String username, String pin, int shiftId) async {
-    username = username.trim().toLowerCase();
+    username = username.trim();
 
     final response = await _api.post('/api/auth/login-pin', body: {
       'username': username,
@@ -106,7 +106,7 @@ class AuthService {
 
   /// Ambil daftar shift berdasarkan username (public endpoint)
   Future<List<ShiftData>> getShiftsByUsername(String username) async {
-    username = username.trim().toLowerCase();
+    username = username.trim();
     final response = await _api.get('/api/auth/shifts-by-username/$username');
 
     if (!response.success || response.data == null) return [];

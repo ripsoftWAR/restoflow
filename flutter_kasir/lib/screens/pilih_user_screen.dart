@@ -72,7 +72,7 @@ class PilihUserScreen extends StatelessWidget {
                                   BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 4)),
                                 ],
                               ),
-                              child: const Icon(Icons.location_on, color: Colors.white, size: 22),
+                              child: const Icon(Icons.restaurant, color: Colors.white, size: 22),
                             ),
                             const SizedBox(width: 12),
                             const Column(
@@ -270,7 +270,16 @@ class PilihUserScreen extends StatelessWidget {
                     }),
                     const SizedBox(height: 12),
                     // Login akun lain
-                    _OtherLoginCard(onTap: () {}),
+                    _OtherLoginCard(onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Gunakan halaman login untuk masuk dengan akun lain'),
+                          backgroundColor: const Color(0xFF2563EB),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      );
+                    }),
                     const SizedBox(height: 20),
                     // Security notice
                     Container(

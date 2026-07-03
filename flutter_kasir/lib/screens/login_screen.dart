@@ -106,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.location_on, color: Colors.white, size: 28),
+                      child: const Icon(Icons.restaurant, color: Colors.white, size: 28),
                     ),
                     const SizedBox(height: 12),
                     const Text.rich(
@@ -161,14 +161,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-              // Email field
-              const _Label('Email atau Nomor HP'),
+              // Username field
+              const _Label('Username'),
               const SizedBox(height: 6),
               _RealInputBox(
                 controller: _usernameCtrl,
-                icon: Icons.mail_outline,
-                hint: 'Masukkan email atau nomor HP',
-                keyboardType: TextInputType.emailAddress,
+                icon: Icons.person_outline,
+                hint: 'Masukkan username',
+                keyboardType: TextInputType.text,
+                textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 16),
               // Password field
@@ -181,11 +182,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 isPassword: true,
                 obscureText: _obscurePassword,
                 onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _handleLogin(),
               ),
               const SizedBox(height: 8),
-              const Align(
+              Align(
                 alignment: Alignment.centerRight,
-                child: Text('Lupa password?', style: TextStyle(color: Color(0xFF2563EB), fontSize: 14, fontWeight: FontWeight.w500)),
+                child: GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Hubungi admin restoran untuk reset password'),
+                        backgroundColor: const Color(0xFF2563EB),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        margin: const EdgeInsets.all(16),
+                      ),
+                    );
+                  },
+                  child: const Text('Lupa password?', style: TextStyle(color: Color(0xFF2563EB), fontSize: 14, fontWeight: FontWeight.w500)),
+                ),
               ),
               const SizedBox(height: 20),
               // Login button
@@ -222,12 +238,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-              // Google button (tetap demo)
+              // Google button (coming soon)
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: OutlinedButton.icon(
-                  onPressed: () => _handleLogin(), // fallback ke login form
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Login dengan Google akan tersedia di update berikutnya'),
+                        backgroundColor: const Color(0xFF2563EB),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        margin: const EdgeInsets.all(16),
+                      ),
+                    );
+                  },
                   icon: _googleIcon(),
                   label: const Text('Lanjutkan dengan Google', style: TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w500)),
                   style: OutlinedButton.styleFrom(
@@ -241,7 +267,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextSpan(
                   children: [
                     const TextSpan(text: 'Belum punya akun? ', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
-                    TextSpan(text: 'Daftar Sekarang', style: TextStyle(color: Color(0xFF2563EB), fontSize: 14, fontWeight: FontWeight.w500)),
+                    WidgetSpan(
+                      child: GestureDetector(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('Hubungi admin restoran untuk membuat akun baru'),
+                              backgroundColor: const Color(0xFF2563EB),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              margin: const EdgeInsets.all(16),
+                            ),
+                          );
+                        },
+                        child: const Text('Daftar Sekarang', style: TextStyle(color: Color(0xFF2563EB), fontSize: 14, fontWeight: FontWeight.w500)),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -283,6 +324,8 @@ class _RealInputBox extends StatelessWidget {
   final bool obscureText;
   final VoidCallback? onToggleObscure;
   final TextInputType keyboardType;
+  final TextInputAction textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   const _RealInputBox({
     required this.controller,
@@ -292,6 +335,8 @@ class _RealInputBox extends StatelessWidget {
     this.obscureText = true,
     this.onToggleObscure,
     this.keyboardType = TextInputType.text,
+    this.textInputAction = TextInputAction.done,
+    this.onSubmitted,
   });
 
   @override
@@ -313,8 +358,8 @@ class _RealInputBox extends StatelessWidget {
               controller: controller,
               obscureText: isPassword && obscureText,
               keyboardType: keyboardType,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) {}, // handled by login button
+              textInputAction: textInputAction,
+              onSubmitted: onSubmitted,
               style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
               decoration: InputDecoration(
                 hintText: hint,
