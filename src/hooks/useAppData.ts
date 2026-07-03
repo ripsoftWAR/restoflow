@@ -29,26 +29,15 @@ export function useAppData() {
       const reqSales       = api('/api/sales').then((r: Response) => r.json());
       const reqMovements   = api('/api/movements').then((r: Response) => r.json());
 
-      if (session.user.role === 'Pemilik') {
-        const [st, ing, rec, sal, mov] = await Promise.all([
-          api('/api/dashboard/stats').then((r: Response) => r.json()),
-          reqIngredients, reqRecipes, reqSales, reqMovements,
-        ]);
-        setStats(st);
-        setIngredients(Array.isArray(ing) ? ing : []);
-        setRecipes(Array.isArray(rec)     ? rec : []);
-        setSales(Array.isArray(sal)       ? sal : []);
-        setMovements(Array.isArray(mov)   ? mov : []);
-      } else {
-        const [ing, rec, sal, mov] = await Promise.all([
-          reqIngredients, reqRecipes, reqSales, reqMovements,
-        ]);
-        setStats(null);
-        setIngredients(Array.isArray(ing) ? ing : []);
-        setRecipes(Array.isArray(rec)     ? rec : []);
-        setSales(Array.isArray(sal)       ? sal : []);
-        setMovements(Array.isArray(mov)   ? mov : []);
-      }
+      const [st, ing, rec, sal, mov] = await Promise.all([
+        api('/api/dashboard/stats').then((r: Response) => r.json()),
+        reqIngredients, reqRecipes, reqSales, reqMovements,
+      ]);
+      setStats(st);
+      setIngredients(Array.isArray(ing) ? ing : []);
+      setRecipes(Array.isArray(rec)     ? rec : []);
+      setSales(Array.isArray(sal)       ? sal : []);
+      setMovements(Array.isArray(mov)   ? mov : []);
     } catch (err) {
       console.error('Sync Error:', err);
     } finally {

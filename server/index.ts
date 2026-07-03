@@ -114,7 +114,7 @@ const apiLimiter = rateLimit({
 // ==========================================
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/app', apiLimiter, appRoutes);  // APK download + version check
-app.use('/api/dashboard', apiLimiter, requireAuth, requireRole('Pemilik'), dashboardRoutes);
+app.use('/api/dashboard', apiLimiter, requireAuth, dashboardRoutes);
 app.use('/api/ingredients', apiLimiter, requireAuth, ingredientRoutes);
 app.use('/api/movements', apiLimiter, requireAuth, movementRoutes);
 app.use('/api/recipes', apiLimiter, requireAuth, recipeRoutes);
