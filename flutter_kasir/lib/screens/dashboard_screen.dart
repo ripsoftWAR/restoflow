@@ -147,7 +147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildSalesCard(DashboardStats? stats) {
     switch (_loadState) {
       case _LoadState.loading:
-        return const _SalesCardSkeleton();
+        return _SalesCardSkeleton();
       case _LoadState.error:
         return _ErrorCard(onRetry: _fetchData);
       case _LoadState.loaded:
