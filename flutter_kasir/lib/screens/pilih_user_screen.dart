@@ -5,14 +5,12 @@ import '../providers/app_state.dart';
 
 class PilihUserScreen extends StatelessWidget {
   final VoidCallback onSelectUser;
-  const PilihUserScreen({super.key, required this.onSelectUser});
-
-  static const _users = [
-    PilotUser(name: 'Kasir Utama', role: 'Kasir', shift: '09:00 - 23:00', seed: 'Kasir1', roleColor: 'blue'),
-    PilotUser(name: 'Sarah', role: 'Supervisor', shift: '10:00 - 22:00', seed: 'Sarah', roleColor: 'purple'),
-    PilotUser(name: 'Andi', role: 'Manager', shift: '08:00 - 17:00', seed: 'Andi', roleColor: 'orange'),
-    PilotUser(name: 'Dewi', role: 'Kasir', shift: '12:00 - 21:00', seed: 'Dewi', roleColor: 'amber'),
-  ];
+  final VoidCallback onLoginLain;
+  const PilihUserScreen({
+    super.key,
+    required this.onSelectUser,
+    required this.onLoginLain,
+  });
 
   Color _roleBgColor(String roleColor) {
     switch (roleColor) {
@@ -245,41 +243,61 @@ class PilihUserScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(99)),
-                          child: const Text('4 Pengguna', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF2563EB))),
+                          child: Text(
+                            '${appState.users.length} Pengguna',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF2563EB)),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // User cards
-                    ...List.generate(_users.length, (i) {
-                      final user = _users[i];
-                      final isSelected = appState.selectedUser.name == user.name;
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: i < _users.length - 1 ? 12 : 0),
-                        child: _UserCard(
-                          user: user,
-                          isSelected: isSelected,
-                          roleBgColor: _roleBgColor(user.roleColor),
-                          roleTextColor: _roleTextColor(user.roleColor),
-                          onTap: () {
-                            appState.selectUser(user);
-                            Future.delayed(const Duration(milliseconds: 350), onSelectUser);
-                          },
+                    // Loading state
+                    if (appState.usersLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF2563EB))),
+                      ),
+                    // Empty state
+                    if (!appState.usersLoading && appState.users.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: Center(
+                          child: Text('Tidak ada pengguna', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
                         ),
-                      );
-                    }),
+                      ),
+                    // User cards
+                    if (!appState.usersLoading && appState.users.isNotEmpty)
+                      ...List.generate(appState.users.length, (i) {
+                        final user = appState.users[i];
+                        final isSelected = appState.selectedUser.name == user.name;
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: i < appState.users.length - 1 ? 12 : 0),
+                          child: _UserCard(
+                            user: user,
+                            isSelected: isSelected,
+                            roleBgColor: _roleBgColor(user.roleColor),
+                            roleTextColor: _roleTextColor(user.roleColor),
+                            onTap: () async {
+                              final ok = await appState.selectUserAndPrepare(user);
+                              if (ok) {
+                                Future.delayed(const Duration(milliseconds: 350), onSelectUser);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('Gagal memuat shift untuk user ini'),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        );
+                      }),
                     const SizedBox(height: 12),
                     // Login akun lain
-                    _OtherLoginCard(onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Gunakan halaman login untuk masuk dengan akun lain'),
-                          backgroundColor: const Color(0xFF2563EB),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      );
-                    }),
+                    _OtherLoginCard(onTap: onLoginLain),
                     const SizedBox(height: 20),
                     // Security notice
                     Container(

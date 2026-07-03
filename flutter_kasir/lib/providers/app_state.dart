@@ -30,6 +30,13 @@ class AppState extends ChangeNotifier {
   );
   PilotUser get selectedUser => _selectedUser;
 
+  // ── User list dari backend (untuk PilihUserScreen) ──
+  List<PilotUser> _users = [];
+  List<PilotUser> get users => _users;
+
+  bool _usersLoading = false;
+  bool get usersLoading => _usersLoading;
+
   // ── Auth data dari backend ──
   UserAuthData? _authUser;
   UserAuthData? get authUser => _authUser;
@@ -262,6 +269,42 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Fetch daftar user dari backend untuk PilihUserScreen
+  Future<void> fetchUsers() async {
+    if (!_isLoggedIn) return;
+
+    _usersLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await _api.get('/api/users');
+      if (response.success && response.data != null) {
+        final list = response.data!['data'] as List? ?? [];
+        _users = list.map<PilotUser>((u) {
+          final role = u['role']?.toString() ?? 'Kasir';
+          return PilotUser(
+            id: u['id'] ?? 0,
+            name: u['nama']?.toString() ?? u['username']?.toString() ?? '-',
+            role: role,
+            shift: '', // shift per user tidak ada di response
+            seed: u['username']?.toString() ?? role,
+            roleColor: _roleColorFromString(role),
+          );
+        }).toList();
+
+        // Fallback ke demo users kalau backend kosong
+        if (_users.isEmpty) _users = demoUsers;
+      } else {
+        _users = demoUsers;
+      }
+    } catch (_) {
+      _users = demoUsers;
+    }
+
+    _usersLoading = false;
+    notifyListeners();
+  }
+
   // ═══════════════════════════════════════
   //  LOGOUT
   // ═══════════════════════════════════════
@@ -289,7 +332,20 @@ class AppState extends ChangeNotifier {
 
   void selectUser(PilotUser user) {
     _selectedUser = user;
+    _loginUsername = user.seed; // seed = username dari backend
     notifyListeners();
+  }
+
+  /// Pilih user lalu fetch shifts — dipanggil dari PilihUserScreen sebelum ke PinScreen
+  Future<bool> selectUserAndPrepare(PilotUser user) async {
+    _selectedUser = user;
+    _loginUsername = user.seed; // seed = username dari backend
+    _errorMessage = null;
+    notifyListeners();
+
+    // Fetch shifts yang tersedia untuk user ini
+    final hasShifts = await fetchShifts(user.seed);
+    return hasShifts;
   }
 
   void navigateTo(int screen) {

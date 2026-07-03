@@ -14,6 +14,7 @@ class PinScreen extends StatefulWidget {
 class _PinScreenState extends State<PinScreen> with SingleTickerProviderStateMixin {
   late AnimationController _shakeCtrl;
   late Animation<double> _shakeAnim;
+  bool _isAuthenticating = false;
 
   @override
   void initState() {
@@ -44,19 +45,18 @@ class _PinScreenState extends State<PinScreen> with SingleTickerProviderStateMix
     final user = appState.selectedUser;
     final pinLength = appState.pinLength;
 
-    // Auto-navigate when PIN is complete
-    if (pinLength == 6) {
-      Future.microtask(() {
-        appState.clearPin();
-        widget.onSuccess();
-      });
-    }
-
-    // Trigger shake if there was a previous error
-    if (appState.errorMessage != null && appState.errorMessage!.contains('PIN')) {
-      Future.microtask(() {
-        _triggerError();
-        appState.clearError();
+    // Auto-authenticate when PIN is complete
+    if (pinLength == 6 && !_isAuthenticating) {
+      _isAuthenticating = true;
+      Future.microtask(() async {
+        final success = await appState.doPinLogin();
+        if (!mounted) return;
+        _isAuthenticating = false;
+        if (success) {
+          widget.onSuccess();
+        } else {
+          _triggerError();
+        }
       });
     }
 
@@ -148,6 +148,24 @@ class _PinScreenState extends State<PinScreen> with SingleTickerProviderStateMix
                 ),
               ),
               const SizedBox(height: 32),
+              // Error / Loading indicator
+              if (appState.isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: SizedBox(
+                    width: 28, height: 28,
+                    child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF2563EB)),
+                  ),
+                ),
+              if (appState.errorMessage != null && appState.pinLength == 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    appState.errorMessage!,
+                    style: const TextStyle(color: Color(0xFFEF4444), fontSize: 14, fontWeight: FontWeight.w500),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               // Keypad
               _Keypad(
                 onDigit: (d) {

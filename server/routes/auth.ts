@@ -29,11 +29,17 @@ router.post('/register', async (req: Request, res: Response) => {
     // Hash Password
     const hashedPassword = bcrypt.hashSync(password, 10);
 
-    // Buat User Pemilik
-    await db.query(
-      'INSERT INTO users (restaurant_id, username, password, role, nama) VALUES ($1, $2, $3, $4, $5)',
-      [newRestoId, username, hashedPassword, role, username]
+    // Generate PIN 6 digit untuk owner juga
+    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+    const pinHash = bcrypt.hashSync(pin, 10);
+
+    // Buat User Pemilik (dengan PIN)
+    const userInsert = await db.query(
+      'INSERT INTO users (restaurant_id, username, password, role, nama, pin) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+      [newRestoId, username, hashedPassword, role, username, pinHash]
     );
+
+    const newUserId = userInsert.rows[0].id;
 
     // Buat Shift default
     await db.query(
@@ -43,7 +49,11 @@ router.post('/register', async (req: Request, res: Response) => {
     );
 
     await db.query('COMMIT');
-    res.status(201).json({ success: true, message: 'Restoran dan Akun berhasil didaftarkan!' });
+    res.status(201).json({
+      success: true,
+      message: 'Restoran dan Akun berhasil didaftarkan!',
+      pin, // Tampilkan PIN sekali saja ke Owner saat registrasi
+    });
 
   } catch (err: any) {
     await db.query('ROLLBACK');
@@ -179,11 +189,6 @@ router.post('/login-pin', async (req: Request, res: Response) => {
 
     if (!user) {
       return res.status(401).json({ error: 'Username tidak ditemukan atau akun nonaktif' });
-    }
-
-    // Pemilik tidak boleh login via PIN
-    if (user.role === 'Pemilik') {
-      return res.status(403).json({ error: 'Owner harus login dengan password' });
     }
 
     // Validasi PIN

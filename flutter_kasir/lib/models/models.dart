@@ -2,6 +2,7 @@
 library;
 
 class PilotUser {
+  final int id;
   final String name;
   final String role;
   final String shift;
@@ -9,6 +10,7 @@ class PilotUser {
   final String roleColor; // blue, purple, orange, amber
 
   const PilotUser({
+    this.id = 0,
     required this.name,
     required this.role,
     required this.shift,

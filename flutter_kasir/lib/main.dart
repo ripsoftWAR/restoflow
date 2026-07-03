@@ -90,7 +90,7 @@ class _MainNavigatorState extends State<MainNavigator> {
   }
 
   /// Cek apakah ada session tersimpan.
-  /// Kalau ada → langsung ke dashboard. Kalau tidak → ke login.
+  /// Kalau ada → ke PilihUser. Kalau tidak → ke login.
   Future<void> _checkSessionAndNavigate() async {
     final appState = context.read<AppState>();
 
@@ -100,8 +100,10 @@ class _MainNavigatorState extends State<MainNavigator> {
     if (!mounted) return;
 
     if (appState.isLoggedIn) {
-      // Sudah login → langsung ke dashboard
-      _navigateTo(DASHBOARD);
+      // Sudah login → fetch users dulu, lalu ke PilihUser
+      await appState.fetchUsers();
+      if (!mounted) return;
+      _navigateTo(PILIH_USER);
     } else {
       _navigateTo(LOGIN);
     }
@@ -140,8 +142,11 @@ class _MainNavigatorState extends State<MainNavigator> {
           // 1 - Login (password-based → langsung dashboard)
           LoginScreen(onLogin: () => _navigateTo(DASHBOARD)),
 
-          // 2 - Pilih User (quick PIN login untuk staff)
-          PilihUserScreen(onSelectUser: () => _navigateTo(PIN)),
+          // 2 - Pilih User (quick PIN login)
+          PilihUserScreen(
+            onSelectUser: () => _navigateTo(PIN),
+            onLoginLain: () => _navigateTo(LOGIN),
+          ),
 
           // 3 - PIN
           PinScreen(onSuccess: () => _navigateTo(DASHBOARD)),
