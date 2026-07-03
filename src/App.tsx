@@ -10,7 +10,7 @@ import MovementLogs from './components/MovementLogs';
 import AIChatAssistant from './components/AIChatAssistant';
 import UsersPage from './components/userspage';
 
-import AuthPanel from './components/auth/AuthPanel';
+import AuthFlow from './components/auth/AuthFlow';
 import MobileLayout from './components/layout/MobileLayout';
 import TabletLayout from './components/layout/TabletLayout';
 import DesktopLayout from './components/layout/DesktopLayout';
@@ -37,7 +37,7 @@ const NAV_SECONDARY: NavItem[] = [
 const Spinner = ({ label }: { label: string }) => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
     <div className="flex items-center gap-3 text-slate-400">
-      <div className="bg-gradient-to-br from-blue-600 to-blue-500 p-2 rounded-2xl animate-pulse shadow-sm shadow-blue-200">
+      <div className="bg-gradient-to-br from-indigo-600 to-indigo-500 p-2 rounded-2xl animate-pulse shadow-sm shadow-indigo-200">
         <MapPin size={18} fill="white" className="text-white" strokeWidth={1.5} />
       </div>
       <span className="text-sm font-medium">{label}</span>
@@ -48,9 +48,8 @@ const Spinner = ({ label }: { label: string }) => (
 export default function App() {
   const {
     stats, ingredients, recipes, sales, movements,
-    loading, authChecked, authSession, authError, authMode,
-    setAuthMode, fetchAllData,
-    handleLogin, handleRegister, handleLogout,
+    loading, authChecked, authSession, fetchAllData,
+    handleAuthSuccess, handleLogout,
     handleAddIngredient, handleEditIngredient, handleDeleteIngredient, handleAdjustStock,
     handleAddOrUpdateRecipe,
     handleDeleteRecipe,
@@ -61,12 +60,8 @@ export default function App() {
   // ─── Gates ────────────────────────────────────────────────────────────────
   if (!authChecked) return <Spinner label="Memuat sesi..." />;
   if (!authSession) return (
-    <AuthPanel
-      authMode={authMode}
-      authError={authError}
-      setAuthMode={setAuthMode}
-      onLogin={handleLogin}
-      onRegister={handleRegister}
+    <AuthFlow
+      onAuthSuccess={handleAuthSuccess}
     />
   );
   if (loading) return <Spinner label="Memuat PilotPOS…" />;

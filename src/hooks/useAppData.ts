@@ -12,8 +12,6 @@ export function useAppData() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [sessionId,   setSessionId]   = useState<string | null>(null);
-  const [authError,   setAuthError]   = useState<string | null>(null);
-  const [authMode,    setAuthMode]    = useState<'landing' | 'login' | 'register'>('landing');
 
   const apiFetch = makeApiFetch(sessionId);
 
@@ -51,11 +49,10 @@ export function useAppData() {
       const storedToken = localStorage.getItem('restoflow_session_id');
       if (!storedToken) { setAuthChecked(true); setLoading(false); return; }
 
-      // storedToken adalah JWT, gunakan langsung sebagai Bearer token
       setSessionId(storedToken);
 
       try {
-        const res = await fetch(resolveApiUrl('/api/auth/me'), {
+        const res = await fetch(resolveApiUrl('/api/auth/me-with-permissions'), {
           headers: { 'Authorization': `Bearer ${storedToken}` },
         });
         if (!res.ok) {
@@ -66,7 +63,7 @@ export function useAppData() {
           return;
         }
         const session = await res.json();
-        setAuthSession(session);
+        setAuthSession({ ...session, token: storedToken });
         setAuthChecked(true);
       } catch (err) {
         console.error('Session restore failed:', err);
@@ -84,44 +81,14 @@ export function useAppData() {
   }, [authSession]);
 
   // ─── Auth handlers ─────────────────────────────────────────────────────────
-  const handleLogin = async (username: string, credential: string, shift_id: number, mode: 'owner' | 'staf' = 'owner') => {
-    setAuthError(null);
-    try {
-      const endpoint = mode === 'staf' ? '/api/auth/login-pin' : '/api/auth/login';
-      const body = mode === 'staf'
-        ? { username, pin: credential, shift_id }
-        : { username, password: credential, shift_id };
-
-      const res  = await apiFetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || 'Login gagal');
-      setAuthSession(data);
-      setSessionId(data.token);  // simpan JWT token, bukan session_id numeric
-      localStorage.setItem('restoflow_session_id', data.token);
-    } catch (err: any) {
-      setAuthError(err.message || 'Login gagal');
-    }
-  };
-
-  const handleRegister = async (username: string, password: string, role: string, restaurant_name: string) => {
-    setAuthError(null);
-    try {
-      const res  = await apiFetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurant_name, username, password, role }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || 'Gagal mendaftar');
-      alert('Pendaftaran berhasil! Silakan masuk.');
-      setAuthMode('login');
-    } catch (err: any) {
-      setAuthError(err.message || 'Gagal mendaftar');
-    }
+  /**
+   * Dipanggil oleh AuthFlow setelah PIN berhasil diverifikasi.
+   * Menerima session object dari endpoint /api/auth/verify-pin.
+   */
+  const handleAuthSuccess = (session: AuthSession) => {
+    setAuthSession(session);
+    setSessionId(session.token);
+    localStorage.setItem('restoflow_session_id', session.token);
   };
 
   const handleLogout = async () => {
@@ -143,7 +110,6 @@ export function useAppData() {
       setRecipes([]);
       setSales([]);
       setMovements([]);
-      setAuthMode('login');
       setAuthChecked(true);
       setLoading(false);
     }
@@ -270,12 +236,10 @@ export function useAppData() {
   return {
     // state
     stats, ingredients, recipes, sales, movements,
-    loading, authChecked, authSession, sessionId, authError, authMode,
-    // setters
-    setAuthMode, setAuthError,
+    loading, authChecked, authSession, sessionId,
     // handlers
     fetchAllData,
-    handleLogin, handleRegister, handleLogout,
+    handleAuthSuccess, handleLogout,
     handleAddIngredient, handleEditIngredient, handleDeleteIngredient, handleAdjustStock,
     handleAddOrUpdateRecipe,
     handleDeleteRecipe,

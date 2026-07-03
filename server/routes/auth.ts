@@ -66,6 +66,166 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/auth/verify-credentials
+ * Step 1 dari 2-step login: verifikasi username + password.
+ * TIDAK membuat session. Hanya mengembalikan info user + daftar shift.
+ */
+router.post('/verify-credentials', async (req: Request, res: Response) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username dan password wajib diisi' });
+  }
+
+  try {
+    const userSearch = await db.query(
+      'SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND is_active = true',
+      [username]
+    );
+    const user = userSearch.rows[0];
+
+    if (!user) {
+      return res.status(401).json({ error: 'Username atau password salah' });
+    }
+
+    const isMatch = bcrypt.compareSync(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Username atau password salah' });
+    }
+
+    const shiftsResult = await db.query(
+      'SELECT id, nama, jam_mulai, jam_akhir FROM shifts WHERE restaurant_id = $1 ORDER BY id',
+      [user.restaurant_id]
+    );
+
+    // Ambil semua user aktif di restoran ini (untuk user picker)
+    const usersResult = await db.query(
+      `SELECT u.id, u.username, u.nama, u.role, u.is_active, u.last_login
+       FROM users u
+       WHERE u.restaurant_id = $1 AND u.is_active = true
+       ORDER BY 
+         CASE u.role WHEN 'Pemilik' THEN 0 WHEN 'Manajer' THEN 1 WHEN 'Supervisor' THEN 2 ELSE 3 END,
+         u.nama ASC`,
+      [user.restaurant_id]
+    );
+
+    res.json({
+      success: true,
+      username: user.username,
+      nama: user.nama,
+      role: user.role,
+      restaurant_id: user.restaurant_id,
+      shifts: shiftsResult.rows,
+      users: usersResult.rows,
+    });
+
+  } catch (err) {
+    console.error('Verify Credentials Error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan pada sistem' });
+  }
+});
+
+/**
+ * POST /api/auth/verify-pin
+ * Step 2 dari 2-step login: verifikasi PIN + buat session.
+ * Mengembalikan JWT token lengkap.
+ */
+router.post('/verify-pin', async (req: Request, res: Response) => {
+  const { username, pin, shift_id } = req.body;
+
+  if (!username || !pin) {
+    return res.status(400).json({ error: 'Username dan PIN wajib diisi' });
+  }
+
+  try {
+    const userSearch = await db.query(
+      'SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND is_active = true',
+      [username]
+    );
+    const user = userSearch.rows[0];
+
+    if (!user) {
+      return res.status(401).json({ error: 'Akun tidak ditemukan atau dinonaktifkan' });
+    }
+
+    if (!user.pin) {
+      return res.status(401).json({ error: 'PIN belum diset. Hubungi pemilik restoran.' });
+    }
+
+    const isPinValid = bcrypt.compareSync(String(pin), user.pin);
+    if (!isPinValid) {
+      return res.status(401).json({ error: 'PIN salah. Coba lagi.' });
+    }
+
+    const shiftSearch = await db.query(
+      'SELECT * FROM shifts WHERE id = $1 AND restaurant_id = $2',
+      [shift_id, user.restaurant_id]
+    );
+    const shift = shiftSearch.rows[0];
+
+    if (!shift) {
+      return res.status(400).json({ error: 'Shift tidak valid' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const tokenFamily = generateTokenFamily();
+
+    const sessionInsert = await db.query(
+      `INSERT INTO shift_sessions (restaurant_id, user_id, shift_id, login_at, date, token_family, refresh_count)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, $5, 0) RETURNING id`,
+      [user.restaurant_id, user.id, shift.id, today, tokenFamily]
+    );
+
+    const sessionId = sessionInsert.rows[0].id;
+
+    await db.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
+
+    const token = generateToken({
+      session_id: sessionId,
+      user_id: user.id,
+      username: user.username,
+      role: user.role,
+      nama: user.nama,
+      restaurant_id: user.restaurant_id,
+      shift_id: shift.id,
+      shift_nama: shift.nama,
+    });
+
+    const refreshToken = generateRefreshToken({
+      session_id: sessionId,
+      user_id: user.id,
+      token_family: tokenFamily,
+    });
+
+    const features = await db.query(
+      'SELECT feature_key, enabled FROM user_features WHERE user_id = $1',
+      [user.id]
+    );
+
+    res.json({
+      success: true,
+      token,
+      refresh_token: refreshToken,
+      session_id: sessionId,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        nama: user.nama,
+        restaurant_id: user.restaurant_id,
+      },
+      shift: { id: shift.id, nama: shift.nama },
+      features: features.rows,
+      login_at: new Date().toISOString(),
+    });
+
+  } catch (err) {
+    console.error('Verify PIN Error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan pada sistem' });
+  }
+});
+
+/**
  * POST /api/auth/login
  * Login dengan password → return JWT token.
  */
@@ -383,6 +543,10 @@ router.get('/me-with-permissions', async (req: Request, res: Response) => {
         role: payload.role,
         nama: payload.nama,
         restaurant_id: payload.restaurant_id,
+      },
+      shift: {
+        id: payload.shift_id,
+        nama: payload.shift_nama,
       },
       features: features.rows,
     });

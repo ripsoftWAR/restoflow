@@ -18,24 +18,31 @@ export default defineConfig(() => {
       emptyOutDir: true,
     },
     server: {
+      host: true,
       port: 5173,
+      allowedHosts: [],
+
       proxy: {
         '/api': {
-          target: 'http://127.0.0.1:3000', // Sesuaikan dengan port di server/.env (PORT=3000)
+          target: 'http://localhost:3000',
           changeOrigin: true,
           secure: false,
         },
       },
+
       hmr: !isHmrDisabled,
-      watch: isHmrDisabled ? null : {
-        ignored: [
-          '**/database.db', 
-          '**/database.db-journal', 
-          '**/database.db-wal',
-          '**/node_modules/**',
-          '**/dist/**'
-        ],
-      },
+
+      watch: isHmrDisabled
+        ? null
+        : {
+            ignored: [
+              '**/database.db',
+              '**/database.db-journal',
+              '**/database.db-wal',
+              '**/node_modules/**',
+              '**/dist/**',
+            ],
+          },
     },
   };
 });
