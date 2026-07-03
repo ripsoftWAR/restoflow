@@ -347,24 +347,24 @@ export default function UsersPage({ user }: UsersPageProps) {
                       </td>
                       <td className="py-3">
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                          {/* Toggle aktif/nonaktif — sembunyikan untuk Pemilik */}
                           {u.role !== 'Pemilik' && (
-                            <>
-                              <button
-                                onClick={e => { e.stopPropagation(); toggleActive(u); }}
-                                className={`p-1.5 rounded-lg transition text-[10px] font-bold ${u.is_active ? 'hover:bg-red-50 text-red-400' : 'hover:bg-green-50 text-green-500'}`}
-                                title={u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
-                              >
-                                {u.is_active ? <UserX size={13} /> : <UserCheck size={13} />}
-                              </button>
-                              <button
-                                onClick={e => { e.stopPropagation(); resetPin(u.id); }}
-                                className="p-1.5 rounded-lg hover:bg-purple-50 text-purple-500 transition"
-                                title="Reset PIN"
-                              >
-                                <Shield size={13} />
-                              </button>
-                            </>
+                            <button
+                              onClick={e => { e.stopPropagation(); toggleActive(u); }}
+                              className={`p-1.5 rounded-lg transition text-[10px] font-bold ${u.is_active ? 'hover:bg-red-50 text-red-400' : 'hover:bg-green-50 text-green-500'}`}
+                              title={u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                            >
+                              {u.is_active ? <UserX size={13} /> : <UserCheck size={13} />}
+                            </button>
                           )}
+                          {/* Reset PIN — tampil untuk semua role termasuk Pemilik */}
+                          <button
+                            onClick={e => { e.stopPropagation(); resetPin(u.id); }}
+                            className="p-1.5 rounded-lg hover:bg-purple-50 text-purple-500 transition"
+                            title="Reset PIN"
+                          >
+                            <Shield size={13} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -462,8 +462,9 @@ export default function UsersPage({ user }: UsersPageProps) {
                   </div>
                 </div>
 
-                {selectedUser.role !== 'Pemilik' && (
-                  <div className="flex gap-2 mt-3">
+                {/* Action buttons — Reset PIN untuk semua, toggle hanya non-Pemilik */}
+                <div className="flex gap-2 mt-3">
+                  {selectedUser.role !== 'Pemilik' && (
                     <button
                       onClick={() => toggleActive(selectedUser)}
                       className={`flex-1 py-2 rounded-xl text-[10px] font-bold transition ${
@@ -474,14 +475,14 @@ export default function UsersPage({ user }: UsersPageProps) {
                     >
                       {selectedUser.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                     </button>
-                    <button
-                      onClick={() => resetPin(selectedUser.id)}
-                      className="flex-1 py-2 rounded-xl text-[10px] font-bold bg-purple-50 text-purple-600 hover:bg-purple-100 transition flex items-center justify-center gap-1"
-                    >
-                      <Shield size={11} /> Reset PIN
-                    </button>
-                  </div>
-                )}
+                  )}
+                  <button
+                    onClick={() => resetPin(selectedUser.id)}
+                    className={`${selectedUser.role === 'Pemilik' ? 'w-full' : 'flex-1'} py-2 rounded-xl text-[10px] font-bold bg-purple-50 text-purple-600 hover:bg-purple-100 transition flex items-center justify-center gap-1`}
+                  >
+                    <Shield size={11} /> Reset PIN
+                  </button>
+                </div>
               </div>
 
               {/* Features Card */}
