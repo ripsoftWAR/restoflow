@@ -48,7 +48,7 @@ class _PinScreenState extends State<PinScreen> with SingleTickerProviderStateMix
     if (pinLength == 6) {
       Future.microtask(() {
         appState.clearPin();
-        onSuccess();
+        widget.onSuccess();
       });
     }
 
