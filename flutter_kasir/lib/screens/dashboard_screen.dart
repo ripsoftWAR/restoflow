@@ -82,10 +82,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
-    final authUser = appState.authUser;
-    final user = appState.selectedUser;
-    final shift = appState.activeShift;
-    final stats = appState.dashboardStats;
 
     return Container(
       color: const Color(0xFFF8FAFF),
@@ -99,43 +95,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 32),
-                      // ── Header ──
-                      _Header(authUser: authUser, user: user, shift: shift),
-                      const SizedBox(height: 16),
-                      // ── Countdown shift ──
-                      if (_shiftRemaining != null) _ShiftBanner(remaining: _shiftRemaining!),
-                      if (_shiftRemaining != null) const SizedBox(height: 16),
-                      // ── Sales card ──
-                      if (_loadState == _LoadState.loading)
-                        _SalesCardSkeleton()
-                      else if (_loadState == _LoadState.error)
-                        _ErrorCard(onRetry: _fetchData)
-                      else
-                        _SalesCard(stats: stats),
-                      const SizedBox(height: 20),
-                    // ── Quick actions ──
-                    _QuickActionsRow(onPOS: widget.onPOS, onAksiCepat: widget.onAksiCepat),
-                    const SizedBox(height: 20),
-                    // ── Ringkasan operasional ──
-                    _OperationalSummary(stats: stats),
-                    const SizedBox(height: 20),
-                    // ── Transaksi terakhir ──
-                    _RecentTransactions(
-                      loadState: _loadState,
-                      transactions: appState.recentTransactions,
-                      onSeeAll: widget.onAksiCepat,
-                      formatRupiah: _formatRupiah,
-                    ),
-                    const SizedBox(height: 32),
-                  ],
+                  child: _buildScrollContent(appState),
                 ),
               ),
             ),
-            // ── Bottom nav ──
             _BottomNav(
               activeIndex: 0,
               onTap: (i) => _onNavTap(context, i),
@@ -144,6 +107,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildScrollContent(AppState appState) {
+    final stats = appState.dashboardStats;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 32),
+        _Header(
+          authUser: appState.authUser,
+          user: appState.selectedUser,
+          shift: appState.activeShift,
+        ),
+        const SizedBox(height: 16),
+        if (_shiftRemaining != null)
+          _ShiftBanner(remaining: _shiftRemaining!),
+        if (_shiftRemaining != null) const SizedBox(height: 16),
+        _buildSalesCard(stats),
+        const SizedBox(height: 20),
+        _QuickActionsRow(
+          onPOS: widget.onPOS,
+          onAksiCepat: widget.onAksiCepat,
+        ),
+        const SizedBox(height: 20),
+        _OperationalSummary(stats: stats),
+        const SizedBox(height: 20),
+        _RecentTransactions(
+          loadState: _loadState,
+          transactions: appState.recentTransactions,
+          onSeeAll: widget.onAksiCepat,
+          formatRupiah: _formatRupiah,
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _buildSalesCard(DashboardStats? stats) {
+    switch (_loadState) {
+      case _LoadState.loading:
+        return const _SalesCardSkeleton();
+      case _LoadState.error:
+        return _ErrorCard(onRetry: _fetchData);
+      case _LoadState.loaded:
+      case _LoadState.empty:
+        return _SalesCard(stats: stats);
+    }
   }
 
   void _onNavTap(BuildContext context, int i) {
@@ -739,14 +749,19 @@ class _RecentTransactions extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        if (loadState == _LoadState.loading)
-          ...List.generate(3, (_) => _TxSkeleton())
-        else if (loadState == _LoadState.empty || transactions.isEmpty)
-          _EmptyTx()
-        else
-          ...transactions.take(5).map((tx) => _TxCard(tx: tx, fmt: formatRupiah)),
+        ..._buildTxList(),
       ],
     );
+  }
+
+  List<Widget> _buildTxList() {
+    if (loadState == _LoadState.loading) {
+      return List.generate(3, (_) => _TxSkeleton());
+    }
+    if (loadState == _LoadState.empty || transactions.isEmpty) {
+      return <Widget>[_EmptyTx()];
+    }
+    return transactions.take(5).map((tx) => _TxCard(tx: tx, fmt: formatRupiah)).toList();
   }
 }
 
