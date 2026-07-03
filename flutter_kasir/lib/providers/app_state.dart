@@ -149,12 +149,43 @@ class AppState extends ChangeNotifier {
       _sessionId = result.sessionId;
       _isLoggedIn = true;
       _errorMessage = null;
+
+      // Set selectedUser dari data backend agar dashboard tampil benar
+      if (result.user != null) {
+        _selectedUser = PilotUser(
+          name: result.user!.nama,
+          role: result.user!.role,
+          shift: result.shift?.displayTime ?? '',
+          seed: result.user!.username,
+          roleColor: _roleColorFromString(result.user!.role),
+        );
+      }
+
       notifyListeners();
+
+      // Fetch dashboard data di background
+      fetchDashboardData();
+
       return true;
     } else {
       _errorMessage = result.error;
       notifyListeners();
       return false;
+    }
+  }
+
+  String _roleColorFromString(String role) {
+    switch (role.toLowerCase()) {
+      case 'manager':
+      case 'owner':
+        return 'orange';
+      case 'supervisor':
+        return 'purple';
+      case 'kasir':
+      case 'cashier':
+        return 'blue';
+      default:
+        return 'blue';
     }
   }
 

@@ -33,8 +33,8 @@ window.addEventListener('appinstalled', () => {
   console.log('[PWA] App installed successfully');
 });
 
-// ── PWA: Register Service Worker ────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
+// ── PWA: Register Service Worker (HANYA di production build) ───────────────
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })
