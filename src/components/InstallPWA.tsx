@@ -10,6 +10,7 @@ import {
   Check,
   ChevronDown,
 } from 'lucide-react';
+import { resolveApiUrl } from '../utils/api';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const isIOS = (): boolean => {
@@ -81,7 +82,7 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
     }
 
     // Check if APK is available on server
-    fetch('/api/app/version')
+    fetch(resolveApiUrl('/api/app/version'))
       .then(r => r.json())
       .then(data => {
         if (data.file_name && data.file_size > 0) {

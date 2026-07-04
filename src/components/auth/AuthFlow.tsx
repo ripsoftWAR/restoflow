@@ -5,6 +5,7 @@ import { LoginView } from './LoginView';
 import { UserPickerView } from './UserPickerView';
 import { PinVerificationView } from './PinVerificationView';
 import { RegisterView } from './RegisterView';
+import { resolveApiUrl } from '../../utils/api';
 
 interface Shift {
   id: number;
@@ -60,7 +61,7 @@ export default function AuthFlow({ initialStep = 'landing', onAuthSuccess }: Pro
     setLoginError(null);
     setLoginLoading(true);
     try {
-      const res = await fetch('/api/auth/verify-credentials', {
+      const res = await fetch(resolveApiUrl('/api/auth/verify-credentials'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -102,7 +103,7 @@ export default function AuthFlow({ initialStep = 'landing', onAuthSuccess }: Pro
       // Gunakan shift pertama yang tersedia
       const shiftId = verifiedShifts.length > 0 ? verifiedShifts[0].id : 0;
 
-      const res = await fetch('/api/auth/verify-pin', {
+      const res = await fetch(resolveApiUrl('/api/auth/verify-pin'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

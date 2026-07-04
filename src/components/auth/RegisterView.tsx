@@ -13,6 +13,7 @@ import {
 import { BrandMark } from '../ui/BrandMark';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { resolveApiUrl } from '../../utils/api';
 
 interface Props {
   onSuccess: () => void;
@@ -46,7 +47,7 @@ export function RegisterView({ onSuccess, onBack }: Props) {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(resolveApiUrl('/api/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
