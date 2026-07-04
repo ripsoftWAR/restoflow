@@ -1,4 +1,4 @@
-import { MapPin, Brain, Sparkles, LogOut } from 'lucide-react';
+import { Brain, LogOut } from 'lucide-react';
 import { NavItem } from '../../types';
 import InstallPWA from '../InstallPWA';
 
@@ -13,19 +13,18 @@ interface Props {
 export default function MobileLayout({ activeTab, setActiveTab, rolePrimaryTabs, onLogout, children }: Props) {
   return (
     <div className="flex flex-col h-screen bg-slate-50 md:hidden">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-4 pt-3 pb-2.5 flex-shrink-0">
+      {/* Header — sticky glass */}
+      <header className="sticky top-0 z-40 bg-white/75 backdrop-blur-xl border-b border-slate-200/60 px-4 pt-3 pb-2.5 flex-shrink-0">
         <div className="flex items-center justify-between gap-3 mb-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-500 w-8 h-8 rounded-2xl flex items-center justify-center shadow-sm shadow-blue-200">
-              <MapPin size={14} fill="white" className="text-white" strokeWidth={1.5} />
-            </div>
+            {/* 🟦 Blue square logo */}
+            <div className="bg-[#2563EB] w-7 h-7 rounded-[7px] flex-shrink-0 shadow-sm shadow-blue-200" />
             <div>
               <h1 className="text-[15px] font-extrabold tracking-[-0.02em] leading-none">
                 <span className="text-slate-900">Pilot</span>
-                <span className="text-blue-600">POS</span>
+                <span className="text-[#2563EB]">POS</span>
               </h1>
-              <p className="text-[10px] text-slate-400 mt-0.5">Restaurant POS System</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Restaurant Operating System</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

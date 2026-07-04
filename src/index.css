@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════
-   PILOTPOS DESIGN SYSTEM
-   Brand: #2563EB | Navy: #0F172A | Soft: #E7F0FF
-   Type: Plus Jakarta Sans — weights 400/500/600/700
+   PILOTPOS DESIGN SYSTEM v4 — Enterprise SaaS
+   Brand: #2563EB | Navy: #0F172A | Soft: #EFF6FF
+   Type: Inter — weights 400/500/600/700/800
    Radius: 24px | Shadow: ultra-soft | Motion: spring
    ═══════════════════════════════════════════════════ */
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ── Design Tokens ──────────────────────────── */
@@ -16,43 +16,58 @@
   /* Brand */
   --pp-primary:        #2563EB;
   --pp-primary-hover:  #1D4ED8;
-  --pp-primary-soft:   #E7F0FF;
+  --pp-primary-soft:   #EFF6FF;
   --pp-primary-muted:  #DBEAFE;
+  --pp-primary-dark:   #1E40AF;
 
   /* Navy */
   --pp-navy:           #0F172A;
   --pp-navy-soft:      #1E293B;
+  --pp-navy-muted:     #334155;
 
   /* Status */
   --pp-success:         #059669;
   --pp-success-soft:    #ECFDF5;
+  --pp-success-border:  #A7F3D0;
   --pp-danger:          #DC2626;
   --pp-danger-soft:     #FEF2F2;
+  --pp-danger-border:   #FECACA;
+  --pp-warning:         #D97706;
+  --pp-warning-soft:    #FFFBEB;
 
   /* Text */
   --pp-text-heading:    #0F172A;
   --pp-text-body:       #475569;
   --pp-text-muted:      #64748B;
   --pp-text-subtle:     #94A3B8;
+  --pp-text-placeholder:#94A3B8;
 
   /* Surfaces */
   --pp-bg:              #F8FAFC;
   --pp-surface:         #FFFFFF;
+  --pp-surface-alt:     #FAFBFC;
 
   /* Border */
   --pp-border:          #E2E8F0;
   --pp-border-light:    #F1F5F9;
+  --pp-border-focus:    #2563EB;
 
   /* Radius */
-  --pp-radius-sm:       12px;
-  --pp-radius-md:       16px;
+  --pp-radius-sm:       10px;
+  --pp-radius-md:       14px;
   --pp-radius-lg:       20px;
   --pp-radius-xl:       24px;
 
-  /* Shadow — ultra soft */
-  --pp-shadow-sm:       0 1px 2px rgba(0, 0, 0, 0.03);
-  --pp-shadow-md:       0 4px 20px rgba(0, 0, 0, 0.05);
-  --pp-shadow-lg:       0 12px 40px rgba(0, 0, 0, 0.07);
+  /* Shadow — ultra soft enterprise grade */
+  --pp-shadow-xs:       0 1px 2px rgba(0, 0, 0, 0.03);
+  --pp-shadow-sm:       0 2px 8px rgba(0, 0, 0, 0.04);
+  --pp-shadow-md:       0 8px 30px rgba(0, 0, 0, 0.05);
+  --pp-shadow-lg:       0 20px 60px rgba(0, 0, 0, 0.07);
+  --pp-shadow-xl:       0 30px 80px rgba(0, 0, 0, 0.09);
+
+  /* Brand shadow */
+  --pp-shadow-brand:    0 8px 25px rgba(37, 99, 235, 0.25);
+  --pp-shadow-brand-lg: 0 16px 40px rgba(37, 99, 235, 0.3);
 }
 
 /* ── Base ───────────────────────────────────── */
@@ -65,6 +80,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.01em;
+  font-feature-settings: "tnum", "cv02", "cv03", "cv04";
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -80,15 +96,62 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
-/* ── Animations ─────────────────────────────── */
+/* ── Selection ──────────────────────────────── */
+::selection {
+  background: var(--pp-primary-soft);
+  color: var(--pp-primary);
+}
+
+/* ═══════════════════════════════════════════════════
+   ANIMATIONS — Enterprise micro-interactions
+   ═══════════════════════════════════════════════════ */
+
+/* ── Fade in up ────────────────────────────── */
 @keyframes pp-fade-in {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .pp-animate-in {
-  animation: pp-fade-in 0.35s ease forwards;
+  animation: pp-fade-in 0.4s ease forwards;
 }
 
+/* ── Fade in (no translate) ────────────────── */
+@keyframes pp-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.pp-fade-in {
+  animation: pp-fade 0.3s ease forwards;
+}
+
+/* ── Scale in ──────────────────────────────── */
+@keyframes pp-scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.pp-scale-in {
+  animation: pp-scale-in 0.3s ease forwards;
+}
+
+/* ── Slide in from right ───────────────────── */
+@keyframes pp-slide-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.pp-slide-right {
+  animation: pp-slide-right 0.35s ease forwards;
+}
+
+/* ── Slide in from bottom ──────────────────── */
+@keyframes pp-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pp-slide-up {
+  animation: pp-slide-up 0.35s ease forwards;
+}
+
+/* ── Shake (error state) ───────────────────── */
 @keyframes pp-shake {
   0%, 100% { transform: translateX(0); }
   10%, 50%, 90% { transform: translateX(-4px); }
@@ -96,4 +159,133 @@ h1, h2, h3, h4, h5, h6 {
 }
 .pp-shake {
   animation: pp-shake 0.4s ease;
+}
+
+/* ── Pulse glow (loading/processing) ───────────── */
+@keyframes pp-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2); }
+  50%      { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0); }
+}
+.pp-pulse-glow {
+  animation: pp-pulse-glow 2s ease-in-out infinite;
+}
+
+/* ── Typing indicator dots ─────────────────── */
+@keyframes pp-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%           { transform: translateY(-8px); }
+}
+.pp-typing-dot {
+  animation: pp-typing-bounce 1.4s ease-in-out infinite;
+}
+.pp-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.pp-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Skeleton loading ──────────────────────── */
+@keyframes pp-skeleton {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.pp-skeleton {
+  background: linear-gradient(
+    90deg,
+    #F1F5F9 0%,
+    #E2E8F0 40%,
+    #F1F5F9 80%
+  );
+  background-size: 200% 100%;
+  animation: pp-skeleton 1.5s ease-in-out infinite;
+  border-radius: var(--pp-radius-sm);
+}
+
+/* ── Success checkmark draw ────────────────── */
+@keyframes pp-check-draw {
+  to { stroke-dashoffset: 0; }
+}
+.pp-check-animate {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: pp-check-draw 0.5s ease forwards 0.3s;
+}
+
+/* ── Chat bubble appear ────────────────────── */
+@keyframes pp-bubble-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.pp-bubble-in {
+  animation: pp-bubble-in 0.35s ease forwards;
+}
+
+/* ── Counter number ────────────────────────── */
+@keyframes pp-count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pp-count-up {
+  animation: pp-count-up 0.5s ease forwards;
+}
+
+/* ── Float (subtle hover effect) ───────────── */
+@keyframes pp-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.pp-float {
+  animation: pp-float 4s ease-in-out infinite;
+}
+
+/* ── Spin (for loaders) ────────────────────── */
+@keyframes pp-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.pp-spin {
+  animation: pp-spin 0.8s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   UTILITY CLASSES
+   ═══════════════════════════════════════════════════ */
+
+/* ── Glass surface ─────────────────────────── */
+.pp-glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+/* ── Card hover lift ───────────────────────── */
+.pp-card-lift {
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.pp-card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--pp-shadow-lg);
+}
+
+/* ── Gradient text ─────────────────────────── */
+.pp-gradient-text {
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Focus ring ────────────────────────────── */
+.pp-focus-ring {
+  outline: none;
+}
+.pp-focus-ring:focus-visible {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+/* ── Reduced motion ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

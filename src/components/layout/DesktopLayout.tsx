@@ -40,17 +40,15 @@ export default function DesktopLayout({
     <div className="hidden lg:flex h-screen bg-[#FAFAFA]">
       {/* ── Sidebar ──────────────────────────── */}
       <aside className="w-60 bg-white border-r border-[#F5F5F5] flex flex-col py-6 flex-shrink-0">
-        {/* Logo — cleaner */}
+        {/* Logo — 🟦 PilotPOS */}
         <div className="px-4 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="bg-[#5B5BED] w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm font-bold tracking-tight">R</span>
-            </div>
+          <div className="flex items-center gap-2.5">
+            <div className="bg-[#2563EB] w-7 h-7 rounded-[8px] flex-shrink-0" />
             <div>
-              <h1 className="text-[16px] font-semibold tracking-[-0.02em] text-[#171717]">
-                RestoFlow
+              <h1 className="text-[16px] font-semibold tracking-[-0.02em] text-[#171717] leading-none">
+                Pilot<span className="text-[#2563EB]">POS</span>
               </h1>
-              <p className="text-[10px] text-[#A3A3A3] tracking-wide mt-0.5">Management System</p>
+              <p className="text-[10px] text-[#A3A3A3] tracking-wide mt-0.5">Restaurant Operating System</p>
             </div>
           </div>
         </div>
@@ -116,8 +114,8 @@ export default function DesktopLayout({
 
       {/* ── Main area ────────────────────────── */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Top bar — breadcrumb style, cleaner */}
-        <header className="bg-white border-b border-[#F5F5F5] px-8 py-3.5 flex items-center justify-between flex-shrink-0">
+        {/* Top bar — sticky glass */}
+        <header className="sticky top-0 z-40 bg-white/75 backdrop-blur-xl border-b border-[#F5F5F5]/60 px-8 py-3.5 flex items-center justify-between flex-shrink-0">
           <div>
             <p className="text-[15px] font-semibold text-[#171717] tracking-[-0.01em]">
               {activeTab === 'home' ? 'Dasbor' :

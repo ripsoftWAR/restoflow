@@ -1,8 +1,6 @@
 import {
-  MapPin,
   Settings,
   Brain,
-  Sparkles,
   LogOut,
   LayoutDashboard,
   Layers,
@@ -10,7 +8,6 @@ import {
   ShoppingCart,
   Scan,
   ListOrdered,
-  Download,
 } from 'lucide-react';
 import { DashboardStats, NavItem } from '../../types';
 import StatChips from './StatChips';
@@ -55,9 +52,8 @@ export default function TabletLayout({ activeTab, setActiveTab, stats, onLogout,
     <div className="hidden md:flex lg:hidden h-screen bg-slate-50">
       {/* Sidebar icon-only */}
       <aside className="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-4 gap-1 flex-shrink-0">
-        <div className="bg-gradient-to-br from-blue-600 to-blue-500 w-9 h-9 rounded-2xl flex items-center justify-center mb-4 shadow-sm shadow-blue-200">
-          <MapPin size={15} fill="white" className="text-white" strokeWidth={1.5} />
-        </div>
+        {/* 🟦 Blue square logo */}
+        <div className="bg-[#2563EB] w-9 h-9 rounded-[9px] mb-4 shadow-sm shadow-blue-200" />
         {NAV_ITEMS.map(item => (
           <SideBtn key={item.id} {...item} activeTab={activeTab} setActiveTab={setActiveTab} />
         ))}
@@ -73,7 +69,7 @@ export default function TabletLayout({ activeTab, setActiveTab, stats, onLogout,
 
       {/* Main */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        <header className="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center justify-between flex-shrink-0">
+        <header className="sticky top-0 z-40 bg-white/75 backdrop-blur-xl border-b border-slate-200/60 px-4 py-2.5 flex items-center justify-between flex-shrink-0">
           <div>
             <p className="text-[13px] font-semibold text-slate-900 leading-none capitalize">
               {NAV_ITEMS.find(n => n.id === activeTab)?.label ?? activeTab}
