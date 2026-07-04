@@ -170,56 +170,56 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
         />
         <div className="fixed bottom-0 inset-x-0 z-[101] bg-white rounded-t-[20px] px-6 pt-6 pb-8 animate-in slide-in-from-bottom duration-300 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] safe-area-bottom">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-[16px] font-semibold text-[#171717] tracking-[-0.01em]">
+            <h3 className="text-[16px] font-semibold text-[#0F172A] tracking-[-0.01em]">
               Pasang RestoFlow di iOS
             </h3>
             <button
               onClick={() => setShowIOSGuide(false)}
-              className="w-8 h-8 rounded-full bg-[#F5F5F5] flex items-center justify-center hover:bg-[#E5E5E5] transition-colors"
+              className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center hover:bg-[#E2E8F0] transition-colors"
             >
-              <X size={16} className="text-[#737373]" />
+              <X size={16} className="text-[#475569]" />
             </button>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-start gap-4">
-              <div className="bg-[#5B5BED] w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="bg-[#2563EB] w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
                 <Smartphone size={18} className="text-white" />
               </div>
               <div>
-                <p className="text-[14px] font-medium text-[#171717]">
+                <p className="text-[14px] font-medium text-[#0F172A]">
                   Tambahkan ke Layar Utama
                 </p>
-                <p className="text-[13px] text-[#737373] mt-1">
+                <p className="text-[13px] text-[#475569] mt-1">
                   RestoFlow akan terpasang seperti aplikasi native — lebih cepat, full screen, dan bisa diakses offline.
                 </p>
               </div>
             </div>
 
-            <div className="bg-[#FAFAFA] rounded-xl p-4 border border-[#F5F5F5] space-y-3">
+            <div className="bg-[#FAFBFC] rounded-xl p-4 border border-[#F1F5F9] space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-[#5B5BED] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">1</div>
-                <p className="text-[13px] text-[#525252]">
-                  Tap tombol <span className="font-semibold"><Share2 size={14} className="inline align-middle text-[#5B5BED]" /> Share</span> di browser Safari
+                <div className="w-6 h-6 rounded-full bg-[#2563EB] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">1</div>
+                <p className="text-[13px] text-[#334155]">
+                  Tap tombol <span className="font-semibold"><Share2 size={14} className="inline align-middle text-[#2563EB]" /> Share</span> di browser Safari
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-[#5B5BED] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">2</div>
-                <p className="text-[13px] text-[#525252]">
-                  Scroll dan pilih <span className="font-semibold text-[#171717]">"Add to Home Screen"</span>
+                <div className="w-6 h-6 rounded-full bg-[#2563EB] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">2</div>
+                <p className="text-[13px] text-[#334155]">
+                  Scroll dan pilih <span className="font-semibold text-[#0F172A]">"Add to Home Screen"</span>
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-[#5B5BED] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">3</div>
-                <p className="text-[13px] text-[#525252]">
-                  Tap <span className="font-semibold text-[#171717]">"Add"</span> — selesai!
+                <div className="w-6 h-6 rounded-full bg-[#2563EB] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">3</div>
+                <p className="text-[13px] text-[#334155]">
+                  Tap <span className="font-semibold text-[#0F172A]">"Add"</span> — selesai!
                 </p>
               </div>
             </div>
 
             <button
               onClick={() => setShowIOSGuide(false)}
-              className="w-full py-3 rounded-xl bg-[#F5F5F5] text-[13px] font-medium text-[#737373] hover:bg-[#E5E5E5] transition-colors"
+              className="w-full py-3 rounded-xl bg-[#F1F5F9] text-[13px] font-medium text-[#475569] hover:bg-[#E2E8F0] transition-colors"
             >
               Mengerti
             </button>
@@ -248,19 +248,19 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
                   <Monitor size={20} className="text-[#EA580C]" />
                 </div>
                 <div>
-                  <h3 className="text-[16px] font-semibold text-[#171717] tracking-[-0.01em]">
+                  <h3 className="text-[16px] font-semibold text-[#0F172A] tracking-[-0.01em]">
                     Pasang via Browser
                   </h3>
-                  <p className="text-[12px] text-[#A3A3A3] mt-0.5">
+                  <p className="text-[12px] text-[#94A3B8] mt-0.5">
                     Chrome / Edge / Brave
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowBrowserGuide(false)}
-                className="w-8 h-8 rounded-full bg-[#F5F5F5] flex items-center justify-center hover:bg-[#E5E5E5] transition-colors"
+                className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center hover:bg-[#E2E8F0] transition-colors"
               >
-                <X size={16} className="text-[#737373]" />
+                <X size={16} className="text-[#475569]" />
               </button>
             </div>
 
@@ -268,19 +268,19 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
             <div className="px-6 pb-6 space-y-4">
               {/* Step 1 */}
               <div className="flex items-start gap-4">
-                <div className="w-7 h-7 rounded-full bg-[#F3F3FF] text-[#5B5BED] text-[12px] font-bold flex items-center justify-center flex-shrink-0 border border-[#E8E7FF]">
+                <div className="w-7 h-7 rounded-full bg-[#EFF6FF] text-[#2563EB] text-[12px] font-bold flex items-center justify-center flex-shrink-0 border border-[#DBEAFE]">
                   1
                 </div>
                 <div className="flex-1">
-                  <p className="text-[14px] font-medium text-[#171717]">
+                  <p className="text-[14px] font-medium text-[#0F172A]">
                     Klik ikon di address bar
                   </p>
-                  <p className="text-[13px] text-[#737373] mt-1 leading-relaxed">
-                    Cari ikon <code className="bg-[#F5F5F5] px-1.5 py-0.5 rounded text-[#5B5BED] text-[12px] font-mono font-semibold">⚙️</code> atau <code className="bg-[#F5F5F5] px-1.5 py-0.5 rounded text-[#5B5BED] text-[12px] font-mono font-semibold">⋮</code> di pojok kanan atas address bar browser kamu.
+                  <p className="text-[13px] text-[#475569] mt-1 leading-relaxed">
+                    Cari ikon <code className="bg-[#F1F5F9] px-1.5 py-0.5 rounded text-[#2563EB] text-[12px] font-mono font-semibold">⚙️</code> atau <code className="bg-[#F1F5F9] px-1.5 py-0.5 rounded text-[#2563EB] text-[12px] font-mono font-semibold">⋮</code> di pojok kanan atas address bar browser kamu.
                   </p>
                   {/* Visual hint — address bar illustration */}
-                  <div className="mt-3 bg-[#FAFAFA] rounded-xl border border-[#F5F5F5] p-3 flex items-center gap-2">
-                    <div className="flex-1 h-2.5 bg-[#E5E5E5] rounded-full" />
+                  <div className="mt-3 bg-[#FAFBFC] rounded-xl border border-[#F1F5F9] p-3 flex items-center gap-2">
+                    <div className="flex-1 h-2.5 bg-[#E2E8F0] rounded-full" />
                     <div className="w-8 h-8 rounded-lg bg-[#FFF7ED] border border-[#FFEDD5] flex items-center justify-center flex-shrink-0">
                       <span className="text-[14px] leading-none">⋮</span>
                     </div>
@@ -290,25 +290,25 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
 
               {/* Step 2 */}
               <div className="flex items-start gap-4">
-                <div className="w-7 h-7 rounded-full bg-[#F3F3FF] text-[#5B5BED] text-[12px] font-bold flex items-center justify-center flex-shrink-0 border border-[#E8E7FF]">
+                <div className="w-7 h-7 rounded-full bg-[#EFF6FF] text-[#2563EB] text-[12px] font-bold flex items-center justify-center flex-shrink-0 border border-[#DBEAFE]">
                   2
                 </div>
                 <div className="flex-1">
-                  <p className="text-[14px] font-medium text-[#171717]">
+                  <p className="text-[14px] font-medium text-[#0F172A]">
                     Pilih "Pasang RestoFlow..."
                   </p>
-                  <p className="text-[13px] text-[#737373] mt-1 leading-relaxed">
-                    Dari menu dropdown, cari dan klik opsi <span className="font-semibold text-[#171717]">"Pasang RestoFlow..."</span> atau <span className="font-semibold text-[#171717]">"Install RestoFlow..."</span>.
+                  <p className="text-[13px] text-[#475569] mt-1 leading-relaxed">
+                    Dari menu dropdown, cari dan klik opsi <span className="font-semibold text-[#0F172A]">"Pasang RestoFlow..."</span> atau <span className="font-semibold text-[#0F172A]">"Install RestoFlow..."</span>.
                   </p>
                   {/* Visual hint — menu dropdown */}
-                  <div className="mt-3 bg-[#FAFAFA] rounded-xl border border-[#F5F5F5] p-3 space-y-1.5">
-                    <div className="h-2 bg-[#E5E5E5] rounded w-2/3" />
-                    <div className="h-2 bg-[#E5E5E5] rounded w-1/2" />
+                  <div className="mt-3 bg-[#FAFBFC] rounded-xl border border-[#F1F5F9] p-3 space-y-1.5">
+                    <div className="h-2 bg-[#E2E8F0] rounded w-2/3" />
+                    <div className="h-2 bg-[#E2E8F0] rounded w-1/2" />
                     <div className="flex items-center gap-2 py-1">
-                      <Download size={13} className="text-[#5B5BED] flex-shrink-0" />
-                      <span className="text-[12px] font-semibold text-[#5B5BED]">Pasang RestoFlow...</span>
+                      <Download size={13} className="text-[#2563EB] flex-shrink-0" />
+                      <span className="text-[12px] font-semibold text-[#2563EB]">Pasang RestoFlow...</span>
                     </div>
-                    <div className="h-2 bg-[#E5E5E5] rounded w-3/4" />
+                    <div className="h-2 bg-[#E2E8F0] rounded w-3/4" />
                   </div>
                 </div>
               </div>
@@ -319,24 +319,24 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
                   <Check size={13} strokeWidth={3} />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[14px] font-medium text-[#171717]">
+                  <p className="text-[14px] font-medium text-[#0F172A]">
                     Konfirmasi & selesai
                   </p>
-                  <p className="text-[13px] text-[#737373] mt-1 leading-relaxed">
-                    Klik <span className="font-semibold text-[#171717]">"Pasang"</span> di dialog konfirmasi. RestoFlow akan terbuka di jendela sendiri seperti aplikasi native.
+                  <p className="text-[13px] text-[#475569] mt-1 leading-relaxed">
+                    Klik <span className="font-semibold text-[#0F172A]">"Pasang"</span> di dialog konfirmasi. RestoFlow akan terbuka di jendela sendiri seperti aplikasi native.
                   </p>
                   {/* Visual hint — confirm dialog */}
-                  <div className="mt-3 bg-[#FAFAFA] rounded-xl border border-[#F5F5F5] p-3">
+                  <div className="mt-3 bg-[#FAFBFC] rounded-xl border border-[#F1F5F9] p-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-5 h-5 rounded bg-[#5B5BED]/10 flex items-center justify-center">
-                        <Smartphone size={12} className="text-[#5B5BED]" />
+                      <div className="w-5 h-5 rounded bg-[#2563EB]/10 flex items-center justify-center">
+                        <Smartphone size={12} className="text-[#2563EB]" />
                       </div>
-                      <span className="text-[12px] font-medium text-[#171717]">Pasang aplikasi?</span>
+                      <span className="text-[12px] font-medium text-[#0F172A]">Pasang aplikasi?</span>
                     </div>
-                    <p className="text-[11px] text-[#A3A3A3] mb-3">RestoFlow — Restaurant Management</p>
+                    <p className="text-[11px] text-[#94A3B8] mb-3">RestoFlow — Restaurant Management</p>
                     <div className="flex justify-end gap-2">
-                      <div className="h-2.5 bg-[#E5E5E5] rounded w-16" />
-                      <div className="h-2.5 bg-[#5B5BED] rounded w-16" />
+                      <div className="h-2.5 bg-[#E2E8F0] rounded w-16" />
+                      <div className="h-2.5 bg-[#2563EB] rounded w-16" />
                     </div>
                   </div>
                 </div>
@@ -344,7 +344,7 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
 
               <button
                 onClick={() => setShowBrowserGuide(false)}
-                className="w-full py-3 rounded-xl bg-[#F5F5F5] text-[13px] font-medium text-[#737373] hover:bg-[#E5E5E5] transition-colors mt-2"
+                className="w-full py-3 rounded-xl bg-[#F1F5F9] text-[13px] font-medium text-[#475569] hover:bg-[#E2E8F0] transition-colors mt-2"
               >
                 Mengerti
               </button>
@@ -365,13 +365,13 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
           onClick={() => setIsOpen(!isOpen)}
           aria-label="Pasang aplikasi"
           title="Pasang RestoFlow"
-          className="w-11 h-11 rounded-xl flex items-center justify-center bg-[#F3F3FF] text-[#5B5BED] hover:bg-[#E8E7FF] transition-colors"
+          className="w-11 h-11 rounded-xl flex items-center justify-center bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE] transition-colors"
         >
           <Download size={18} strokeWidth={2} />
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-[#F5F5F5] shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150 origin-top-right">
+          <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-[#F1F5F9] shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150 origin-top-right">
             <InstallDropdownContent
               canNative={canNative}
               canIOS={canIOS}
@@ -396,15 +396,15 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium text-[#5B5BED] hover:bg-[#F3F3FF] transition-all duration-150"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium text-[#2563EB] hover:bg-[#EFF6FF] transition-all duration-150"
         >
           <Download size={18} strokeWidth={2} />
           <span className="flex-1 text-left">Pasang App</span>
-          <ChevronDown size={12} className={`text-[#5B5BED] transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown size={12} className={`text-[#2563EB] transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {isOpen && (
-          <div className="absolute left-2 bottom-full mb-1 w-60 bg-white rounded-xl border border-[#F5F5F5] shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150 origin-bottom-left">
+          <div className="absolute left-2 bottom-full mb-1 w-60 bg-white rounded-xl border border-[#F1F5F9] shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150 origin-bottom-left">
             <InstallDropdownContent
               canNative={canNative}
               canIOS={canIOS}
@@ -428,7 +428,7 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-[#F3F3FF] hover:bg-[#E8E7FF] text-[#5B5BED] text-[12px] font-medium px-4 py-2 rounded-xl transition-colors"
+        className="flex items-center gap-2 bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#2563EB] text-[12px] font-medium px-4 py-2 rounded-xl transition-colors"
       >
         <Download size={14} strokeWidth={2} />
         Pasang App
@@ -436,7 +436,7 @@ export default function InstallPWA({ variant = 'sidebar', compact = false }: Ins
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl border border-[#F5F5F5] shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150 origin-top-right">
+        <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl border border-[#F1F5F9] shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150 origin-top-right">
           <InstallDropdownContent
             canNative={canNative}
             canIOS={canIOS}
@@ -478,8 +478,8 @@ function InstallDropdownContent({
   return (
     <>
       {/* Header */}
-      <div className="px-3 py-2 border-b border-[#F5F5F5]">
-        <p className="text-[11px] font-semibold text-[#A3A3A3] uppercase tracking-[0.06em]">
+      <div className="px-3 py-2 border-b border-[#F1F5F9]">
+        <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-[0.06em]">
           Pasang RestoFlow
         </p>
       </div>
@@ -488,14 +488,14 @@ function InstallDropdownContent({
       {canNative && (
         <button
           onClick={onNativeInstall}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] text-[#171717] hover:bg-[#F5F5F5] transition-colors text-left"
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] text-[#0F172A] hover:bg-[#F1F5F9] transition-colors text-left"
         >
-          <div className="w-8 h-8 rounded-lg bg-[#F3F3FF] flex items-center justify-center flex-shrink-0">
-            <Monitor size={16} className="text-[#5B5BED]" />
+          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
+            <Monitor size={16} className="text-[#2563EB]" />
           </div>
           <div>
-            <p className="font-medium text-[#171717]">Pasang PWA</p>
-            <p className="text-[11px] text-[#A3A3A3] mt-0.5">Instal langsung dari browser</p>
+            <p className="font-medium text-[#0F172A]">Pasang PWA</p>
+            <p className="text-[11px] text-[#94A3B8] mt-0.5">Instal langsung dari browser</p>
           </div>
         </button>
       )}
@@ -504,14 +504,14 @@ function InstallDropdownContent({
       {canIOS && (
         <button
           onClick={onIOSGuide}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] text-[#171717] hover:bg-[#F5F5F5] transition-colors text-left"
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] text-[#0F172A] hover:bg-[#F1F5F9] transition-colors text-left"
         >
-          <div className="w-8 h-8 rounded-lg bg-[#F3F3FF] flex items-center justify-center flex-shrink-0">
-            <Smartphone size={16} className="text-[#5B5BED]" />
+          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
+            <Smartphone size={16} className="text-[#2563EB]" />
           </div>
           <div>
-            <p className="font-medium text-[#171717]">Pasang di iOS</p>
-            <p className="text-[11px] text-[#A3A3A3] mt-0.5">Tambahkan ke Home Screen</p>
+            <p className="font-medium text-[#0F172A]">Pasang di iOS</p>
+            <p className="text-[11px] text-[#94A3B8] mt-0.5">Tambahkan ke Home Screen</p>
           </div>
         </button>
       )}
@@ -520,14 +520,14 @@ function InstallDropdownContent({
       {!canNative && !canIOS && (
         <button
           onClick={onBrowserGuide}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] text-[#171717] hover:bg-[#F5F5F5] transition-colors text-left"
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] text-[#0F172A] hover:bg-[#F1F5F9] transition-colors text-left"
         >
           <div className="w-8 h-8 rounded-lg bg-[#FFF7ED] flex items-center justify-center flex-shrink-0">
             <Monitor size={16} className="text-[#EA580C]" />
           </div>
           <div>
-            <p className="font-medium text-[#171717]">Pasang via Browser</p>
-            <p className="text-[11px] text-[#A3A3A3] mt-0.5">Panduan langkah demi langkah</p>
+            <p className="font-medium text-[#0F172A]">Pasang via Browser</p>
+            <p className="text-[11px] text-[#94A3B8] mt-0.5">Panduan langkah demi langkah</p>
           </div>
         </button>
       )}
@@ -535,30 +535,30 @@ function InstallDropdownContent({
       {/* Download APK */}
       {canAPK && (
         <>
-          <div className="border-t border-[#F5F5F5] my-1" />
+          <div className="border-t border-[#F1F5F9] my-1" />
           <button
             onClick={onDownloadAPK}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] text-[#171717] hover:bg-[#F5F5F5] transition-colors text-left"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] text-[#0F172A] hover:bg-[#F1F5F9] transition-colors text-left"
           >
             <div className="w-8 h-8 rounded-lg bg-[#F0FDF4] flex items-center justify-center flex-shrink-0">
               <Tablet size={16} className="text-[#16A34A]" />
             </div>
             <div>
-              <p className="font-medium text-[#171717]">Download APK Android</p>
-              <p className="text-[11px] text-[#A3A3A3] mt-0.5">
+              <p className="font-medium text-[#0F172A]">Download APK Android</p>
+              <p className="text-[11px] text-[#94A3B8] mt-0.5">
                 {isAndroid() ? 'Langsung install di Android' : 'Untuk perangkat Android'}
               </p>
             </div>
-            <ExternalLink size={12} className="text-[#A3A3A3] ml-auto flex-shrink-0" />
+            <ExternalLink size={12} className="text-[#94A3B8] ml-auto flex-shrink-0" />
           </button>
         </>
       )}
 
       {/* Dismiss */}
-      <div className="border-t border-[#F5F5F5] mt-1 pt-1 px-1.5">
+      <div className="border-t border-[#F1F5F9] mt-1 pt-1 px-1.5">
         <button
           onClick={onDismiss}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[12px] text-[#A3A3A3] hover:text-[#737373] hover:bg-[#F5F5F5] transition-colors"
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[12px] text-[#94A3B8] hover:text-[#475569] hover:bg-[#F1F5F9] transition-colors"
         >
           <X size={12} />
           Sembunyikan

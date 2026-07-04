@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { BellRing, AlertTriangle, TrendingDown, ChevronRight } from 'lucide-react';
 import { Ingredient, Sale } from '../../types';
 
 interface Props {
@@ -32,7 +33,7 @@ export default function TabAlerts({ ingredients, sales, dateRangeLabel, onNaviga
         });
       });
 
-    // Anomaly: check for menu with declining sales (simple heuristic)
+    // Anomaly: menu sales decline
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -41,9 +42,7 @@ export default function TabAlerts({ ingredients, sales, dateRangeLabel, onNaviga
     const lastWeek: Record<string, number> = {};
 
     sales.forEach(s => {
-      const dateStr = s.created_at
-        ? String(s.created_at ?? '')
-        : '';
+      const dateStr = s.created_at ? String(s.created_at ?? '') : '';
       const saleDate = new Date(dateStr);
       if (saleDate >= weekAgo) {
         thisWeek[s.menu_name] = (thisWeek[s.menu_name] || 0) + (Number(s.quantity) || 0);
@@ -69,75 +68,130 @@ export default function TabAlerts({ ingredients, sales, dateRangeLabel, onNaviga
     return result.slice(0, 10);
   }, [ingredients, sales]);
 
-  const badgeClass = (type: string) => {
-    if (type === 'Kritis') return 'bg-[#FCEBEB] text-[#791F1F] border border-[#F7C1C1]';
-    if (type === 'Warning') return 'bg-[#FAEEDA] text-[#633806] border border-[#FAC775]';
-    return 'bg-[#FAEEDA] text-[#633806] border border-[#FAC775]';
+  const alertStyle = (type: string) => {
+    if (type === 'Kritis') return {
+      icon: AlertTriangle,
+      bg: 'var(--pp-danger-soft)',
+      text: 'var(--pp-danger)',
+      border: 'var(--pp-danger-border)',
+      dot: 'var(--pp-danger)',
+    };
+    if (type === 'Warning') return {
+      icon: AlertTriangle,
+      bg: 'var(--pp-warning-soft)',
+      text: 'var(--pp-warning)',
+      border: 'var(--pp-warning-border)',
+      dot: 'var(--pp-warning)',
+    };
+    return {
+      icon: TrendingDown,
+      bg: 'var(--pp-info-soft)',
+      text: 'var(--pp-info)',
+      border: 'var(--pp-info-border)',
+      dot: 'var(--pp-info)',
+    };
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4">
+    <div className="bg-pp-surface border border-pp-border rounded-pp-md shadow-pp-xs overflow-hidden">
       {/* HEADER */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-[13px] font-medium text-slate-800">Alerts aktif</h3>
-          <p className="text-[11px] text-slate-400 mt-0.5">Stok kritis & anomali</p>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-pp-border-light">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-pp-xs bg-pp-danger-soft flex items-center justify-center">
+            <BellRing size={16} className="text-pp-danger" />
+          </div>
+          <div>
+            <h3 className="text-[14px] font-semibold text-pp-text">Alerts aktif</h3>
+            <p className="text-[12px] text-pp-text-muted mt-0.5">Stok kritis & anomali penjualan</p>
+          </div>
         </div>
         {alerts.length > 0 && (
-          <span className="text-[10px] font-medium bg-[#FCEBEB] text-[#791F1F] border border-[#F7C1C1] px-2 py-0.5 rounded-full">
+          <span
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+            style={{
+              backgroundColor: 'var(--pp-danger-soft)',
+              color: 'var(--pp-danger)',
+              border: '1px solid var(--pp-danger-border)',
+            }}
+          >
             {alerts.length} aktif
           </span>
         )}
       </div>
 
       {alerts.length === 0 ? (
-        <div className="py-8 text-center">
-          <p className="text-xs text-slate-400">Tidak ada alerts aktif</p>
+        <div className="flex flex-col items-center justify-center gap-2 py-16">
+          <div className="w-10 h-10 rounded-full bg-pp-success-soft flex items-center justify-center">
+            <BellRing size={18} className="text-pp-success" />
+          </div>
+          <p className="text-[13px] font-medium text-pp-text">Tidak ada alerts aktif</p>
+          <p className="text-[12px] text-pp-text-muted">Semua berjalan normal</p>
         </div>
       ) : (
-        <table className="w-full border-collapse text-[11px]">
-          <thead>
-            <tr>
-              <th className="text-[10px] uppercase tracking-wide text-slate-400 font-medium text-left py-1.5 px-2 border-b border-slate-100">
-                Jenis
-              </th>
-              <th className="text-[10px] uppercase tracking-wide text-slate-400 font-medium text-left py-1.5 px-2 border-b border-slate-100">
-                Detail
-              </th>
-              <th className="text-[10px] uppercase tracking-wide text-slate-400 font-medium text-left py-1.5 px-2 border-b border-slate-100">
-                Waktu
-              </th>
-              <th className="text-[10px] uppercase tracking-wide text-slate-400 font-medium text-left py-1.5 px-2 border-b border-slate-100">
-                Aksi
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {alerts.map((alert, i) => (
-              <tr key={i}>
-                <td className="py-2.5 px-2 border-b border-slate-100">
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${badgeClass(alert.type)}`}>
-                    {alert.type}
-                  </span>
-                </td>
-                <td className="py-2.5 px-2 border-b border-slate-100 text-slate-700">
-                  {alert.detail}
-                </td>
-                <td className="py-2.5 px-2 border-b border-slate-100 text-slate-400">
-                  {alert.time}
-                </td>
-                <td className="py-2.5 px-2 border-b border-slate-100">
-                  <button
-                    onClick={() => onNavigate(alert.actionTab)}
-                    className="text-[10px] px-2 py-1 border border-slate-200 rounded-md bg-white text-slate-600 hover:bg-slate-50"
-                  >
-                    {alert.action}
-                  </button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[13px]">
+            <thead>
+              <tr className="bg-pp-bg/50">
+                <th className="py-2.5 pl-5 pr-2 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">
+                  Jenis
+                </th>
+                <th className="py-2.5 px-2 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">
+                  Detail
+                </th>
+                <th className="py-2.5 px-2 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">
+                  Waktu
+                </th>
+                <th className="py-2.5 pl-2 pr-5 text-right text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">
+                  Aksi
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {alerts.map((alert, i) => {
+                const style = alertStyle(alert.type);
+                const IconComp = style.icon;
+                return (
+                  <tr
+                    key={i}
+                    className="border-t border-pp-border-light hover:bg-pp-bg/50 transition-colors"
+                  >
+                    <td className="py-3 pl-5 pr-2">
+                      <span
+                        className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                        style={{
+                          backgroundColor: style.bg,
+                          color: style.text,
+                          border: `1px solid ${style.border}`,
+                        }}
+                      >
+                        <div
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: style.dot }}
+                        />
+                        {alert.type}
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 text-pp-text font-medium">
+                      {alert.detail}
+                    </td>
+                    <td className="py-3 px-2 text-pp-text-muted">
+                      {alert.time}
+                    </td>
+                    <td className="py-3 pl-2 pr-5 text-right">
+                      <button
+                        onClick={() => onNavigate(alert.actionTab)}
+                        className="inline-flex items-center gap-1 text-[12px] font-medium px-3 py-1.5 border border-pp-border rounded-pp-xs bg-pp-surface text-pp-text-secondary hover:bg-pp-bg hover:text-pp-text transition-all duration-150"
+                      >
+                        {alert.action}
+                        <ChevronRight size={12} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

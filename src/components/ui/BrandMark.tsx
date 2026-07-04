@@ -24,18 +24,18 @@ export function BrandMark({ size = 'md', showTagline = true }: Props) {
     <div className="flex items-center gap-3">
       {/* 🟦 Blue square — pure brand mark */}
       <div
-        className={`${boxSizes[size]} bg-[#2563EB] flex-shrink-0`}
+        className={`${boxSizes[size]} bg-pp-primary flex-shrink-0`}
       />
 
       <div>
         <h1
-          className={`${titleSizes[size]} font-semibold tracking-[-0.02em] text-[#0F172A] leading-none`}
+          className={`${titleSizes[size]} font-semibold tracking-[-0.02em] text-pp-text leading-none`}
         >
           Pilot
-          <span className="text-[#2563EB]">POS</span>
+          <span className="text-pp-primary">POS</span>
         </h1>
         {showTagline && (
-          <p className={`${subtitleSizes[size]} text-[#64748B] mt-0.5 font-medium leading-tight`}>
+          <p className={`${subtitleSizes[size]} text-pp-text-muted mt-0.5 font-medium leading-tight`}>
             Restaurant Operating System
           </p>
         )}

@@ -100,7 +100,7 @@ export function PinVerificationView({
         {/* Heading */}
         <div className="space-y-2 text-center">
           {/* Shield Icon */}
-          <div className="w-14 h-14 rounded-[18px] bg-gradient-to-br from-[#E7F0FF] to-[#EDE9FE] flex items-center justify-center mx-auto mb-1">
+          <div className="w-14 h-14 rounded-[18px] bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] flex items-center justify-center mx-auto mb-1">
             <ShieldCheck size={24} className="text-[#2563EB]" strokeWidth={1.5} />
           </div>
 

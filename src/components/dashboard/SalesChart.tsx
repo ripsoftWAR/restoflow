@@ -1,15 +1,13 @@
-import { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Lightbulb } from 'lucide-react';
+import { useMemo, useRef, useState, useCallback } from 'react';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { formatIDRCompact } from './shared/utils';
 
-const formatIDR = (num: number) =>
-  new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num);
+/* ═══════════════════════════════════════════════════════════════
+   SalesChart — Penjualan chart with hover tooltip & insight strip
+   ═══════════════════════════════════════════════════════════════ */
 
 interface Props {
   chartData: { time: string; val: number; date: string }[];
@@ -18,11 +16,46 @@ interface Props {
 }
 
 export default function SalesChart({ chartData, dateRangeLabel, isHourly = false }: Props) {
+  const [tooltipData, setTooltipData] = useState<{ x: number; y: number; date: string; val: string } | null>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = useCallback((e: any) => {
+    if (!e || !e.activePayload || !e.activePayload.length) {
+      setTooltipData(null);
+      return;
+    }
+    const payload = e.activePayload[0].payload;
+    const container = chartContainerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const tooltipW = 140; // approx tooltip width
+    const rawX = e.chartX || 0;
+    const rawY = e.chartY || 0;
+
+    // Clamp to container edges
+    const x = Math.max(tooltipW / 2, Math.min(rect.width - tooltipW / 2, rawX));
+    const y = Math.max(0, rawY - 10);
+
+    setTooltipData({
+      x,
+      y,
+      date: payload.time,
+      val: formatIDRCompact(payload.val),
+    });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setTooltipData(null);
+  }, []);
+
   // Auto-generate insight
   const insight = useMemo(() => {
     if (chartData.length < 2) {
       if (chartData.length === 1) {
-        return `Penjualan: ${formatIDRCompact(chartData[0].val)}`;
+        return (
+          <>Penjualan: <b className="text-pp-text">{formatIDRCompact(chartData[0].val)}</b></>
+        );
       }
       return null;
     }
@@ -34,104 +67,133 @@ export default function SalesChart({ chartData, dateRangeLabel, isHourly = false
     const pctAbove = avg > 0 ? Math.round(((max - avg) / avg) * 100) : 0;
 
     if (pctAbove >= 15) {
-      return `Penjualan tertinggi di ${maxLabel}, ${formatIDRCompact(max)} — ${pctAbove}% di atas rata-rata`;
+      return (
+        <>
+          Penjualan tertinggi di <b className="text-pp-text">{maxLabel}, {formatIDRCompact(max)}</b>{' '}
+          <span className="text-pp-success font-semibold">(+{pctAbove}%)</span> di atas rata-rata harian.
+        </>
+      );
     }
-    return `Rata-rata penjualan ${formatIDRCompact(avg)} ${isHourly ? 'per jam' : 'per hari'}`;
+    return (
+      <>
+        Rata-rata penjualan <b className="text-pp-text">{formatIDRCompact(avg)}</b>{' '}
+        {isHourly ? 'per jam' : 'per hari'}
+      </>
+    );
   }, [chartData, isHourly]);
 
+  const isEmpty = chartData.length === 0;
+
   return (
-    <div className="bg-white h-full flex flex-col">
+    <div className="bg-pp-surface border border-pp-border rounded-pp-lg p-5">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-4 pb-0 gap-3">
+      <div className="flex items-center justify-between mb-1">
         <div>
-          <h3 className="text-[13px] font-medium text-slate-800">Penjualan</h3>
-          <p className="text-[11px] text-slate-400 mt-0.5">
-            Omset {isHourly ? 'per jam' : 'per hari'} · <span className="text-slate-500 font-medium">{dateRangeLabel}</span>
-          </p>
+          <div className="text-[15.5px] font-bold text-pp-text">Penjualan</div>
+          <div className="text-[12px] text-pp-text-muted mt-0.5">
+            Omset {isHourly ? 'per jam' : 'per hari'}
+          </div>
         </div>
-        <span className="text-[11px] text-slate-400 cursor-pointer hover:text-slate-600 transition-colors">
-          Explore ›
-        </span>
+        <div className="flex items-center gap-[6px] text-[12.5px] font-medium text-pp-text border border-pp-border px-[10px] py-[6px] rounded-pp-xs">
+          {isHourly ? 'Hourly' : 'Daily'}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </div>
       </div>
 
       {/* CHART */}
-      <div className="flex-1 px-4 pt-2 pb-1 min-h-[220px] h-[220px]">
-        {chartData.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <p className="text-xs text-slate-400">Belum ada data penjualan untuk periode ini</p>
+      <div ref={chartContainerRef} className="relative h-[260px] mt-[14px]">
+        {isEmpty ? (
+          <div className="h-full flex flex-col items-center justify-center gap-2">
+            <span className="text-[32px]">📊</span>
+            <p className="text-[13px] text-pp-text-muted">Belum ada data penjualan</p>
+            <p className="text-[11px] text-pp-text-muted">Data akan muncul setelah ada transaksi</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 5, right: 0, left: -10, bottom: 0 }}>
-              <defs>
-                <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#378ADD" stopOpacity={0.08} />
-                  <stop offset="95%" stopColor="#378ADD" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+          <>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={chartData}
+                margin={{ top: 5, right: 0, left: -10, bottom: 0 }}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              >
+                <defs>
+                  <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3E6DF6" stopOpacity={0.28} />
+                    <stop offset="100%" stopColor="#3E6DF6" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
 
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.1)" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#EEF0F7"
+                />
 
-              <XAxis
-                dataKey="time"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fill: '#888' }}
-                interval="preserveStartEnd"
-                minTickGap={40}
-                dy={8}
-              />
+                <XAxis
+                  dataKey="time"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                  interval="preserveStartEnd"
+                  minTickGap={40}
+                  dy={8}
+                />
 
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fill: '#888' }}
-                tickFormatter={v => {
-                  if (v >= 1_000_000) return `Rp${(v / 1_000_000).toFixed(1)}jt`;
-                  if (v >= 1_000) return `Rp${(v / 1_000).toFixed(0)}rb`;
-                  return `Rp${v}`;
-                }}
-                domain={[0, 'auto']}
-                width={45}
-              />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                  tickFormatter={v => {
+                    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace('.', ',')}jt`;
+                    if (v >= 1_000) return `${Math.round(v / 1_000)}rb`;
+                    return '0';
+                  }}
+                  domain={[0, 'auto']}
+                  width={45}
+                />
 
-              <Tooltip
-                cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }}
-                content={({ payload, active }) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <div className="bg-slate-900 text-white px-3 py-2 rounded-lg shadow-xl border border-slate-800">
-                        <p className="text-[10px] text-slate-400 mb-0.5">{payload[0].payload.time}</p>
-                        <p className="text-sm font-bold">{formatIDR(Number(payload[0].value))}</p>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
+                <Tooltip content={() => null} cursor={{ stroke: '#D7DCEC', strokeWidth: 1, strokeDasharray: '4 4' }} />
 
-              <Area
-                type="monotone"
-                dataKey="val"
-                stroke="#378ADD"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fillOpacity={1}
-                fill="url(#salesGrad)"
-                dot={false}
-                activeDot={{ r: 4, fill: '#378ADD', stroke: '#fff', strokeWidth: 2 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+                <Area
+                  type="monotone"
+                  dataKey="val"
+                  stroke="#3E6DF6"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fillOpacity={1}
+                  fill="url(#salesGradient)"
+                  dot={false}
+                  activeDot={{ r: 6, fill: '#3E6DF6', stroke: '#fff', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+
+            {/* Hover Tooltip */}
+            {tooltipData && (
+              <div
+                className="absolute bg-[#1B2436] text-white px-[13px] py-[10px] rounded-[10px] text-[12px] pointer-events-none whitespace-nowrap z-10 transform -translate-x-1/2 -translate-y-[115%]"
+                style={{ left: tooltipData.x, top: tooltipData.y }}
+              >
+                <div className="text-[#B9C1D9] text-[11px] mb-[3px]">{tooltipData.date}</div>
+                <div className="font-bold flex items-center gap-[6px]">
+                  <span className="w-[6px] h-[6px] rounded-full bg-[#3E6DF6] inline-block" />
+                  {tooltipData.val}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* INSIGHT BAR */}
+      {/* INSIGHT STRIP */}
       {insight && (
-        <div className="px-4 pb-3 pt-2 border-t border-slate-100 flex items-center gap-1.5">
-          <Lightbulb size={13} className="text-amber-600 flex-shrink-0" />
-          <p className="text-[11px] text-slate-500">{insight}</p>
+        <div className="flex items-center gap-[9px] mt-3 pt-[14px] border-t border-pp-border text-[12.5px] text-pp-text-secondary">
+          <span className="text-[15px]">💡</span>
+          <span>{insight}</span>
         </div>
       )}
     </div>

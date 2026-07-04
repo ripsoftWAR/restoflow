@@ -18,18 +18,24 @@ function getTrend(idx: number): number {
 function TrendBadge({ value }: { value: number }) {
   if (value > 0)
     return (
-      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#EAF3DE] text-[#27500A] whitespace-nowrap">
+      <span
+        className="text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+        style={{ backgroundColor: 'var(--pp-success-soft)', color: 'var(--pp-success)', border: '1px solid var(--pp-success-border)' }}
+      >
         ↑ {value}%
       </span>
     );
   if (value < 0)
     return (
-      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#FCEBEB] text-[#791F1F] whitespace-nowrap">
+      <span
+        className="text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+        style={{ backgroundColor: 'var(--pp-danger-soft)', color: 'var(--pp-danger)', border: '1px solid var(--pp-danger-border)' }}
+      >
         ↓ {Math.abs(value)}%
       </span>
     );
   return (
-    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 whitespace-nowrap">
+    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-pp-bg text-pp-text-muted whitespace-nowrap border border-pp-border-light">
       → 0%
     </span>
   );
@@ -109,49 +115,55 @@ export default function TabBreakdown({ sales, dateRangeLabel }: Props) {
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
 
       {/* ── TOP 3 HIGHLIGHT CARDS ─────────────────────────────── */}
       {breakdown.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-4">
           {[
             {
               label: 'Omset tertinggi',
               name: topOmset?.name,
               value: formatIDRCompact(topOmset?.revenue || 0),
-              color: 'text-[#0F6E56]',
-              bg: 'bg-[#E1F5EE]',
-              dot: 'bg-[#1D9E75]',
+              color: 'var(--pp-chart-green)',
+              bg: 'var(--pp-success-soft)',
+              dot: 'var(--pp-chart-green)',
             },
             {
               label: 'Paling laris',
               name: topQty?.name,
               value: `${topQty?.qty || 0} porsi`,
-              color: 'text-[#185FA5]',
-              bg: 'bg-[#E6F1FB]',
-              dot: 'bg-[#378ADD]',
+              color: 'var(--pp-chart-blue)',
+              bg: 'var(--pp-primary-soft)',
+              dot: 'var(--pp-chart-blue)',
             },
             {
               label: 'Harga tertinggi',
               name: topAvg?.name,
               value: formatIDRCompact(topAvg?.avg || 0) + '/porsi',
-              color: 'text-[#533AB7]',
-              bg: 'bg-[#EEEDFE]',
-              dot: 'bg-[#7F77DD]',
+              color: 'var(--pp-chart-purple)',
+              bg: 'var(--pp-info-soft)',
+              dot: 'var(--pp-chart-purple)',
             },
           ].map(card => (
             <div
               key={card.label}
-              className="bg-white border border-slate-200 rounded-xl p-4"
+              className="bg-pp-surface border border-pp-border rounded-pp-md p-4 shadow-pp-xs"
             >
-              <div className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full mb-2 ${card.bg} ${card.color}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${card.dot}`} />
+              <div
+                className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full mb-2"
+                style={{ backgroundColor: card.bg, color: card.color }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: card.dot }}
+                />
                 {card.label}
               </div>
-              <p className="text-[13px] font-medium text-slate-800 truncate leading-snug">
+              <p className="text-[13px] font-medium text-pp-text truncate leading-snug">
                 {card.name || '—'}
               </p>
-              <p className={`text-[12px] font-medium mt-0.5 ${card.color}`}>
+              <p className="text-[12px] font-semibold mt-0.5" style={{ color: card.color }}>
                 {card.value}
               </p>
             </div>
@@ -160,41 +172,41 @@ export default function TabBreakdown({ sales, dateRangeLabel }: Props) {
       )}
 
       {/* ── SUMMARY STRIP ─────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-4">
         {[
           { label: 'Total omset', value: formatIDRCompact(totalRevenue) },
           { label: 'Total porsi', value: `${totalQty} porsi` },
           { label: 'Rata-rata/porsi', value: formatIDRCompact(avgPerPorsi) },
         ].map(s => (
-          <div key={s.label} className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
-            <p className="text-[11px] text-slate-400 mb-0.5">{s.label}</p>
-            <p className="text-[15px] font-semibold text-slate-800 tabular-nums">{s.value}</p>
+          <div key={s.label} className="bg-pp-bg border border-pp-border-light rounded-pp-md px-4 py-3">
+            <p className="text-[11px] font-medium text-pp-text-muted mb-0.5">{s.label}</p>
+            <p className="text-[16px] font-bold text-pp-text tabular-nums">{s.value}</p>
           </div>
         ))}
       </div>
 
       {/* ── TABLE CARD ────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-pp-surface border border-pp-border rounded-pp-md shadow-pp-xs overflow-hidden">
 
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5 border-b border-slate-100">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-pp-border-light">
           <div>
-            <h3 className="text-[14px] font-medium text-slate-800">Breakdown per menu</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <h3 className="text-[14px] font-semibold text-pp-text">Breakdown per menu</h3>
+            <p className="text-[12px] text-pp-text-muted mt-0.5">
               {dateRangeLabel} · {breakdown.length} menu aktif
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Payment filter */}
-            <div className="flex gap-0.5 bg-slate-100 rounded-lg p-0.5">
+            <div className="flex gap-0.5 bg-pp-bg border border-pp-border-light rounded-pp-xs p-0.5">
               {(['ALL', 'CASH', 'QRIS'] as PaymentFilter[]).map(f => (
                 <button
                   key={f}
                   onClick={() => setPaymentFilter(f)}
-                  className={`text-[11px] px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-pp-xs transition-all duration-150 cursor-pointer ${
                     paymentFilter === f
-                      ? 'bg-white text-slate-800 shadow-sm font-medium'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-pp-surface text-pp-text shadow-pp-xs'
+                      : 'text-pp-text-muted hover:text-pp-text-secondary'
                   }`}
                 >
                   {f === 'ALL' ? 'Semua' : f}
@@ -203,15 +215,15 @@ export default function TabBreakdown({ sales, dateRangeLabel }: Props) {
             </div>
 
             {/* Sort */}
-            <div className="flex gap-0.5 bg-slate-100 rounded-lg p-0.5">
+            <div className="flex gap-0.5 bg-pp-bg border border-pp-border-light rounded-pp-xs p-0.5">
               {SORT_OPTIONS.map(o => (
                 <button
                   key={o.key}
                   onClick={() => setSortKey(o.key)}
-                  className={`text-[11px] px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-pp-xs transition-all duration-150 cursor-pointer ${
                     sortKey === o.key
-                      ? 'bg-white text-slate-800 shadow-sm font-medium'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-pp-surface text-pp-text shadow-pp-xs'
+                      : 'text-pp-text-muted hover:text-pp-text-secondary'
                   }`}
                 >
                   {o.label}
@@ -222,7 +234,7 @@ export default function TabBreakdown({ sales, dateRangeLabel }: Props) {
             {/* Export */}
             <button
               onClick={handleExport}
-              className="text-[11px] px-3 py-1.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
+              className="text-[12px] font-medium px-3 py-1.5 bg-pp-primary text-white rounded-pp-xs hover:bg-pp-primary-hover transition-colors duration-150 cursor-pointer"
             >
               Export CSV
             </button>
@@ -230,8 +242,12 @@ export default function TabBreakdown({ sales, dateRangeLabel }: Props) {
         </div>
 
         {breakdown.length === 0 ? (
-          <div className="py-12 text-center">
-            <p className="text-[13px] text-slate-400">Belum ada data penjualan</p>
+          <div className="flex flex-col items-center justify-center gap-2 py-12">
+            <div className="w-10 h-10 rounded-full bg-pp-bg flex items-center justify-center">
+              <span className="text-pp-text-placeholder text-lg">📋</span>
+            </div>
+            <p className="text-[13px] text-pp-text-muted">Belum ada data penjualan</p>
+            <p className="text-[11px] text-pp-text-placeholder">Data akan muncul setelah ada transaksi</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -246,14 +262,14 @@ export default function TabBreakdown({ sales, dateRangeLabel }: Props) {
                 <col style={{ width: 76 }} />
               </colgroup>
               <thead>
-                <tr className="bg-slate-50">
-                  <th className="py-2 pl-5 pr-2 text-left text-[10px] font-medium text-slate-400 tracking-wide">#</th>
-                  <th className="py-2 px-2 text-left text-[10px] font-medium text-slate-400 tracking-wide">MENU</th>
-                  <th className="py-2 px-2 text-right text-[10px] font-medium text-slate-400 tracking-wide">PORSI</th>
-                  <th className="py-2 px-2 text-right text-[10px] font-medium text-slate-400 tracking-wide">OMSET</th>
-                  <th className="py-2 px-2 text-right text-[10px] font-medium text-slate-400 tracking-wide">AVG/PORSI</th>
-                  <th className="py-2 px-2 text-left text-[10px] font-medium text-slate-400 tracking-wide">KONTRIBUSI</th>
-                  <th className="py-2 pl-2 pr-5 text-center text-[10px] font-medium text-slate-400 tracking-wide">TREND</th>
+                <tr className="bg-pp-bg/50">
+                  <th className="py-2.5 pl-5 pr-2 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">#</th>
+                  <th className="py-2.5 px-2 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">MENU</th>
+                  <th className="py-2.5 px-2 text-right text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">PORSI</th>
+                  <th className="py-2.5 px-2 text-right text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">OMSET</th>
+                  <th className="py-2.5 px-2 text-right text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">AVG/PORSI</th>
+                  <th className="py-2.5 px-2 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">KONTRIBUSI</th>
+                  <th className="py-2.5 pl-2 pr-5 text-center text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">TREND</th>
                 </tr>
               </thead>
               <tbody>
@@ -266,39 +282,49 @@ export default function TabBreakdown({ sales, dateRangeLabel }: Props) {
                   return (
                     <tr
                       key={item.name}
-                      className={`border-t border-slate-100 transition-colors ${
-                        isTop ? 'bg-slate-50/80' : 'hover:bg-slate-50/60'
+                      className={`border-t border-pp-border-light transition-colors ${
+                        isTop ? 'bg-pp-primary-soft/30' : 'hover:bg-pp-bg/50'
                       }`}
                     >
-                      <td className="py-3 pl-5 pr-2 text-[12px] text-slate-400">{i + 1}</td>
+                      <td className="py-3 pl-5 pr-2 text-[12px] text-pp-text-muted tabular-nums">{i + 1}</td>
                       <td className="py-3 px-2">
                         <div className="flex items-center gap-2">
-                          <span className={`text-[13px] ${isTop ? 'font-medium text-slate-800' : 'text-slate-700'}`}>
+                          <span className={`text-[13px] ${isTop ? 'font-semibold text-pp-text' : 'text-pp-text-secondary'}`}>
                             {item.name}
                           </span>
                           {isTop && (
-                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#EAF3DE] text-[#27500A] whitespace-nowrap">
+                            <span
+                              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap"
+                              style={{
+                                backgroundColor: 'var(--pp-success-soft)',
+                                color: 'var(--pp-success)',
+                                border: '1px solid var(--pp-success-border)',
+                              }}
+                            >
                               Terlaris
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-2 text-right text-slate-500 tabular-nums">{item.qty}</td>
-                      <td className="py-3 px-2 text-right font-medium text-slate-800 tabular-nums">
+                      <td className="py-3 px-2 text-right text-pp-text-muted tabular-nums">{item.qty}</td>
+                      <td className="py-3 px-2 text-right font-semibold text-pp-text tabular-nums">
                         {formatIDRCompact(item.revenue)}
                       </td>
-                      <td className="py-3 px-2 text-right text-slate-500 tabular-nums">
+                      <td className="py-3 px-2 text-right text-pp-text-muted tabular-nums">
                         {formatIDRCompact(item.avg)}
                       </td>
                       <td className="py-3 px-2">
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="flex-1 h-1.5 bg-pp-border-light rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-[#1D9E75] rounded-full"
-                              style={{ width: `${barW}%` }}
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${barW}%`,
+                                backgroundColor: 'var(--pp-chart-green)',
+                              }}
                             />
                           </div>
-                          <span className="text-[11px] text-slate-400 tabular-nums min-w-[28px] text-right">
+                          <span className="text-[11px] text-pp-text-muted tabular-nums min-w-[28px] text-right">
                             {pct}%
                           </span>
                         </div>

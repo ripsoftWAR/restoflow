@@ -1,19 +1,35 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { DashboardStats, Ingredient, MovementLog, RecipeWithDetails, Sale } from '../../types';
-import MetricCards from './MetricCards';
+import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Filter, Bell, LayoutGrid,
+  TrendingUp, PieChart, AlertTriangle, FileText,
+  ChevronDown,
+} from 'lucide-react';
+import type { DashboardStats, Ingredient, MovementLog, RecipeWithDetails, Sale, AuthSession } from '../../types';
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENTS
+   ═══════════════════════════════════════════════════════════════ */
+import StatCards from './StatCards';
 import SalesChart from './SalesChart';
-import ShoppingList from './ShoppingList';
-import InventoryInsight from './InventoryInsight';
 import MenuTerlaris from './MenuTerlaris';
+import InventoryInsight from './InventoryInsight';
+import ShoppingList from './ShoppingList';
+import RightSidebar from './RightSidebar';
 import TabTren from './TabTren';
 import TabBreakdown from './TabBreakdown';
 import TabAlerts from './TabAlerts';
 import TabLaporan from './TabLaporan';
-import { AlertTriangle, ChevronRight, Calendar, Clock, ChevronDown, X } from 'lucide-react';
-import { parseDashboardDate, buildSalesChartData } from './shared/utils';
+import DateRangePicker, { getPresetRange, type DateRangeValue } from './DateRangePicker';
+import { parseDashboardDate, buildSalesChartData, formatIDRCompact } from './shared/utils';
+
+/* ═══════════════════════════════════════════════════════════════
+   TYPES
+   ═══════════════════════════════════════════════════════════════ */
 
 interface DashboardProps {
   stats: DashboardStats;
+  authSession: AuthSession;
   onNavigate: (tab: string) => void;
   movements: MovementLog[];
   ingredients: Ingredient[];
@@ -21,99 +37,37 @@ interface DashboardProps {
   sales: Sale[];
 }
 
-type TabId = 'overview' | 'tren' | 'breakdown' | 'alerts' | 'laporan';
-type DateRangeKey = 'today' | '7d' | '30d' | 'custom';
+type TabId = 'overview' | 'trend' | 'breakdown' | 'alerts' | 'laporan';
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'tren', label: 'Tren' },
-  { id: 'breakdown', label: 'Breakdown' },
-  { id: 'alerts', label: 'Alerts' },
-  { id: 'laporan', label: 'Laporan' },
+const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
+  { id: 'overview', label: 'Overview', icon: LayoutGrid },
+  { id: 'trend', label: 'Trend', icon: TrendingUp },
+  { id: 'breakdown', label: 'Breakdown', icon: PieChart },
+  { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
+  { id: 'laporan', label: 'Laporan', icon: FileText },
 ];
 
-const DATE_RANGES: { key: DateRangeKey; label: string }[] = [
-  { key: 'today', label: 'Hari ini' },
-  { key: '7d', label: '7 hari' },
-  { key: '30d', label: '30 hari' },
-  { key: 'custom', label: 'Custom' },
-];
+/* ═══════════════════════════════════════════════════════════════
+   MAIN
+   ═══════════════════════════════════════════════════════════════ */
 
-/** Dapatkan tanggal mulai berdasarkan range */
-function getStartDate(range: DateRangeKey, customStart?: string): Date {
-  const now = new Date();
-  now.setHours(23, 59, 59, 999);
-  switch (range) {
-    case 'today': {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      return d;
-    }
-    case '7d': {
-      const d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      d.setHours(0, 0, 0, 0);
-      return d;
-    }
-    case '30d': {
-      const d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      d.setHours(0, 0, 0, 0);
-      return d;
-    }
-    case 'custom':
-      return customStart ? new Date(customStart) : new Date(0);
-    default:
-      return new Date(0);
-  }
-}
-
-function getEndDate(range: DateRangeKey, customEnd?: string): Date {
-  const now = new Date();
-  now.setHours(23, 59, 59, 999);
-  if (range === 'custom' && customEnd) {
-    const d = new Date(customEnd);
-    d.setHours(23, 59, 59, 999);
-    return d;
-  }
-  return now;
-}
-
-/** Parse date string dari Sale/Movement ke Date object */
-function parseDate(val: string | Date | undefined): Date | null {
-  if (!val) return null;
-  if (val instanceof Date) return val;
-  const d = new Date(val);
-  return isNaN(d.getTime()) ? null : d;
-}
-
-export default function Dashboard({ stats, onNavigate, movements, ingredients, recipes, sales }: DashboardProps) {
+export default function Dashboard({
+  stats, authSession, onNavigate,
+  movements, ingredients, recipes, sales,
+}: DashboardProps) {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [dateRange, setDateRange] = useState<DateRangeValue>({ preset: '30d' });
 
-  // ── Date range state (SINGLE SOURCE OF TRUTH) ──────────────────
-  const [dateRange, setDateRange] = useState<DateRangeKey>('today');
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
-  const [showCalendar, setShowCalendar] = useState(false);
-  const calRef = useRef<HTMLDivElement>(null);
-  const [dismissWarning, setDismissWarning] = useState(false);
+  // ── Computed dates from DateRangePicker value ──────────
+  const { startDate, endDate } = useMemo(() => {
+    if (dateRange.preset === 'custom' && dateRange.from && dateRange.to) {
+      return { startDate: dateRange.from, endDate: dateRange.to };
+    }
+    const range = getPresetRange(dateRange.preset);
+    return { startDate: range.from, endDate: range.to };
+  }, [dateRange]);
 
-  // Close calendar on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (calRef.current && !calRef.current.contains(e.target as Node)) {
-        setShowCalendar(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  // ── Computed date boundaries ────────────────────────────────────
-  const { startDate, endDate } = useMemo(() => ({
-    startDate: getStartDate(dateRange, customStart),
-    endDate: getEndDate(dateRange, customEnd),
-  }), [dateRange, customStart, customEnd]);
-
-  // ── Filtered sales ──────────────────────────────────────────────
+  // ── Filtered data ───────────────────────────────────────
   const filteredSales = useMemo(() => {
     return sales.filter(s => {
       const d = parseDashboardDate(s.created_at);
@@ -122,7 +76,6 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
     });
   }, [sales, startDate, endDate]);
 
-  // ── Filtered movements ──────────────────────────────────────────
   const filteredMovements = useMemo(() => {
     return movements.filter(m => {
       const d = parseDashboardDate(m.created_at);
@@ -131,7 +84,6 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
     });
   }, [movements, startDate, endDate]);
 
-  // ── Computed stats dari filtered sales ──────────────────────────
   const fallbackTrend = useMemo(() => {
     if (!Array.isArray(stats?.salesTrend)) return [];
     return stats.salesTrend.map(item => ({
@@ -140,287 +92,271 @@ export default function Dashboard({ stats, onNavigate, movements, ingredients, r
     })).filter(item => item.date);
   }, [stats]);
 
+  // ── Computed stats ──────────────────────────────────────
   const filteredStats = useMemo(() => {
     const totalOmsetFromSales = filteredSales.reduce((sum, s) => sum + (Number(s.total_price) || 0), 0);
-    const totalOmset = totalOmsetFromSales > 0 ? totalOmsetFromSales : fallbackTrend.reduce((sum, item) => sum + item.amount, 0);
-    const totalTx = filteredSales.length > 0 ? filteredSales.length : (stats?.totalTransactionsByDay || 0);
-    const totalQty = filteredSales.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0) || (stats?.totalItemsSoldByDay || 0);
+    const totalOmset = totalOmsetFromSales > 0
+      ? totalOmsetFromSales
+      : fallbackTrend.reduce((sum, item) => sum + item.amount, 0);
+    const totalTx = filteredSales.length > 0
+      ? filteredSales.length
+      : (stats?.totalTransactionsByDay || 0);
     const profit = Math.round(totalOmset * 0.42);
 
-    // Aggregate per day for sparkline
     const dayMap: Record<string, number> = {};
     if (filteredSales.length > 0) {
       filteredSales.forEach(s => {
         const dateStr = parseDashboardDate(s.created_at)?.toISOString().split('T')[0];
-        if (dateStr) {
-          dayMap[dateStr] = (dayMap[dateStr] || 0) + (Number(s.total_price) || 0);
-        }
+        if (dateStr) dayMap[dateStr] = (dayMap[dateStr] || 0) + (Number(s.total_price) || 0);
       });
     } else {
-      fallbackTrend.forEach(item => {
-        dayMap[item.date] = (dayMap[item.date] || 0) + item.amount;
-      });
+      fallbackTrend.forEach(item => { dayMap[item.date] = (dayMap[item.date] || 0) + item.amount; });
     }
     const sparkline = Object.entries(dayMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([, v]) => v);
 
-    return { totalOmset, totalTx, totalQty, profit, sparkline };
+    return { totalOmset, totalTx, profit, sparkline };
   }, [filteredSales, fallbackTrend, stats]);
 
-  // ── Chart data dari filtered sales (aggregate per day) ──────────
+  // ── Chart data ──────────────────────────────────────────
   const chartData = useMemo(() => {
-    return buildSalesChartData(filteredSales, dateRange, fallbackTrend);
+    return buildSalesChartData(filteredSales, dateRange.preset, fallbackTrend);
   }, [filteredSales, dateRange, fallbackTrend]);
 
-  // ── Critical items ──────────────────────────────────────────────
+  // ── Critical items ──────────────────────────────────────
   const criticalItems = useMemo(
     () => stats.criticalStockItems?.items || [],
     [stats.criticalStockItems],
   );
   const criticalCount = stats.criticalStockItems?.count || 0;
 
-  // ── Stock value ─────────────────────────────────────────────────
+  // ── Stock value ─────────────────────────────────────────
   const stockValue = useMemo(() => {
-    return ingredients.reduce((sum, ing) => {
-      return sum + (Number(ing.stock) || 0) * (Number(ing.unit_price) || 0);
-    }, 0);
+    return ingredients.reduce((sum, ing) =>
+      sum + (Number(ing.stock) || 0) * (Number(ing.unit_price) || 0), 0);
   }, [ingredients]);
 
-  // ── Today date string ───────────────────────────────────────────
-  const todayStr = useMemo(() => {
-    const d = new Date();
-    const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-    return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-  }, []);
+  // ── Date label for display (used in chart titles, etc) ──
+  const dateLabel = useMemo(() => {
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const to = `${endDate.getDate()} ${monthNames[endDate.getMonth()]} ${endDate.getFullYear()}`;
 
-  // ── Date range display label ────────────────────────────────────
-  const dateRangeLabel = useMemo(() => {
-    if (dateRange === 'custom' && customStart && customEnd) {
-      const s = new Date(customStart).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      const e = new Date(customEnd).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      return `${s} – ${e}`;
-    }
-    const opt = DATE_RANGES.find(d => d.key === dateRange);
-    return opt?.label || 'Hari ini';
-  }, [dateRange, customStart, customEnd]);
+    if (dateRange.preset === 'today') return `Hari ini, ${to}`;
+    if (dateRange.preset === 'thisMonth') return `Bulan ini (${monthNames[endDate.getMonth()]} ${endDate.getFullYear()})`;
+    if (dateRange.preset === '1year') return `Tahun ${endDate.getFullYear()}`;
 
-  // ── Most critical item name ─────────────────────────────────────
-  const mostCritical = criticalItems[0];
+    const from = `${startDate.getDate()} ${monthNames[startDate.getMonth()]} ${startDate.getFullYear()}`;
+    return `${from} – ${to}`;
+  }, [dateRange, startDate, endDate]);
 
-  // ── Handle date range click ─────────────────────────────────────
-  const handleRangeClick = (key: DateRangeKey) => {
-    if (key === 'custom') {
-      setShowCalendar(!showCalendar);
-      return;
-    }
-    setShowCalendar(false);
-    setDateRange(key);
-  };
-
-  const handleCustomApply = () => {
-    if (customStart && customEnd) {
-      setDateRange('custom');
-      setShowCalendar(false);
-    }
-  };
-
+  /* ═══════════════════════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════════════════════ */
   return (
-    <div className="space-y-3.5">
-      {/* ═══════════════════════════════════════════════════════════
-          TOPBAR — dengan filter tanggal fungsional
-          ═══════════════════════════════════════════════════════════ */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="p-[22px] px-[26px] min-w-0">
+      {/* ═══════════════════════════════════════════════
+          TOPBAR
+          ═══════════════════════════════════════════════ */}
+      <div className="flex items-start justify-between mb-[18px] flex-wrap gap-[14px]">
         <div>
-          <h1 className="font-2xl text-primary">Overview</h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Ringkasan operasional · Shift 1 · Budi
+          <h1 className="text-[24px] font-bold text-[#1B2436] tracking-[-0.02em]">
+            Dashboard
+          </h1>
+          <p className="text-[13px] text-[#6B7280] mt-1 flex items-center gap-1">
+            Ringkasan operasional
+            <span className="text-[#9CA3AF] mx-1">•</span>
+            <select className="border-none bg-transparent text-[13px] text-[#6B7280] font-medium cursor-pointer outline-none">
+              <option>Semua Outlet</option>
+              <option>PilotPOS Jakarta</option>
+            </select>
           </p>
         </div>
 
-        {/* DATE RANGE FILTER */}
-        <div className="flex items-center gap-2">
-          {/* Range pills */}
-          <div className="flex gap-0.5 bg-slate-100 rounded-lg p-0.5">
-            {DATE_RANGES.map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => handleRangeClick(key)}
-                className={`font-sm px-4 py-2 rounded-md transition-all cursor-pointer whitespace-nowrap ${
-                  dateRange === key && key !== 'custom'
-                    ? 'bg-white text-slate-800 shadow-sm font-medium'
-                    : key === 'custom' && showCalendar
-                    ? 'bg-white text-slate-800 shadow-sm font-medium'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {key === 'custom' ? (
-                  <span className="flex items-center gap-1">
-                    <Calendar size={10} />
-                    {label}
-                  </span>
-                ) : (
-                  label
-                )}
-              </button>
-            ))}
-          </div>
+        {/* Topbar Right */}
+        <div className="flex items-center gap-[10px]">
+          {/* Date Range Picker — Tokopedia-style */}
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
 
-          {/* Current date display */}
-          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5">
-            <Clock size={12} />
-            {todayStr}
-          </div>
-        </div>
-      </div>
-
-      {/* Calendar dropdown */}
-      {showCalendar && (
-        <div ref={calRef} className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
-          <input
-            type="date"
-            value={customStart}
-            onChange={e => setCustomStart(e.target.value)}
-            className="text-[12px] border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700"
-          />
-          <span className="text-[12px] text-slate-400">s/d</span>
-          <input
-            type="date"
-            value={customEnd}
-            onChange={e => setCustomEnd(e.target.value)}
-            className="text-[12px] border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700"
-          />
-          <button
-            onClick={handleCustomApply}
-            disabled={!customStart || !customEnd}
-            className="text-[12px] px-4 py-1.5 bg-[#185FA5] text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-          >
-            Terapkan
+          {/* Filter Button */}
+          <button className="flex items-center gap-2 bg-white border border-[#E9ECF5] px-[14px] py-[9px] rounded-[10px] text-[13px] font-medium text-[#1B2436] hover:border-[#D6DCEC] transition-colors">
+            <Filter size={15} strokeWidth={1.8} />
+            Filter
           </button>
-        </div>
-      )}
 
-      {/* ═══════════════════════════════════════════════════════════
-          WARNING BAR
-          ═══════════════════════════════════════════════════════════ */}
-      {criticalCount > 0 && mostCritical && !dismissWarning && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#FAEEDA] border border-[#FAC775] rounded-xl px-4 py-2.5">
-          <span className="text-[12px] text-[#633806] flex items-center gap-1.5">
-            <AlertTriangle size={13} className="flex-shrink-0" />
-            <span>
-              {criticalCount} bahan perlu restock —{' '}
-              <strong>{mostCritical.name}</strong> paling kritis, sisa {mostCritical.stock} {mostCritical.base_unit}
+          {/* Bell */}
+          <div className="relative w-[38px] h-[38px] rounded-[10px] bg-white border border-[#E9ECF5] flex items-center justify-center">
+            <Bell size={17} strokeWidth={1.8} color="#4B5468" />
+            <span className="absolute -top-1 -right-1 bg-[#2E4FE0] text-white text-[10px] font-bold rounded-full w-[17px] h-[17px] flex items-center justify-center border-[2px] border-[#F3F5FA]">
+              3
             </span>
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onNavigate('inventory')}
-              className="text-[11px] text-[#854F0B] underline cursor-pointer whitespace-nowrap"
-            >
-              Lihat detail →
-            </button>
-            <button
-              onClick={() => setDismissWarning(true)}
-              className="text-[#854F0B] hover:text-[#633806] cursor-pointer"
-            >
-              <X size={13} />
-            </button>
+          </div>
+
+          {/* Profile */}
+          <div className="flex items-center gap-[9px] py-1 pl-1 pr-2 rounded-[10px] hover:bg-white cursor-pointer transition-colors">
+            <img
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(authSession.user.nama || 'User')}&background=2E4FE0&color=fff&size=72`}
+              alt={authSession.user.nama}
+              className="w-[36px] h-[36px] rounded-full object-cover"
+            />
+            <div>
+              <div className="text-[13.5px] font-semibold leading-tight text-[#1B2436]">
+                {authSession.user.nama || 'User'}
+              </div>
+              <div className="text-[11.5px] text-[#9CA3AF]">{authSession.user.role}</div>
+            </div>
+            <ChevronDown size={13} strokeWidth={2} color="#9CA3AF" />
           </div>
         </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════
-          TABS
-          ═══════════════════════════════════════════════════════════ */}
-      <div className="flex gap-0 border-b border-slate-200">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`text-[13px] px-4 py-2.5 cursor-pointer border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? 'text-slate-800 border-slate-800 font-medium'
-                : 'text-slate-400 border-transparent hover:text-slate-500'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════
-          TAB: OVERVIEW
-          ═══════════════════════════════════════════════════════════ */}
-      {activeTab === 'overview' && (
-        <div className="space-y-3">
-          {/* Metric Cards — pakai filteredStats */}
-          <MetricCards
-            filteredStats={filteredStats}
-            criticalCount={criticalCount}
-            dateRangeLabel={dateRangeLabel}
-            onNavigate={onNavigate}
-          />
+      {/* ═══════════════════════════════════════════════
+          TABS
+          ═══════════════════════════════════════════════ */}
+      <div className="flex gap-[22px] border-b border-[#E9ECF5] mb-5">
+        {TABS.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-[7px] px-0.5 pb-3 text-[14px] font-medium border-b-[2px] transition-colors cursor-pointer ${
+                activeTab === tab.id
+                  ? 'text-[#2E4FE0] font-semibold border-[#2E4FE0]'
+                  : 'text-[#6B7280] border-transparent hover:text-[#2E4FE0]'
+              }`}
+            >
+              <Icon size={15} strokeWidth={2} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-          {/* Row 2: Sales Chart + Menu Terlaris */}
-          <div className="grid lg:grid-cols-12 gap-3">
-            <div className="lg:col-span-8 bg-white border border-slate-200 rounded-xl overflow-hidden">
-              <SalesChart chartData={chartData} dateRangeLabel={dateRangeLabel} isHourly={dateRange === 'today'} />
+      {/* ═══════════════════════════════════════════════
+          TAB CONTENT
+          ═══════════════════════════════════════════════ */}
+      <AnimatePresence mode="wait">
+        {/* ── OVERVIEW ────────────────────────────── */}
+        {activeTab === 'overview' && (
+          <motion.div
+            key="overview"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="grid grid-cols-[1fr_340px] gap-5 max-[1180px]:grid-cols-1">
+              {/* LEFT COLUMN */}
+              <div className="flex flex-col gap-5 min-w-0">
+                {/* STAT CARDS ROW */}
+                <StatCards
+                  sales={sales}
+                  ingredients={ingredients}
+                  globalDateRange={dateRange}
+                />
+
+                {/* TWO COL: Sales Chart + Menu Terlaris */}
+                <div className="grid grid-cols-[1fr_1fr] gap-5 max-[760px]:grid-cols-1">
+                  <SalesChart chartData={chartData} dateRangeLabel={dateLabel} isHourly={dateRange.preset === 'today'} />
+                  <MenuTerlaris sales={filteredSales} dateRangeLabel={dateLabel} />
+                </div>
+
+                {/* TWO COL: Inventory Insight + Perlu Restock */}
+                <div className="grid grid-cols-[1fr_1fr] gap-5 max-[760px]:grid-cols-1">
+                  <InventoryInsight
+                    ingredients={ingredients}
+                    movements={filteredMovements}
+                    criticalCount={criticalCount}
+                    stockValue={stockValue}
+                    dateRangeLabel={dateLabel}
+                    onNavigate={onNavigate}
+                  />
+                  <ShoppingList
+                    items={criticalItems}
+                    totalCount={criticalCount}
+                    onNavigate={onNavigate}
+                  />
+                </div>
+
+
+              </div>
+
+              {/* RIGHT SIDEBAR */}
+              <div className="max-[1180px]:col-span-1 overflow-visible">
+                <RightSidebar
+                  sales={filteredSales}
+                  ingredients={ingredients}
+                  movements={filteredMovements}
+                  criticalCount={criticalCount}
+                  stockValue={stockValue}
+                  totalOmset={filteredStats.totalOmset}
+                  totalTx={filteredStats.totalTx}
+                  onNavigate={onNavigate}
+                />
+              </div>
             </div>
-            <div className="lg:col-span-4 bg-white border border-slate-200 rounded-xl overflow-hidden">
-              <MenuTerlaris sales={filteredSales} dateRangeLabel={dateRangeLabel} />
-            </div>
-          </div>
+          </motion.div>
+        )}
 
-          {/* Row 3: Inventory Insight + Shopping List */}
-          <div className="grid lg:grid-cols-2 gap-3">
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-              <InventoryInsight
-                ingredients={ingredients}
-                movements={filteredMovements}
-                criticalCount={criticalCount}
-                stockValue={stockValue}
-                dateRangeLabel={dateRangeLabel}
-              />
-            </div>
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-              <ShoppingList
-                items={criticalItems}
-                totalCount={criticalCount}
-                onNavigate={onNavigate}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+        {/* ── TREND ───────────────────────────────── */}
+        {activeTab === 'trend' && (
+          <motion.div
+            key="trend"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <TabTren sales={filteredSales} dateRangeLabel={dateLabel} dateRange={dateRange.preset} />
+          </motion.div>
+        )}
 
-      {/* ═══════════════════════════════════════════════════════════
-          TAB: TREN
-          ═══════════════════════════════════════════════════════════ */}
-      {activeTab === 'tren' && (
-        <TabTren sales={filteredSales} dateRangeLabel={dateRangeLabel} dateRange={dateRange} />
-      )}
+        {/* ── BREAKDOWN ───────────────────────────── */}
+        {activeTab === 'breakdown' && (
+          <motion.div
+            key="breakdown"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <TabBreakdown sales={filteredSales} dateRangeLabel={dateLabel} />
+          </motion.div>
+        )}
 
-      {/* ═══════════════════════════════════════════════════════════
-          TAB: BREAKDOWN
-          ═══════════════════════════════════════════════════════════ */}
-      {activeTab === 'breakdown' && (
-        <TabBreakdown sales={filteredSales} dateRangeLabel={dateRangeLabel} />
-      )}
+        {/* ── ALERTS ──────────────────────────────── */}
+        {activeTab === 'alerts' && (
+          <motion.div
+            key="alerts"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <TabAlerts
+              ingredients={ingredients}
+              sales={filteredSales}
+              dateRangeLabel={dateLabel}
+              onNavigate={onNavigate}
+            />
+          </motion.div>
+        )}
 
-      {/* ═══════════════════════════════════════════════════════════
-          TAB: ALERTS
-          ═══════════════════════════════════════════════════════════ */}
-      {activeTab === 'alerts' && (
-        <TabAlerts ingredients={ingredients} sales={filteredSales} dateRangeLabel={dateRangeLabel} onNavigate={onNavigate} />
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════
-          TAB: LAPORAN
-          ═══════════════════════════════════════════════════════════ */}
-      {activeTab === 'laporan' && (
-        <TabLaporan sales={filteredSales} dateRangeLabel={dateRangeLabel} />
-      )}
+        {/* ── LAPORAN ─────────────────────────────── */}
+        {activeTab === 'laporan' && (
+          <motion.div
+            key="laporan"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <TabLaporan sales={filteredSales} dateRangeLabel={dateLabel} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

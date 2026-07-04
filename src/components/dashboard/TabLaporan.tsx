@@ -46,101 +46,113 @@ export default function TabLaporan({ sales, dateRangeLabel }: Props) {
   const todayStr = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white border border-slate-200 rounded-xl p-3">
-          <div className="text-[10px] text-slate-400 mb-1">Total omset bulan ini</div>
-          <div className="text-[15px] font-medium text-slate-800 font-mono">
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-pp-surface border border-pp-border rounded-pp-md p-4 shadow-pp-xs">
+          <p className="text-[11px] font-medium text-pp-text-muted uppercase tracking-wider mb-1">Total omset</p>
+          <p className="text-[18px] font-bold text-pp-text tabular-nums tracking-[-0.03em]">
             {formatIDRCompact(totalOmset)}
-          </div>
+          </p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-3">
-          <div className="text-[10px] text-slate-400 mb-1">Total profit bulan ini</div>
-          <div className="text-[15px] font-medium text-slate-800 font-mono">
+        <div className="bg-pp-surface border border-pp-border rounded-pp-md p-4 shadow-pp-xs">
+          <p className="text-[11px] font-medium text-pp-text-muted uppercase tracking-wider mb-1">Total profit</p>
+          <p className="text-[18px] font-bold text-pp-text tabular-nums tracking-[-0.03em]">
             {formatIDRCompact(totalProfit)}
-          </div>
+          </p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-3">
-          <div className="text-[10px] text-slate-400 mb-1">Total transaksi</div>
-          <div className="text-[15px] font-medium text-slate-800 font-mono">
+        <div className="bg-pp-surface border border-pp-border rounded-pp-md p-4 shadow-pp-xs">
+          <p className="text-[11px] font-medium text-pp-text-muted uppercase tracking-wider mb-1">Total transaksi</p>
+          <p className="text-[18px] font-bold text-pp-text tabular-nums tracking-[-0.03em]">
             {totalTx}
-          </div>
+          </p>
         </div>
       </div>
 
       {/* TABLE */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[13px] font-medium text-slate-800">Riwayat penjualan</h3>
+      <div className="bg-pp-surface border border-pp-border rounded-pp-md shadow-pp-xs overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-pp-border-light">
+          <h3 className="text-[14px] font-semibold text-pp-text">Riwayat penjualan</h3>
           <div className="flex gap-2">
-            <button className="flex items-center gap-1.5 text-[10px] px-2.5 py-1.5 border border-slate-200 rounded-md bg-white text-slate-600 hover:bg-slate-50">
-              <FileText size={11} />
+            <button className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 border border-pp-border rounded-pp-xs bg-pp-surface text-pp-text-secondary hover:bg-pp-bg transition-all duration-150">
+              <FileText size={12} />
               Export PDF
             </button>
-            <button className="flex items-center gap-1.5 text-[10px] px-2.5 py-1.5 border border-slate-200 rounded-md bg-white text-slate-600 hover:bg-slate-50">
-              <Download size={11} />
+            <button className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 border border-pp-border rounded-pp-xs bg-pp-surface text-pp-text-secondary hover:bg-pp-bg transition-all duration-150">
+              <Download size={12} />
               CSV
             </button>
           </div>
         </div>
 
         {dailyReport.length === 0 ? (
-          <div className="py-8 text-center">
-            <p className="text-xs text-slate-400">Belum ada data penjualan</p>
+          <div className="flex flex-col items-center justify-center gap-2 py-16">
+            <div className="w-10 h-10 rounded-full bg-pp-bg flex items-center justify-center">
+              <FileText size={18} className="text-pp-text-placeholder" />
+            </div>
+            <p className="text-[13px] text-pp-text-muted">Belum ada data penjualan</p>
+            <p className="text-[12px] text-pp-text-placeholder">Riwayat akan muncul setelah transaksi</p>
           </div>
         ) : (
-          <table className="w-full border-collapse text-[11px]">
-            <thead>
-              <tr>
-                <th className="text-[10px] uppercase tracking-wide text-slate-400 font-medium text-left py-1.5 px-2 border-b border-slate-100">
-                  Tanggal
-                </th>
-                <th className="text-[10px] uppercase tracking-wide text-slate-400 font-medium text-left py-1.5 px-2 border-b border-slate-100">
-                  Transaksi
-                </th>
-                <th className="text-[10px] uppercase tracking-wide text-slate-400 font-medium text-left py-1.5 px-2 border-b border-slate-100">
-                  Omset
-                </th>
-                <th className="text-[10px] uppercase tracking-wide text-slate-400 font-medium text-left py-1.5 px-2 border-b border-slate-100">
-                  Profit
-                </th>
-                <th className="text-[10px] uppercase tracking-wide text-slate-400 font-medium text-left py-1.5 px-2 border-b border-slate-100">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {dailyReport.map((row, i) => {
-                const isToday = row.rawDate === todayStr;
-                return (
-                  <tr key={row.rawDate}>
-                    <td className="py-2.5 px-2 border-b border-slate-100 text-slate-700">
-                      {row.date}
-                    </td>
-                    <td className="py-2.5 px-2 border-b border-slate-100 text-slate-700">
-                      {row.tx}
-                    </td>
-                    <td className="py-2.5 px-2 border-b border-slate-100 text-slate-700 font-mono">
-                      {formatIDRCompact(row.omset)}
-                    </td>
-                    <td className="py-2.5 px-2 border-b border-slate-100 text-slate-700 font-mono">
-                      {formatIDRCompact(row.profit)}
-                    </td>
-                    <td className="py-2.5 px-2 border-b border-slate-100">
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                        isToday
-                          ? 'bg-[#EAF3DE] text-[#27500A] border border-[#C0DD97]'
-                          : 'bg-[#EAF3DE] text-[#27500A] border border-[#C0DD97]'
-                      }`}>
-                        {isToday ? 'Berjalan' : 'Selesai'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[13px]">
+              <thead>
+                <tr className="bg-pp-bg/50">
+                  <th className="py-2.5 pl-5 pr-2 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">
+                    Tanggal
+                  </th>
+                  <th className="py-2.5 px-2 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">
+                    Transaksi
+                  </th>
+                  <th className="py-2.5 px-2 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">
+                    Omset
+                  </th>
+                  <th className="py-2.5 px-2 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">
+                    Profit
+                  </th>
+                  <th className="py-2.5 pl-2 pr-5 text-left text-[11px] font-semibold text-pp-text-muted uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailyReport.map((row) => {
+                  const isToday = row.rawDate === todayStr;
+                  return (
+                    <tr
+                      key={row.rawDate}
+                      className="border-t border-pp-border-light hover:bg-pp-bg/50 transition-colors"
+                    >
+                      <td className="py-3 pl-5 pr-2 text-pp-text font-medium">
+                        {row.date}
+                      </td>
+                      <td className="py-3 px-2 text-pp-text-secondary">
+                        {row.tx}
+                      </td>
+                      <td className="py-3 px-2 text-pp-text font-medium tabular-nums">
+                        {formatIDRCompact(row.omset)}
+                      </td>
+                      <td className="py-3 px-2 text-pp-text-secondary tabular-nums">
+                        {formatIDRCompact(row.profit)}
+                      </td>
+                      <td className="py-3 pl-2 pr-5">
+                        <span
+                          className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                          style={{
+                            backgroundColor: isToday ? 'var(--pp-success-soft)' : 'var(--pp-bg)',
+                            color: isToday ? 'var(--pp-success)' : 'var(--pp-text-muted)',
+                            border: `1px solid ${isToday ? 'var(--pp-success-border)' : 'var(--pp-border-light)'}`,
+                          }}
+                        >
+                          {isToday ? 'Berjalan' : 'Selesai'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

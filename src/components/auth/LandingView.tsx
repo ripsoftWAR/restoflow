@@ -153,7 +153,7 @@ const testimonials = [
     role: 'Head Chef',
     restaurant: 'The Galley',
     rating: 5,
-    avatarColor: '#7C3AED',
+    avatarColor: '#2563EB',
   },
 ];
 

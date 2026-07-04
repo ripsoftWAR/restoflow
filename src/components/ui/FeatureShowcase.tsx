@@ -35,10 +35,10 @@ export function FeatureShowcase({
       iconBg: 'bg-gradient-to-br from-[#059669] to-[#047857]',
     },
     violet: {
-      bg: 'from-[#F5F3FF] to-white',
-      border: 'hover:border-[#DDD6FE]',
-      shadow: 'hover:shadow-[0_12px_40px_-12px_rgba(124,58,237,0.18)]',
-      iconBg: 'bg-gradient-to-br from-[#7C3AED] to-[#6D28D9]',
+      bg: 'from-[#EFF6FF] to-white',
+      border: 'hover:border-[#BFDBFE]',
+      shadow: 'hover:shadow-[0_12px_40px_-12px_rgba(37,99,235,0.18)]',
+      iconBg: 'bg-gradient-to-br from-[#2563EB] to-[#1D4ED8]',
     },
     orange: {
       bg: 'from-[#FFF7ED] to-white',

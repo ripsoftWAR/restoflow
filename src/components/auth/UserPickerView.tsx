@@ -32,7 +32,7 @@ function roleColor(role: string): { bg: string; text: string; border: string } {
       return { bg: '#FFF7ED', text: '#EA580C', border: '#FED7AA' };
     case 'manajer':
     case 'manager':
-      return { bg: '#F3E8FF', text: '#9333EA', border: '#D8B4FE' };
+      return { bg: '#EFF6FF', text: '#2563EB', border: '#BFDBFE' };
     case 'supervisor':
       return { bg: '#FEF3C7', text: '#D97706', border: '#FDE68A' };
     case 'dapur':
@@ -85,7 +85,7 @@ export function UserPickerView({ users, onSelect, onBack }: Props) {
 
         {/* Heading */}
         <div className="space-y-2 text-center">
-          <div className="w-12 h-12 rounded-[16px] bg-gradient-to-br from-[#E7F0FF] to-[#EDE9FE] flex items-center justify-center mx-auto mb-1">
+          <div className="w-12 h-12 rounded-[16px] bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] flex items-center justify-center mx-auto mb-1">
             <UsersIcon size={22} className="text-[#2563EB]" strokeWidth={1.5} />
           </div>
           <h2 className="text-2xl font-semibold text-[#0F172A] tracking-[-0.02em]">

@@ -1,7 +1,5 @@
-// MetricCards.tsx  (fixed)
-// Sekarang pakai shared StatCard — tidak ada duplikasi logic card lagi.
-
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import StatCard from './shared/StatCard';
 import { formatIDRCompact } from './shared/utils';
 
@@ -19,6 +17,19 @@ interface Props {
   dateRangeLabel: string;
   onNavigate: (tab: string) => void;
 }
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.1 },
+  },
+};
+
+const cardItem = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] } },
+};
 
 export default function MetricCards({
   filteredStats,
@@ -45,7 +56,6 @@ export default function MetricCards({
         | 'up'
         | 'down'
         | 'flat',
-      label: 'trend',
     };
   }, [sparkline]);
 
@@ -74,36 +84,49 @@ export default function MetricCards({
   );
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      <StatCard
-        label={`Omset · ${dateRangeLabel}`}
-        value={formatIDRCompact(totalOmset)}
-        trend={salesTrend}
-        sparkData={sparkline}
-        sparkColor="#1D9E75"
-        onClick={() => onNavigate('sales')}
-      />
-      <StatCard
-        label={`Transaksi · ${dateRangeLabel}`}
-        value={`${totalTx}`}
-        sparkData={txSpark}
-        sparkColor="#378ADD"
-        onClick={() => onNavigate('sales')}
-      />
-      <StatCard
-        label={`Profit · ${dateRangeLabel}`}
-        value={formatIDRCompact(profit)}
-        sparkData={profitSpark}
-        sparkColor="#7C3AED"
-        onClick={() => onNavigate('sales')}
-      />
-      <StatCard
-        label="Stok kritis"
-        value={`${criticalCount} item`}
-        sparkData={criticalSpark}
-        sparkColor="#EF9F27"
-        onClick={() => onNavigate('inventory')}
-      />
-    </div>
+    <motion.div
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+    >
+      <motion.div variants={cardItem}>
+        <StatCard
+          label={`Omset · ${dateRangeLabel}`}
+          value={formatIDRCompact(totalOmset)}
+          trend={salesTrend}
+          sparkData={sparkline}
+          sparkColor="var(--pp-chart-green)"
+          onClick={() => onNavigate('sales')}
+        />
+      </motion.div>
+      <motion.div variants={cardItem}>
+        <StatCard
+          label={`Transaksi · ${dateRangeLabel}`}
+          value={`${totalTx}`}
+          sparkData={txSpark}
+          sparkColor="var(--pp-chart-blue)"
+          onClick={() => onNavigate('sales')}
+        />
+      </motion.div>
+      <motion.div variants={cardItem}>
+        <StatCard
+          label={`Profit · ${dateRangeLabel}`}
+          value={formatIDRCompact(profit)}
+          sparkData={profitSpark}
+          sparkColor="var(--pp-chart-purple)"
+          onClick={() => onNavigate('sales')}
+        />
+      </motion.div>
+      <motion.div variants={cardItem}>
+        <StatCard
+          label="Stok kritis"
+          value={`${criticalCount} item`}
+          sparkData={criticalSpark}
+          sparkColor="var(--pp-chart-orange)"
+          onClick={() => onNavigate('inventory')}
+        />
+      </motion.div>
+    </motion.div>
   );
 }

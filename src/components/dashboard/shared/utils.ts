@@ -39,7 +39,7 @@ export function getSafeNumber(value: unknown): number {
 
 export function buildSalesChartData(
   sales: Sale[],
-  dateRange: 'today' | '7d' | '30d' | 'custom',
+  dateRange: 'today' | '7d' | '30d' | 'thisMonth' | '3months' | '1year' | 'custom',
   fallbackTrend: Array<{ date: string; amount: number }> = []
 ) {
   const dayMap: Record<string, number> = {};

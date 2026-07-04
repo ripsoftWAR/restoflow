@@ -272,6 +272,75 @@ const executeTool = async (toolName: string, toolInput: any, restaurantId: numbe
   }
 };
 
+// ── Quick Summary route ─────────────────────────────────────────
+router.post('/quick-summary', requireAuth, async (req: Request, res: Response) => {
+  const { context } = req.body;
+  if (!context) return res.status(400).json({ error: 'Context payload is required' });
+
+  const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  const SYSTEM_PROMPT = `Kamu adalah Pilot AI — asisten analis bisnis untuk restoran. Berikan ringkasan bisnis dalam Bahasa Indonesia yang SINGKAT, PADAT, dan INSIGHTFUL. 
+
+Hari ini: ${today}
+
+Format jawaban:
+- Maksimal 8-10 baris pendek
+- Gunakan bullet points singkat (•)
+- Fokus ke HAL PENTING saja: omset, menu terlaris, stok kritis, tren
+- Akhiri dengan 1 rekomendasi aksi konkret
+- JANGAN basa-basi pembuka/penutup
+- JANGAN pakai markdown heading (#)
+- Gunakan **tebal** untuk angka penting`;
+
+  // ── Offline fallback ────────────────────────────────────────
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.json({
+      text: `• **Ringkasan Bisnis** — Mode offline\n• Gunakan data dashboard untuk analisis manual\n\n💡 _API key AI belum dikonfigurasi. Chat lengkap tetap tersedia di halaman AI._`,
+    });
+  }
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY!,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: `Berikut data bisnis restoran hari ini:\n\n${context}\n\nBuat ringkasan insight bisnis singkat.`
+          }
+        ]
+      })
+    });
+
+    const data = await response.json() as any;
+
+    if (!response.ok) {
+      console.warn('Claude Quick Summary error:', data?.error?.message);
+      return res.json({ text: '⚠️ AI sedang sibuk, coba lagi sebentar.' });
+    }
+
+    const text = data.content
+      ?.filter((b: any) => b.type === 'text')
+      .map((b: any) => b.text)
+      .join('\n')
+      .trim();
+
+    return res.json({ text: text || '🔍 Tidak ada insight khusus untuk saat ini.' });
+
+  } catch (err: any) {
+    console.error('Quick Summary error:', err);
+    return res.json({ text: '⚠️ Gagal menghubungi AI. Coba lagi nanti.' });
+  }
+});
+
 // ── Main route ─────────────────────────────────────────────────
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   const restaurantId = req.user!.restaurant_id;

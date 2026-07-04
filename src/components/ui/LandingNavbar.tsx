@@ -46,7 +46,7 @@ export function LandingNavbar({ onMasuk, onDaftar }: Props) {
         className={`
           fixed top-0 left-0 right-0 z-50 transition-all duration-400 ease-out
           ${scrolled
-            ? 'bg-white/80 backdrop-blur-xl border-b border-[#E2E8F0]/40 shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+            ? 'bg-pp-surface/80 backdrop-blur-xl border-b border-pp-border/40 shadow-pp-sm'
             : 'bg-transparent border-b border-transparent'
           }
         `}
@@ -87,8 +87,8 @@ export function LandingNavbar({ onMasuk, onDaftar }: Props) {
           <button
             onClick={() => setMobileOpen(true)}
             className={`
-              lg:hidden p-2 -mr-2 rounded-xl
-              text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]
+              lg:hidden p-2 -mr-2 rounded-pp-md
+              text-pp-text-secondary hover:text-pp-text hover:bg-pp-bg
               transition-all duration-400 ease-out
               ${scrolled ? 'opacity-100' : 'opacity-60'}
             `}
@@ -129,13 +129,13 @@ export function LandingNavbar({ onMasuk, onDaftar }: Props) {
               "
             >
               {/* Drawer header */}
-              <div className="flex items-center justify-between px-5 h-[68px] border-b border-[#F1F5F9]">
+              <div className="flex items-center justify-between px-5 h-[68px] border-b border-pp-border-light">
                 <BrandMark size="sm" showTagline={false} />
                 <button
                   onClick={() => setMobileOpen(false)}
                   className="
-                    p-2 -mr-2 rounded-xl
-                    text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]
+                    p-2 -mr-2 rounded-pp-md
+                    text-pp-text-secondary hover:text-pp-text hover:bg-pp-bg
                     transition-colors duration-200
                   "
                   aria-label="Tutup menu navigasi"

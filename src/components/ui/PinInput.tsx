@@ -135,12 +135,12 @@ export function PinInput({
               outline-none select-none
               ${
                 error
-                  ? 'border-[#DC2626] bg-[#FEF2F2] text-[#DC2626]'
+                  ? 'border-pp-danger bg-pp-danger-soft text-pp-danger'
                   : isFocused
-                    ? 'border-[#2563EB] bg-white ring-[3px] ring-[#2563EB]/10 text-[#0F172A]'
+                    ? 'border-pp-primary bg-pp-surface ring-[3px] ring-pp-primary/10 text-pp-text'
                     : isFilled
-                      ? 'border-[#CBD5E1] bg-[#F8FAFC] text-[#0F172A]'
-                      : 'border-[#E2E8F0] bg-white text-[#0F172A]'
+                      ? 'border-pp-border bg-pp-bg text-pp-text'
+                      : 'border-pp-border bg-pp-surface text-pp-text'
               }
               disabled:opacity-40 disabled:cursor-not-allowed
             `}

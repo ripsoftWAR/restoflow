@@ -35,9 +35,9 @@ const NAV_SECONDARY: NavItem[] = [
 ];
 
 const Spinner = ({ label }: { label: string }) => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-50">
-    <div className="flex items-center gap-3 text-slate-400">
-      <div className="bg-gradient-to-br from-indigo-600 to-indigo-500 p-2 rounded-2xl animate-pulse shadow-sm shadow-indigo-200">
+  <div className="min-h-screen flex items-center justify-center bg-pp-bg">
+    <div className="flex items-center gap-3 text-pp-text-muted">
+      <div className="bg-gradient-to-br from-pp-primary to-pp-primary-hover p-2 rounded-pp-sm animate-pulse shadow-pp-brand">
         <MapPin size={18} fill="white" className="text-white" strokeWidth={1.5} />
       </div>
       <span className="text-sm font-medium">{label}</span>
@@ -148,13 +148,15 @@ function AppContent(props: any) {
   }, [authSession, rolePrimaryTabs.length, roleSecondaryTabs.length]);
 
   // ─── Main content ──────────────────────────────────────────────────────────
+  const isDashboard = activeTab === 'home';
   const Content = () => (
-    <main className="flex-1 overflow-y-auto p-4 md:p-6">
+    <main className={`flex-1 overflow-y-auto ${isDashboard ? '' : 'p-4 md:p-6'}`}>
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
         {activeTab === 'home' && (
           stats
             ? <Dashboard
               stats={stats}
+              authSession={authSession}
               movements={movements}
               ingredients={ingredients}
               recipes={recipes}
@@ -162,8 +164,8 @@ function AppContent(props: any) {
               onNavigate={setActiveTab}
             />
             : (
-              <div className="flex items-center justify-center min-h-[400px] rounded-3xl bg-white border border-dashed border-slate-200">
-                <p className="text-sm text-slate-500">
+              <div className="flex items-center justify-center min-h-[400px] rounded-pp-xl bg-pp-surface border border-dashed border-pp-border">
+                <p className="text-sm text-pp-text-muted">
                   {authSession.user.role === 'Pemilik' ? 'Sedang memuat data statistik...' : 'Dashboard hanya dapat diakses oleh Pemilik.'}
                 </p>
               </div>
@@ -229,9 +231,9 @@ function AppContent(props: any) {
           <UsersPage user={{ ...authSession.user, sessionId: authSession.token }} />
         )}
         {activeTab === 'settings' && can('settings.view') && (
-          <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
-            <h2 className="text-lg font-semibold text-slate-900">Pengaturan</h2>
-            <p className="text-sm text-slate-500 mt-2">Halaman pengaturan sedang dalam pembangunan.</p>
+          <div className="rounded-pp-xl bg-pp-surface p-6 shadow-pp-sm border border-pp-border">
+            <h2 className="text-lg font-semibold text-pp-text">Pengaturan</h2>
+            <p className="text-sm text-pp-text-muted mt-2">Halaman pengaturan sedang dalam pembangunan.</p>
           </div>
         )}
       </div>

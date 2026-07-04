@@ -21,7 +21,7 @@ interface Props {
   sales: Sale[];
   dateRangeLabel: string;
   /** Dikirim dari Dashboard agar label sumbu X tepat */
-  dateRange: 'today' | '7d' | '30d' | 'custom';
+  dateRange: 'today' | '7d' | '30d' | 'thisMonth' | '3months' | '1year' | 'custom';
 }
 
 export default function TabTren({ sales, dateRangeLabel, dateRange }: Props) {
@@ -78,9 +78,9 @@ export default function TabTren({ sales, dateRangeLabel, dateRange }: Props) {
   const periodLabel = dateRange === 'today' ? 'per jam' : 'per hari';
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {/* STAT CARDS — pakai shared StatCard size="sm" */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-4">
         <StatCard
           label={`Total omset · ${dateRangeLabel}`}
           value={`Rp${totalOmset.toFixed(1)}jt`}
@@ -99,34 +99,46 @@ export default function TabTren({ sales, dateRangeLabel, dateRange }: Props) {
       </div>
 
       {/* CHART */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4">
+      <div className="bg-pp-surface border border-pp-border rounded-pp-md shadow-pp-xs p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-[13px] font-medium text-slate-800">
+            <h3 className="text-[14px] font-semibold text-pp-text">
               Tren penjualan
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <p className="text-[12px] text-pp-text-muted mt-0.5">
               Omset & profit{' '}
-              <span className="text-slate-500 font-medium">{dateRangeLabel}</span>
+              <span className="text-pp-text-secondary font-medium">{dateRangeLabel}</span>
             </p>
           </div>
           {/* Legend */}
-          <div className="flex gap-4 text-[11px] text-slate-500">
+          <div className="flex gap-4 text-[12px] text-pp-text-muted">
             <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-[#378ADD] inline-block" />
+              <span
+                className="w-2.5 h-2.5 rounded-sm inline-block"
+                style={{ backgroundColor: 'var(--pp-chart-blue)' }}
+              />
               Omset
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-[#1D9E75] inline-block" />
+              <span
+                className="w-2.5 h-2.5 rounded-sm inline-block"
+                style={{ backgroundColor: 'var(--pp-chart-green)' }}
+              />
               Profit
             </span>
           </div>
         </div>
 
-        <div className="h-[220px]">
+        <div className="h-[240px]">
           {chartData.length === 0 ? (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-xs text-slate-400">Belum ada data</p>
+            <div className="h-full flex flex-col items-center justify-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-pp-bg flex items-center justify-center">
+                <span className="text-pp-text-placeholder text-lg">📊</span>
+              </div>
+              <p className="text-[13px] text-pp-text-muted">Belum ada data</p>
+              <p className="text-[11px] text-pp-text-placeholder">
+                Data akan muncul setelah ada transaksi
+              </p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
@@ -137,30 +149,30 @@ export default function TabTren({ sales, dateRangeLabel, dateRange }: Props) {
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
-                  stroke="rgba(128,128,128,0.1)"
+                  stroke="var(--pp-border-light)"
                 />
                 <XAxis
                   dataKey="time"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 10, fill: '#888' }}
+                  tick={{ fontSize: 10, fill: 'var(--pp-text-muted)' }}
                   interval="preserveStartEnd"
                   minTickGap={24}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 10, fill: '#888' }}
+                  tick={{ fontSize: 10, fill: 'var(--pp-text-muted)' }}
                   tickFormatter={v => `Rp${v}jt`}
                   width={45}
                 />
                 <Tooltip
-                  cursor={{ fill: 'rgba(0,0,0,0.03)' }}
+                  cursor={{ fill: 'var(--pp-bg)' }}
                   content={({ payload, active }) => {
                     if (active && payload?.length) {
                       return (
-                        <div className="bg-slate-900 text-white px-3 py-2 rounded-lg shadow-xl border border-slate-800 text-xs">
-                          <p className="text-[10px] text-slate-400 mb-1">
+                        <div className="bg-pp-text text-white px-3 py-2 rounded-pp-xs shadow-pp-md border border-white/10 text-xs">
+                          <p className="text-[10px] text-white/60 mb-1">
                             {payload[0]?.payload?.time}
                           </p>
                           {payload.map((p: any) => (
@@ -172,7 +184,7 @@ export default function TabTren({ sales, dateRangeLabel, dateRange }: Props) {
                                 className="w-2 h-2 rounded-sm inline-block"
                                 style={{ backgroundColor: p.color }}
                               />
-                              <span className="text-slate-300">
+                              <span className="text-white/70">
                                 {p.dataKey === 'omset' ? 'Omset' : 'Profit'}:
                               </span>
                               <span className="font-bold">Rp{p.value}jt</span>
@@ -186,13 +198,13 @@ export default function TabTren({ sales, dateRangeLabel, dateRange }: Props) {
                 />
                 <Bar
                   dataKey="omset"
-                  fill="#378ADD"
+                  fill="var(--pp-chart-blue)"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={32}
                 />
                 <Bar
                   dataKey="profit"
-                  fill="#1D9E75"
+                  fill="var(--pp-chart-green)"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={32}
                 />

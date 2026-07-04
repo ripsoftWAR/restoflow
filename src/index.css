@@ -1,73 +1,160 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════
-   PILOTPOS DESIGN SYSTEM v4 — Enterprise SaaS
-   Brand: #2563EB | Navy: #0F172A | Soft: #EFF6FF
-   Type: Inter — weights 400/500/600/700/800
-   Radius: 24px | Shadow: ultra-soft | Motion: spring
+   PILOTPOS DESIGN SYSTEM v5 — Single Source of Truth
+   Brand: #2563EB | Type: Inter | Radius: pp-xs..pp-xl
+   
+   CARA PAKAI:
+     Tailwind utility → bg-pp-primary, text-pp-text, rounded-pp-md
+     CSS custom prop  → var(--pp-primary), var(--pp-shadow-brand)
+     TypeScript       → import { tokens } from '@/theme/tokens'
    ═══════════════════════════════════════════════════ */
 
+/* ───────────────────────────────────────────────
+   1. TAILWIND v4 @theme — generates utility classes
+      Ini yang bikin `bg-pp-primary`, `rounded-pp-md`, dll berfungsi.
+   ─────────────────────────────────────────────── */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  /* ── Color Palette ────────────────────── */
+  --color-pp-primary:       #2563EB;
+  --color-pp-primary-hover: #1D4ED8;
+  --color-pp-primary-soft:  #EFF6FF;
+  --color-pp-primary-muted: #DBEAFE;
+  --color-pp-primary-dark:  #1E40AF;
+
+  --color-pp-success:       #059669;
+  --color-pp-success-soft:  #ECFDF5;
+  --color-pp-success-border:#A7F3D0;
+
+  --color-pp-warning:       #D97706;
+  --color-pp-warning-soft:  #FFFBEB;
+  --color-pp-warning-border:#FDE68A;
+
+  --color-pp-danger:        #DC2626;
+  --color-pp-danger-soft:   #FEF2F2;
+  --color-pp-danger-border: #FECACA;
+
+  --color-pp-info:          #2563EB;
+  --color-pp-info-soft:     #EFF6FF;
+  --color-pp-info-border:   #BFDBFE;
+
+  --color-pp-text:          #0F172A;
+  --color-pp-text-secondary:#475569;
+  --color-pp-text-muted:    #64748B;
+  --color-pp-text-placeholder:#94A3B8;
+
+  --color-pp-bg:            #F8FAFC;
+  --color-pp-surface:       #FFFFFF;
+  --color-pp-surface-alt:   #FAFBFC;
+
+  --color-pp-border:        #E2E8F0;
+  --color-pp-border-light:  #F1F5F9;
+  --color-pp-border-focus:  #2563EB;
+
+  --color-pp-chart-blue:    #378ADD;
+  --color-pp-chart-green:   #1D9E75;
+  --color-pp-chart-purple:  #7C3AED;
+  --color-pp-chart-orange:  #EF9F27;
+
+  /* ── Border Radius ────────────────────── */
+  --radius-pp-xs:  6px;
+  --radius-pp-sm:  10px;
+  --radius-pp-md:  14px;
+  --radius-pp-lg:  20px;
+  --radius-pp-xl:  24px;
+
+  /* ── Shadow ───────────────────────────── */
+  --shadow-pp-xs:   0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-pp-sm:   0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-pp-md:   0 8px 30px rgba(0, 0, 0, 0.05);
+  --shadow-pp-lg:   0 20px 60px rgba(0, 0, 0, 0.07);
+  --shadow-pp-xl:   0 30px 80px rgba(0, 0, 0, 0.09);
+  --shadow-pp-brand:    0 8px 25px rgba(37, 99, 235, 0.25);
+  --shadow-pp-brand-lg: 0 16px 40px rgba(37, 99, 235, 0.30);
 }
 
-/* ── Design Tokens ──────────────────────────── */
+/* ───────────────────────────────────────────────
+   2. CSS CUSTOM PROPERTIES — untuk runtime usage
+      (inline style, Framer Motion, SVG, JS, dll.)
+      NILAI HARUS SAMA persis dengan @theme di atas.
+   ─────────────────────────────────────────────── */
 :root {
-  /* Brand */
+  /* ── Brand / Primary ──────────────────── */
   --pp-primary:        #2563EB;
   --pp-primary-hover:  #1D4ED8;
   --pp-primary-soft:   #EFF6FF;
   --pp-primary-muted:  #DBEAFE;
   --pp-primary-dark:   #1E40AF;
 
-  /* Navy */
-  --pp-navy:           #0F172A;
-  --pp-navy-soft:      #1E293B;
-  --pp-navy-muted:     #334155;
+  /* ── Status ───────────────────────────── */
+  --pp-success:        #059669;
+  --pp-success-soft:   #ECFDF5;
+  --pp-success-border: #A7F3D0;
 
-  /* Status */
-  --pp-success:         #059669;
-  --pp-success-soft:    #ECFDF5;
-  --pp-success-border:  #A7F3D0;
-  --pp-danger:          #DC2626;
-  --pp-danger-soft:     #FEF2F2;
-  --pp-danger-border:   #FECACA;
-  --pp-warning:         #D97706;
-  --pp-warning-soft:    #FFFBEB;
+  --pp-warning:        #D97706;
+  --pp-warning-soft:   #FFFBEB;
+  --pp-warning-border: #FDE68A;
 
-  /* Text */
-  --pp-text-heading:    #0F172A;
-  --pp-text-body:       #475569;
-  --pp-text-muted:      #64748B;
-  --pp-text-subtle:     #94A3B8;
-  --pp-text-placeholder:#94A3B8;
+  --pp-danger:         #DC2626;
+  --pp-danger-soft:    #FEF2F2;
+  --pp-danger-border:  #FECACA;
 
-  /* Surfaces */
-  --pp-bg:              #F8FAFC;
-  --pp-surface:         #FFFFFF;
-  --pp-surface-alt:     #FAFBFC;
+  --pp-info:           #2563EB;  /* SAMA dengan primary */
+  --pp-info-soft:      #EFF6FF;
+  --pp-info-border:    #BFDBFE;
 
-  /* Border */
-  --pp-border:          #E2E8F0;
-  --pp-border-light:    #F1F5F9;
-  --pp-border-focus:    #2563EB;
+  /* ── Text — align dengan docs & @theme ── */
+  --pp-text:           #0F172A;  /* Heading / utama */
+  --pp-text-secondary: #475569;  /* Body */
+  --pp-text-muted:     #64748B;  /* Caption / pendukung */
+  --pp-text-placeholder:#94A3B8; /* Placeholder */
+  /* ⚠️  Backward compat aliases — akan dihapus di v6 */
+  --pp-text-heading:   var(--pp-text);
+  --pp-text-body:      var(--pp-text-secondary);
 
-  /* Radius */
-  --pp-radius-sm:       10px;
-  --pp-radius-md:       14px;
-  --pp-radius-lg:       20px;
-  --pp-radius-xl:       24px;
+  /* ── Background & Surface ─────────────── */
+  --pp-bg:             #F8FAFC;
+  --pp-surface:        #FFFFFF;
+  --pp-surface-alt:    #FAFBFC;
 
-  /* Shadow — ultra soft enterprise grade */
+  /* ── Border ───────────────────────────── */
+  --pp-border:         #E2E8F0;
+  --pp-border-light:   #F1F5F9;
+  --pp-border-focus:   #2563EB;
+
+  /* ── Radius ───────────────────────────── */
+  --pp-radius-xs:      6px;
+  --pp-radius-sm:      10px;
+  --pp-radius-md:      14px;
+  --pp-radius-lg:      20px;
+  --pp-radius-xl:      24px;
+
+  /* ── Shadow ───────────────────────────── */
   --pp-shadow-xs:       0 1px 2px rgba(0, 0, 0, 0.03);
   --pp-shadow-sm:       0 2px 8px rgba(0, 0, 0, 0.04);
   --pp-shadow-md:       0 8px 30px rgba(0, 0, 0, 0.05);
   --pp-shadow-lg:       0 20px 60px rgba(0, 0, 0, 0.07);
   --pp-shadow-xl:       0 30px 80px rgba(0, 0, 0, 0.09);
-
-  /* Brand shadow */
   --pp-shadow-brand:    0 8px 25px rgba(37, 99, 235, 0.25);
-  --pp-shadow-brand-lg: 0 16px 40px rgba(37, 99, 235, 0.3);
+  --pp-shadow-brand-lg: 0 16px 40px rgba(37, 99, 235, 0.30);
+
+  /* ── Duration ─────────────────────────── */
+  --pp-duration-instant: 100ms;
+  --pp-duration-fast:    150ms;
+  --pp-duration-normal:  200ms;
+  --pp-duration-slow:    350ms;
+
+  /* ── Z-Index Scale ────────────────────── */
+  --pp-z-dropdown:   20;
+  --pp-z-sticky:     40;
+  --pp-z-sidebar:    50;
+  --pp-z-overlay:    60;
+  --pp-z-modal:      70;
+  --pp-z-toast:      100;
+  --pp-z-tooltip:    110;
 }
 
 /* ── Base ───────────────────────────────────── */
@@ -76,7 +163,7 @@ body {
   font-size: 14px;
   line-height: 1.6;
   background-color: var(--pp-bg);
-  color: var(--pp-text-body);
+  color: var(--pp-text-secondary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.01em;
@@ -84,7 +171,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  color: var(--pp-text-heading);
+  color: var(--pp-text);
   line-height: 1.2;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -112,7 +199,7 @@ h1, h2, h3, h4, h5, h6 {
   to   { opacity: 1; transform: translateY(0); }
 }
 .pp-animate-in {
-  animation: pp-fade-in 0.4s ease forwards;
+  animation: pp-fade-in 0.35s ease forwards;
 }
 
 /* ── Fade in (no translate) ────────────────── */
@@ -121,7 +208,7 @@ h1, h2, h3, h4, h5, h6 {
   to   { opacity: 1; }
 }
 .pp-fade-in {
-  animation: pp-fade 0.3s ease forwards;
+  animation: pp-fade 0.2s ease forwards;
 }
 
 /* ── Scale in ──────────────────────────────── */
@@ -130,7 +217,7 @@ h1, h2, h3, h4, h5, h6 {
   to   { opacity: 1; transform: scale(1); }
 }
 .pp-scale-in {
-  animation: pp-scale-in 0.3s ease forwards;
+  animation: pp-scale-in 0.2s ease forwards;
 }
 
 /* ── Slide in from right ───────────────────── */
