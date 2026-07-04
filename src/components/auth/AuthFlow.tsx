@@ -5,7 +5,18 @@ import { LoginView } from './LoginView';
 import { UserPickerView } from './UserPickerView';
 import { PinVerificationView } from './PinVerificationView';
 import { RegisterView } from './RegisterView';
-import { resolveApiUrl } from '../../utils/api';
+import { resolveApiUrl } from '@/utils/api';
+
+// ── Helper: fetch dengan base URL yang benar ──
+const apiFetch = (url: string, options: RequestInit = {}) => {
+  const headers = new Headers(options.headers || {});
+  if (options.body && !(options.body instanceof FormData)) {
+    if (!headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+  }
+  return fetch(resolveApiUrl(url), { ...options, headers });
+};
 
 interface Shift {
   id: number;
@@ -61,9 +72,8 @@ export default function AuthFlow({ initialStep = 'landing', onAuthSuccess }: Pro
     setLoginError(null);
     setLoginLoading(true);
     try {
-      const res = await fetch(resolveApiUrl('/api/auth/verify-credentials'), {
+      const res = await apiFetch('/api/auth/verify-credentials', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
 
@@ -103,9 +113,8 @@ export default function AuthFlow({ initialStep = 'landing', onAuthSuccess }: Pro
       // Gunakan shift pertama yang tersedia
       const shiftId = verifiedShifts.length > 0 ? verifiedShifts[0].id : 0;
 
-      const res = await fetch(resolveApiUrl('/api/auth/verify-pin'), {
+      const res = await apiFetch('/api/auth/verify-pin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: selectedUser.username,
           pin,

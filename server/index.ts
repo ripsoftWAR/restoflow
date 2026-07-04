@@ -18,6 +18,7 @@ import authRoutes from './routes/auth';
 import appRoutes from './routes/app';
 import { requireAuth, requireRole } from './utils/authMiddleware';
 import voucherRoutes from './routes/vouchers';
+import { runMigrations, testConnection } from './db/database';
 
 dotenv.config();
 
@@ -27,42 +28,61 @@ const app = express();
 // Nilai 1 = percaya 1 proxy pertama (Railway load balancer)
 app.set('trust proxy', 1);
 
-// Railway biasanya memberikan port otomatis lewat process.env.PORT
-const PORT = process.env.PORT || 8080;
+// ── Port: Railway inject PORT, local default 3000 ──
+const PORT = process.env.PORT || 3000;
+const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENV;
+
+// ── Cek JWT_SECRET ──
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  JWT_SECRET tidak diset — menggunakan fallback (tidak aman untuk production!)');
+}
+if (!process.env.JWT_REFRESH_SECRET) {
+  console.warn('⚠️  JWT_REFRESH_SECRET tidak diset — menggunakan fallback (tidak aman untuk production!)');
+}
 
 // ==========================================
-// 1. KONFIGURASI CORS (Penyebab Error Sebelumnya)
+// 1. KONFIGURASI CORS
 // ==========================================
 const allowedOrigins = [
-  'http://localhost:5173',           // Frontend Lokal
-  'https://restoflow-ruddy.vercel.app', // Frontend Vercel (sesuaikan dengan URL kamu)
-  'https://restoflow-production-fee9.up.railway.app' // URL Backend itu sendiri
+  'http://localhost:5173',           // Frontend Lokal (Vite)
+  'http://localhost:3000',           // Local backend itself
 ];
 
-// Menambahkan origin dari Environment Variable jika ada
+// Tambahkan origin dari environment variable (production)
 if (process.env.CORS_ALLOWED_ORIGINS) {
   const envOrigins = process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim());
   allowedOrigins.push(...envOrigins);
 }
 
+// Di production, kalau tidak ada CORS_ALLOWED_ORIGINS, izinkan semua origin
+// (Supaya tidak pusing dengan URL Vercel/Railway yang berubah-ubah)
+if (isProduction && !process.env.CORS_ALLOWED_ORIGINS) {
+  console.warn('⚠️  CORS_ALLOWED_ORIGINS tidak diset — mengizinkan semua origin (production mode)');
+}
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Izinkan request tanpa origin (seperti mobile apps, curl, atau Postman)
+    // Izinkan request tanpa origin (mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
+    
+    // Production tanpa whitelist → izinkan semua
+    if (isProduction && !process.env.CORS_ALLOWED_ORIGINS) {
+      return callback(null, true);
+    }
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       console.error(`[CORS Error] Origin ${origin} tidak diizinkan.`);
-      callback(null, false); // Jangan kirim error, biarkan browser yang blokir
+      callback(new Error(`Origin ${origin} tidak diizinkan oleh CORS`));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: true,
 }));
 
-// Handle Preflight Request (Sangat penting untuk Railway)
+// Handle Preflight Request
 app.options('*', cors());
 
 // ==========================================
@@ -126,24 +146,57 @@ app.use('/api/users', apiLimiter, requireAuth, requireRole('Pemilik'), userRoute
 // ==========================================
 // 5. HEALTH CHECK & ERROR HANDLING
 // ==========================================
-// Health check agar Railway tahu service ini berjalan
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Restoflow Backend is running' });
+// Health check — cek koneksi database juga
+app.get('/health', async (_req, res) => {
+  const dbOk = await testConnection();
+  res.status(dbOk ? 200 : 503).json({
+    status: dbOk ? 'OK' : 'DEGRADED',
+    message: dbOk ? 'Restoflow Backend is running' : 'Database connection failed',
+    database: dbOk ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Simple ping (tanpa DB check — untuk Railway health check yang cepat)
+app.get('/ping', (_req, res) => {
+  res.status(200).send('pong');
 });
 
 // Error handling global
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[Global Error]:', err.stack);
   res.status(500).json({ error: 'Internal Server Error', message: err.message });
 });
 
 // ==========================================
-// 6. JALANKAN SERVER
+// 6. JALANKAN SERVER (dengan migrasi auto)
 // ==========================================
-app.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`
-  🚀 RESTOFLOW Backend is ready!
-  📡 Port: ${PORT}
-  🔗 URL: https://restoflow-production-fee9.up.railway.app
-  `);
-});
+const startServer = async () => {
+  console.log('🔄 Menjalankan migrasi database...');
+  const migrationResults = await runMigrations();
+  if (migrationResults.length > 0) {
+    console.log('📋 Hasil migrasi:');
+    migrationResults.forEach(r => console.log(`   ${r}`));
+  }
+
+  // Cek koneksi database sebelum listen
+  const dbOk = await testConnection();
+  if (!dbOk) {
+    console.error('❌ GAGAL terkoneksi ke database!');
+    console.error('   Pastikan DATABASE_URL sudah benar di environment variables.');
+    // Tetap listen — Railway akan restart kalau crash
+  } else {
+    console.log('✅ Database connected');
+  }
+
+  app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log('');
+    console.log('  🚀 RESTOFLOW Backend is ready!');
+    console.log(`  📡 Port: ${PORT}`);
+    console.log(`  🌍 Environment: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+    console.log(`  💾 Database: ${dbOk ? '✅ Connected' : '❌ Disconnected'}`);
+    console.log('');
+  });
+};
+
+startServer();

@@ -13,7 +13,18 @@ import {
 import { BrandMark } from '../ui/BrandMark';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { resolveApiUrl } from '../../utils/api';
+import { resolveApiUrl } from '@/utils/api';
+
+// ── Helper: fetch dengan base URL ──
+const apiFetch = (url: string, options: RequestInit = {}) => {
+  const headers = new Headers(options.headers || {});
+  if (options.body && !(options.body instanceof FormData)) {
+    if (!headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+  }
+  return fetch(resolveApiUrl(url), { ...options, headers });
+};
 
 interface Props {
   onSuccess: () => void;
@@ -47,9 +58,8 @@ export function RegisterView({ onSuccess, onBack }: Props) {
     setLoading(true);
 
     try {
-      const res = await fetch(resolveApiUrl('/api/auth/register'), {
+      const res = await apiFetch('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           restaurant_name: restaurant.trim(),
           username: username.trim(),

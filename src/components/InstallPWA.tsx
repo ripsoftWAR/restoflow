@@ -10,7 +10,7 @@ import {
   Check,
   ChevronDown,
 } from 'lucide-react';
-import { resolveApiUrl } from '../utils/api';
+import { resolveApiUrl } from '@/utils/api';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const isIOS = (): boolean => {
