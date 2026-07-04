@@ -1,4 +1,4 @@
-import { Scan, ShoppingCart, MessageSquareText, Package } from 'lucide-react';
+import { Scan, ShoppingCart, Brain, Package } from 'lucide-react';
 
 const ACTIONS = [
   {
@@ -19,7 +19,7 @@ const ACTIONS = [
     label: 'Tanya AI',
     subtitle: 'Asisten cerdas',
     tab: 'ai',
-    icon: MessageSquareText,
+    icon: Brain,
     color: 'text-emerald-600',
   },
   {

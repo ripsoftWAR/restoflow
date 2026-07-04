@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, Copy, Check } from 'lucide-react';
+import { RefreshCw, Copy, Check, Sparkles } from 'lucide-react';
 import { VoucherResult, generateVoucherCode, formatIDRShort } from '../utils/salesHelpers';
 
 interface VoucherGeneratorProps {
@@ -192,9 +192,7 @@ export default function VoucherGenerator({ onVoucherGenerated }: VoucherGenerato
 
         {/* ── Robot mascot ─────────────────────────────────────── */}
         <div className="w-24 flex items-end justify-center pb-1 select-none">
-          <span className="text-6xl" style={{ filter: 'drop-shadow(0 4px 12px rgba(139,92,246,.35))' }}>
-            🤖
-          </span>
+          <Sparkles className="text-purple-500" size={52} strokeWidth={1.5} style={{ filter: 'drop-shadow(0 4px 12px rgba(139,92,246,.35))' }} />
         </div>
       </div>
     </div>

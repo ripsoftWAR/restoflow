@@ -1,4 +1,4 @@
-import { Settings, MessageSquareMore, LogOut, ChevronRight } from 'lucide-react';
+import { Settings, Brain, Sparkles, LogOut, ChevronRight } from 'lucide-react';
 import { DashboardStats, NavItem } from '../../types';
 import { formatIDR } from '../../utils/api';
 import InstallPWA from '../InstallPWA';
@@ -101,7 +101,7 @@ export default function DesktopLayout({
             onClick={() => setActiveTab('ai')}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium text-[#737373] hover:text-[#171717] hover:bg-[#F5F5F5] transition-all duration-150"
           >
-            <MessageSquareMore size={18} strokeWidth={1.6} />
+            <Brain size={18} strokeWidth={1.6} />
             AI Asisten
           </button>
           <button
@@ -139,7 +139,7 @@ export default function DesktopLayout({
               onClick={() => setActiveTab('ai')}
               className="flex items-center gap-2 bg-[#5B5BED] hover:bg-[#4A4AD6] text-white text-[12px] font-medium px-4 py-2 rounded-xl transition-colors"
             >
-              <MessageSquareMore size={14} strokeWidth={2} />
+              <Brain size={14} strokeWidth={2} />
               AI Asisten
             </button>
             <button

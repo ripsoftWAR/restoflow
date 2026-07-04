@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, TrendingUp, AlertTriangle } from 'lucide-react';
+import { FileText, TrendingUp, AlertTriangle, Brain } from 'lucide-react';
 import { Ingredient, RecipeWithDetails } from '../../../types';
 import { calculateHPP, calculateMarginPct, calculateCookablePortions, formatIDR } from '../utils/recipeHelpers';
 
@@ -78,7 +78,7 @@ export default function RecipeStatsBar({ recipes, ingredients }: RecipeStatsBarP
             "Harga Ayam Fillet naik 10% di nota terbaru. HPP Ayam Goreng Kari meningkat menjadi Rp 18.500."
           </p>
         </div>
-        <div className="text-4xl absolute right-2 bottom-0 opacity-30 select-none">🤖</div>
+        <Brain className="text-4xl absolute right-2 bottom-0 opacity-30 select-none" />
       </div>
     </div>
   );

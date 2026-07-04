@@ -1,7 +1,8 @@
 import {
   MapPin,
   Settings,
-  MessageSquareMore,
+  Brain,
+  Sparkles,
   LogOut,
   LayoutDashboard,
   Layers,
@@ -66,7 +67,7 @@ export default function TabletLayout({ activeTab, setActiveTab, stats, onLogout,
         ))}
         <div className="flex-1" />
         <InstallPWA variant="sidebar" />
-        <SideBtn id="ai" icon={MessageSquareMore} label="AI Asisten" activeTab={activeTab} setActiveTab={setActiveTab} />
+        <SideBtn id="ai" icon={Brain} label="AI Asisten" activeTab={activeTab} setActiveTab={setActiveTab} />
         <SideBtn id="settings" icon={Settings} label="Pengaturan" activeTab={activeTab} setActiveTab={setActiveTab} />
       </aside>
 

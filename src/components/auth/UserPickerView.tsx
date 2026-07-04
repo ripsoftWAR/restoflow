@@ -1,5 +1,12 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft, ChevronRight, Shield, Store, Clock, Users as UsersIcon } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronRight,
+  Shield,
+  Store,
+  Clock,
+  Users as UsersIcon,
+} from 'lucide-react';
 import { BrandMark } from '../ui/BrandMark';
 
 interface User {
@@ -17,6 +24,7 @@ interface Props {
   onBack: () => void;
 }
 
+/* ─── Role Helpers ─────────────────────────── */
 function roleColor(role: string): { bg: string; text: string; border: string } {
   switch (role.toLowerCase()) {
     case 'pemilik':
@@ -37,15 +45,22 @@ function roleColor(role: string): { bg: string; text: string; border: string } {
 
 function roleLabel(role: string): string {
   switch (role.toLowerCase()) {
-    case 'pemilik': return 'Pemilik';
-    case 'manajer': return 'Manajer';
-    case 'supervisor': return 'Supervisor';
-    case 'kasir': return 'Kasir';
-    case 'dapur': return 'Dapur';
-    default: return role;
+    case 'pemilik':
+      return 'Pemilik';
+    case 'manajer':
+      return 'Manajer';
+    case 'supervisor':
+      return 'Supervisor';
+    case 'kasir':
+      return 'Kasir';
+    case 'dapur':
+      return 'Dapur';
+    default:
+      return role;
   }
 }
 
+/* ─── Main Component ───────────────────────── */
 export function UserPickerView({ users, onSelect, onBack }: Props) {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-4 py-10">
@@ -70,31 +85,15 @@ export function UserPickerView({ users, onSelect, onBack }: Props) {
 
         {/* Heading */}
         <div className="space-y-2 text-center">
-          <div className="w-12 h-12 rounded-[16px] bg-[#E7F0FF] flex items-center justify-center mx-auto mb-1">
+          <div className="w-12 h-12 rounded-[16px] bg-gradient-to-br from-[#E7F0FF] to-[#EDE9FE] flex items-center justify-center mx-auto mb-1">
             <UsersIcon size={22} className="text-[#2563EB]" strokeWidth={1.5} />
           </div>
           <h2 className="text-2xl font-semibold text-[#0F172A] tracking-[-0.02em]">
-            Pilih Pengguna
+            Pilih Akun
           </h2>
           <p className="text-[14px] text-[#64748B] leading-relaxed">
-            Pilih akun yang akan digunakan untuk masuk
+            Pilih akun Anda untuk melanjutkan ke dasbor.
           </p>
-        </div>
-
-        {/* Info card */}
-        <div className="rounded-[18px] bg-white border border-[#E2E8F0] p-4 flex gap-4 items-center">
-          <div className="w-10 h-10 rounded-full bg-[#E7F0FF] flex items-center justify-center shrink-0">
-            <Store size={16} className="text-[#2563EB]" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-semibold text-[#0F172A] truncate">
-              {users.length} pengguna terdaftar
-            </p>
-            <p className="text-[12px] text-[#94A3B8]">
-              Pilih salah satu untuk melanjutkan dengan PIN
-            </p>
-          </div>
-          <Shield size={16} className="text-[#CBD5E1] shrink-0" />
         </div>
 
         {/* User list */}
@@ -115,7 +114,8 @@ export function UserPickerView({ users, onSelect, onBack }: Props) {
                   className="w-11 h-11 rounded-[14px] flex items-center justify-center shrink-0 text-sm font-bold"
                   style={{ backgroundColor: colors.bg, color: colors.text }}
                 >
-                  {user.nama?.charAt(0)?.toUpperCase() || user.username.charAt(0).toUpperCase()}
+                  {user.nama?.charAt(0)?.toUpperCase() ||
+                    user.username.charAt(0).toUpperCase()}
                 </div>
 
                 {/* Info */}
@@ -168,9 +168,12 @@ export function UserPickerView({ users, onSelect, onBack }: Props) {
         <div className="rounded-[14px] bg-[#EFF6FF] border border-[#DBEAFE] p-4 flex items-start gap-3">
           <Shield size={16} className="text-[#2563EB] shrink-0 mt-0.5" />
           <div>
-            <p className="text-[13px] font-semibold text-[#1D4ED8]">Akun Anda aman</p>
+            <p className="text-[13px] font-semibold text-[#1D4ED8]">
+              Akses sesuai peran
+            </p>
             <p className="text-[12px] text-[#60A5FA] mt-0.5">
-              Semua aktivitas akan tercatat sesuai dengan peran dan hak akses pengguna yang dipilih.
+              Setiap pengguna hanya melihat data sesuai hak aksesnya. AI Business
+              Operator menyesuaikan insight tanpa melanggar privasi.
             </p>
           </div>
         </div>

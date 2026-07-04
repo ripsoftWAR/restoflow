@@ -15,12 +15,18 @@ interface Props {
 
 function roleLabel(role?: string): string {
   switch (role?.toLowerCase()) {
-    case 'pemilik': return 'Pemilik';
-    case 'manajer': return 'Manajer';
-    case 'supervisor': return 'Supervisor';
-    case 'kasir': return 'Kasir';
-    case 'dapur': return 'Dapur';
-    default: return role || '';
+    case 'pemilik':
+      return 'Pemilik';
+    case 'manajer':
+      return 'Manajer';
+    case 'supervisor':
+      return 'Supervisor';
+    case 'kasir':
+      return 'Kasir';
+    case 'dapur':
+      return 'Dapur';
+    default:
+      return role || '';
   }
 }
 
@@ -35,6 +41,7 @@ export function PinVerificationView({
   const [pin, setPin] = useState('');
   const [shake, setShake] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [showForgotHint, setShowForgotHint] = useState(false);
 
   // Auto-verify when 6 digits are entered
   useEffect(() => {
@@ -92,14 +99,16 @@ export function PinVerificationView({
 
         {/* Heading */}
         <div className="space-y-2 text-center">
-          <div className="w-12 h-12 rounded-[16px] bg-[#E7F0FF] flex items-center justify-center mx-auto mb-1">
-            <ShieldCheck size={22} className="text-[#2563EB]" strokeWidth={1.5} />
+          {/* Shield Icon */}
+          <div className="w-14 h-14 rounded-[18px] bg-gradient-to-br from-[#E7F0FF] to-[#EDE9FE] flex items-center justify-center mx-auto mb-1">
+            <ShieldCheck size={24} className="text-[#2563EB]" strokeWidth={1.5} />
           </div>
+
           <h2 className="text-2xl font-semibold text-[#0F172A] tracking-[-0.02em]">
             Verifikasi PIN
           </h2>
           <p className="text-[14px] text-[#64748B] leading-relaxed">
-            Masukkan 6 digit PIN untuk{' '}
+            Masukkan 6 digit PIN untuk melanjutkan sebagai{' '}
             <span className="font-semibold text-[#0F172A]">{username}</span>
             {role && (
               <span className="ml-1.5 inline-block text-[11px] font-medium bg-[#EFF6FF] text-[#2563EB] px-2 py-0.5 rounded-full align-middle">
@@ -125,10 +134,10 @@ export function PinVerificationView({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center justify-center gap-2 text-[14px] text-[#64748B]"
+            className="flex items-center justify-center gap-2 py-2"
           >
             <Loader2 size={15} className="animate-spin text-[#2563EB]" />
-            Memverifikasi...
+            <span className="text-[14px] text-[#64748B]">Memverifikasi...</span>
           </motion.div>
         )}
 
@@ -146,17 +155,33 @@ export function PinVerificationView({
         )}
 
         {/* Forgot PIN */}
-        <p className="text-center">
+        <div className="text-center space-y-3">
           <button
             type="button"
             disabled={isVerifying}
             className="text-[13px] font-medium text-[#64748B] hover:text-[#2563EB] transition-colors disabled:opacity-40"
-            onClick={() =>
-              alert('Hubungi pemilik restoran untuk mereset PIN Anda.')
-            }
+            onClick={() => setShowForgotHint(!showForgotHint)}
           >
             Lupa PIN?
           </button>
+
+          {showForgotHint && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="rounded-[14px] bg-[#EFF6FF] border border-[#BFDBFE] px-4 py-3 text-[13px] text-[#1E40AF] leading-relaxed"
+            >
+              Hubungi <span className="font-semibold">pemilik restoran</span> untuk
+              mereset PIN Anda.
+            </motion.div>
+          )}
+        </div>
+
+        {/* Security note */}
+        <p className="text-center text-[11px] text-[#CBD5E1]">
+          Verifikasi aman — end-to-end encrypted
         </p>
       </motion.div>
     </div>

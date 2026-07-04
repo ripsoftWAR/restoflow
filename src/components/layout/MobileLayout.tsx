@@ -1,4 +1,4 @@
-import { MapPin, MessageSquareMore, LogOut } from 'lucide-react';
+import { MapPin, Brain, Sparkles, LogOut } from 'lucide-react';
 import { NavItem } from '../../types';
 import InstallPWA from '../InstallPWA';
 
@@ -33,7 +33,7 @@ export default function MobileLayout({ activeTab, setActiveTab, rolePrimaryTabs,
               onClick={() => setActiveTab('ai')}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 text-white text-[11px] font-semibold shadow-sm shadow-blue-200 transition-colors hover:bg-blue-700"
             >
-              <MessageSquareMore size={13} />
+              <Brain size={13} />
               AI
             </button>
             <InstallPWA variant="mobile-header" compact />

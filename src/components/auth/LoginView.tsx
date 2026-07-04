@@ -10,12 +10,15 @@ interface Props {
   loading: boolean;
   onSubmit: (username: string, password: string, remember: boolean) => Promise<void>;
   onBack: () => void;
+  onRegister?: () => void;
 }
 
-export function LoginView({ error, loading, onSubmit, onBack }: Props) {
+/* ─── Main Component ───────────────────────── */
+export function LoginView({ error, loading, onSubmit, onBack, onRegister }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
+  const [showForgotHint, setShowForgotHint] = useState(false);
   const usernameRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus username on mount
@@ -53,12 +56,12 @@ export function LoginView({ error, loading, onSubmit, onBack }: Props) {
         <BrandMark />
 
         {/* Heading */}
-        <div className="space-y-1.5 text-center">
+        <div className="space-y-2 text-center">
           <h2 className="text-2xl font-semibold text-[#0F172A] tracking-[-0.02em]">
-            Masuk ke akun Anda
+            Masuk ke akun
           </h2>
-          <p className="text-[14px] text-[#64748B]">
-            Masukkan username dan password restoran
+          <p className="text-[14px] text-[#64748B] leading-relaxed">
+            AI Business Operator siap membantu setelah login.
           </p>
         </div>
 
@@ -103,13 +106,26 @@ export function LoginView({ error, loading, onSubmit, onBack }: Props) {
             <button
               type="button"
               className="text-[13px] font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors"
-              onClick={() =>
-                alert('Hubungi administrator atau pemilik restoran untuk mereset password.')
-              }
+              onClick={() => setShowForgotHint(!showForgotHint)}
             >
               Lupa password?
             </button>
           </div>
+
+          {/* Forgot password hint */}
+          {showForgotHint && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="rounded-[14px] bg-[#EFF6FF] border border-[#BFDBFE] px-4 py-3 text-[13px] text-[#1E40AF] leading-relaxed"
+            >
+              Hubungi <span className="font-semibold">administrator</span> atau{' '}
+              <span className="font-semibold">pemilik restoran</span> untuk mereset
+              password Anda.
+            </motion.div>
+          )}
 
           {/* Error */}
           {error && (
@@ -128,16 +144,23 @@ export function LoginView({ error, loading, onSubmit, onBack }: Props) {
         </form>
 
         {/* Register link */}
-        <p className="text-center text-[13px] text-[#94A3B8]">
-          Restoran baru?{' '}
-          <button
-            type="button"
-            onClick={onBack}
-            className="font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors"
-          >
-            Daftar di sini
-          </button>
-        </p>
+        <div className="text-center space-y-3">
+          <p className="text-[13px] text-[#94A3B8]">
+            Restoran baru?{' '}
+            <button
+              type="button"
+              onClick={onRegister || onBack}
+              className="font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors"
+            >
+              Daftar di sini
+            </button>
+          </p>
+
+          {/* Security note */}
+          <p className="text-[11px] text-[#CBD5E1] text-center">
+            Login aman — end-to-end encrypted
+          </p>
+        </div>
       </motion.div>
     </div>
   );

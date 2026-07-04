@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { LandingView } from './LandingView';
 import { LoginView } from './LoginView';
 import { UserPickerView } from './UserPickerView';
@@ -70,7 +71,10 @@ export default function AuthFlow({ initialStep = 'landing', onAuthSuccess }: Pro
 
       setVerifiedUsername(data.username);
       setVerifiedShifts(data.shifts || []);
-      setRestaurantUsers(data.users || []);
+      // Hanya simpan user yang aktif — user nonaktif tidak bisa login
+      setRestaurantUsers(
+        (data.users || []).filter((u: UserInfo) => u.is_active)
+      );
       setRememberSession(remember);
       setSelectedUser(null);
       setStep('pickUser');
@@ -123,63 +127,98 @@ export default function AuthFlow({ initialStep = 'landing', onAuthSuccess }: Pro
   };
 
   /* ─── Render ──────────────────────────────── */
-  switch (step) {
-    case 'landing':
-      return (
-        <LandingView
-          onMasuk={() => setStep('login')}
-          onDaftar={() => setStep('register')}
-        />
-      );
+  return (
+    <AnimatePresence mode="wait">
+      {step === 'landing' && (
+        <motion.div
+          key="landing"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+        >
+          <LandingView
+            onMasuk={() => setStep('login')}
+            onDaftar={() => setStep('register')}
+          />
+        </motion.div>
+      )}
 
-    case 'login':
-      return (
-        <LoginView
-          error={loginError}
-          loading={loginLoading}
-          onSubmit={handleLogin}
-          onBack={() => setStep('landing')}
-        />
-      );
+      {step === 'login' && (
+        <motion.div
+          key="login"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+        >
+          <LoginView
+            error={loginError}
+            loading={loginLoading}
+            onSubmit={handleLogin}
+            onBack={() => setStep('landing')}
+            onRegister={() => setStep('register')}
+          />
+        </motion.div>
+      )}
 
-    case 'pickUser':
-      return (
-        <UserPickerView
-          users={restaurantUsers}
-          onSelect={handleSelectUser}
-          onBack={() => {
-            setLoginError(null);
-            setStep('login');
-          }}
-        />
-      );
+      {step === 'register' && (
+        <motion.div
+          key="register"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+        >
+          <RegisterView
+            onSuccess={() => setStep('login')}
+            onBack={() => setStep('landing')}
+          />
+        </motion.div>
+      )}
 
-    case 'pin':
-      return (
-        <PinVerificationView
-          username={selectedUser?.nama || selectedUser?.username || verifiedUsername}
-          role={selectedUser?.role}
-          error={pinError}
-          loading={pinLoading}
-          onVerify={handleVerifyPin}
-          onBack={() => {
-            setPinError(null);
-            setPinLoading(false);
-            setSelectedUser(null);
-            setStep('pickUser');
-          }}
-        />
-      );
+      {step === 'pickUser' && (
+        <motion.div
+          key="pickUser"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+        >
+          <UserPickerView
+            users={restaurantUsers}
+            onSelect={handleSelectUser}
+            onBack={() => {
+              setLoginError(null);
+              setStep('login');
+            }}
+          />
+        </motion.div>
+      )}
 
-    case 'register':
-      return (
-        <RegisterView
-          onSuccess={() => setStep('login')}
-          onBack={() => setStep('landing')}
-        />
-      );
-
-    default:
-      return null;
-  }
+      {step === 'pin' && (
+        <motion.div
+          key="pin"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+        >
+          <PinVerificationView
+            username={selectedUser?.nama || selectedUser?.username || verifiedUsername}
+            role={selectedUser?.role}
+            error={pinError}
+            loading={pinLoading}
+            onVerify={handleVerifyPin}
+            onBack={() => {
+              setPinError(null);
+              setPinLoading(false);
+              setSelectedUser(null);
+              setStep('pickUser');
+            }}
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }

@@ -88,7 +88,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
   },
   {
     label: 'AI & OCR',
-    icon: '🤖',
+    icon: '🧠',
     keys: ['ai.chat', 'ocr.scan', 'ocr.confirm'],
   },
   {

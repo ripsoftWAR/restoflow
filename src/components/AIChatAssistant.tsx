@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion'; // Menggunakan framer-motion standar agar kompatibel
 import { 
-  Bot, 
+  Brain, 
   Send, 
   X, 
   Sparkles, 
@@ -225,7 +225,7 @@ export default function AIChatAssistant({ ingredients, recipes, onRefreshData, e
                         <div className={`max-w-[85%] md:max-w-[75%] ${isAi ? 'flex gap-3' : ''}`}>
                           {isAi && (
                             <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-1">
-                              <Bot className="w-4 h-4 text-indigo-600" />
+                              <Brain className="w-4 h-4 text-indigo-600" />
                             </div>
                           )}
                           <div>

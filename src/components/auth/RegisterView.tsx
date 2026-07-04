@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Store, User, Lock } from 'lucide-react';
+import {
+  ArrowLeft,
+  Store,
+  User,
+  Lock,
+  Copy,
+  Check,
+  Brain,
+  Sparkles,
+} from 'lucide-react';
 import { BrandMark } from '../ui/BrandMark';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -10,6 +19,7 @@ interface Props {
   onBack: () => void;
 }
 
+/* ─── Main Component ───────────────────────── */
 export function RegisterView({ onSuccess, onBack }: Props) {
   const [restaurant, setRestaurant] = useState('');
   const [username, setUsername] = useState('');
@@ -17,6 +27,8 @@ export function RegisterView({ onSuccess, onBack }: Props) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [successPin, setSuccessPin] = useState<string | null>(null);
+  const [pinCopied, setPinCopied] = useState(false);
 
   const passwordMatch = password === confirmPassword;
   const passwordValid = password.length >= 6;
@@ -48,14 +60,11 @@ export function RegisterView({ onSuccess, onBack }: Props) {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || 'Gagal mendaftar');
 
-      // Tampilkan PIN ke owner
       if (data.pin) {
-        alert(
-          `Akun berhasil dibuat!\n\nPIN Anda: ${data.pin}\n\nSimpan PIN ini — digunakan untuk verifikasi saat login.`
-        );
+        setSuccessPin(data.pin);
+      } else {
+        onSuccess();
       }
-
-      onSuccess();
     } catch (err: any) {
       setError(err.message || 'Gagal mendaftar. Coba lagi.');
     } finally {
@@ -69,7 +78,7 @@ export function RegisterView({ onSuccess, onBack }: Props) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-        className="w-full max-w-[400px] space-y-8"
+        className="w-full max-w-[440px] space-y-8"
       >
         {/* Back */}
         <button
@@ -85,101 +94,218 @@ export function RegisterView({ onSuccess, onBack }: Props) {
         <BrandMark />
 
         {/* Heading */}
-        <div className="space-y-1.5 text-center">
+        <div className="space-y-2 text-center">
           <h2 className="text-2xl font-semibold text-[#0F172A] tracking-[-0.02em]">
-            Daftar akun baru
+            Daftar restoran baru
           </h2>
-          <p className="text-[14px] text-[#64748B]">
-            Mulai kelola restoran Anda dengan PilotPOS
+          <p className="text-[14px] text-[#64748B] leading-relaxed">
+            Setup 5 menit. AI Business Operator langsung aktif — siap analisa
+            profit, saran promo, dan rekomendasi menu untuk restoran Anda.
           </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <Input
-            label="Nama Restoran"
-            placeholder="Nama restoran Anda"
-            icon={<Store size={16} />}
-            value={restaurant}
-            onChange={(e) => setRestaurant(e.target.value)}
-            autoFocus
-            required
-          />
+        <div className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Nama Restoran"
+              placeholder="Nama restoran Anda"
+              icon={<Store size={16} />}
+              value={restaurant}
+              onChange={(e) => setRestaurant(e.target.value)}
+              autoFocus
+              required
+            />
 
-          <Input
-            label="Username"
-            placeholder="Pilih username"
-            icon={<User size={16} />}
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            autoCapitalize="none"
-            autoCorrect="off"
-            required
-          />
+            <Input
+              label="Username"
+              placeholder="Pilih username"
+              icon={<User size={16} />}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              required
+            />
 
-          <Input
-            label="Password"
-            type="password"
-            placeholder="Minimal 6 karakter"
-            icon={<Lock size={16} />}
-            showPasswordToggle
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-            minLength={6}
-            required
-          />
+            <Input
+              label="Password"
+              type="password"
+              placeholder="Minimal 6 karakter"
+              icon={<Lock size={16} />}
+              showPasswordToggle
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={6}
+              required
+            />
 
-          <Input
-            label="Konfirmasi Password"
-            type="password"
-            placeholder="Ulangi password"
-            icon={<Lock size={16} />}
-            showPasswordToggle
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            autoComplete="new-password"
-            error={
-              confirmPassword && !passwordMatch
-                ? 'Password tidak cocok'
-                : null
-            }
-            required
-          />
+            <Input
+              label="Konfirmasi Password"
+              type="password"
+              placeholder="Ulangi password"
+              icon={<Lock size={16} />}
+              showPasswordToggle
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+              error={
+                confirmPassword && !passwordMatch
+                  ? 'Password tidak cocok'
+                  : null
+              }
+              required
+            />
 
-          {/* Error */}
-          {error && (
-            <div
-              role="alert"
-              className="rounded-[14px] bg-[#FEF2F2] border border-[#FECACA] px-4 py-3 text-[13px] text-[#DC2626] font-medium"
+            {/* Error */}
+            {error && (
+              <div
+                role="alert"
+                className="rounded-[14px] bg-[#FEF2F2] border border-[#FECACA] px-4 py-3 text-[13px] text-[#DC2626] font-medium"
+              >
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              size="lg"
+              loading={loading}
+              disabled={!canSubmit}
+              className="w-full"
             >
-              {error}
+              Daftar & Aktifkan AI Partner
+            </Button>
+          </form>
+
+          {/* Feature reminder */}
+          {!successPin && (
+            <div className="rounded-[16px] bg-[#F8FAFC] border border-[#F1F5F9] p-4 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <Brain size={14} className="text-[#2563EB]" strokeWidth={1.5} />
+                <p className="text-[12px] font-semibold text-[#475569]">
+                  Setelah daftar, Anda bisa langsung:
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                {[
+                  'Tanya profit & analisis penjualan',
+                  'Minta saran promo & ide banner',
+                  'Rekomendasi menu dari data restoran',
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-2">
+                    <span className="text-[11px] text-[#94A3B8] mt-px">•</span>
+                    <p className="text-[12px] text-[#64748B]">{item}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+        </div>
 
-          <Button
-            type="submit"
-            size="lg"
-            loading={loading}
-            disabled={!canSubmit}
-            className="w-full"
+        {/* ─── SUCCESS: PIN Card ────────── */}
+        {successPin && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+            className="rounded-[20px] bg-white border border-[#E2E8F0] shadow-[0_8px_30px_-8px_rgba(37,99,235,0.12)] p-6 space-y-5 text-center"
           >
-            Daftar Sekarang
-          </Button>
-        </form>
+            {/* Success header */}
+            <div className="flex items-center justify-center gap-2">
+              <Brain size={18} className="text-[#2563EB]" strokeWidth={1.5} />
+              <span className="text-[13px] font-semibold text-[#2563EB]">
+                AI Business Operator siap!
+              </span>
+            </div>
+
+            {/* Success icon */}
+            <div className="w-14 h-14 rounded-full bg-[#ECFDF5] flex items-center justify-center mx-auto">
+              <svg
+                className="w-7 h-7 text-[#059669]"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-[#0F172A]">
+                Akun restoran siap!
+              </h3>
+              <p className="text-[14px] text-[#64748B] leading-relaxed">
+                Ini adalah{' '}
+                <span className="font-semibold text-[#0F172A]">PIN rahasia</span> Anda
+                — kunci untuk masuk ke sistem dan mengakses AI Business Operator.
+                <br />
+                <span className="text-[12px] text-[#94A3B8]">
+                  Hanya Anda yang punya akses. Simpan baik-baik.
+                </span>
+              </p>
+            </div>
+
+            {/* PIN display + copy */}
+            <div className="flex items-center justify-center gap-3">
+              <div className="rounded-[14px] bg-[#F8FAFC] border border-[#E2E8F0] px-5 py-3 ring-2 ring-[#2563EB]/5">
+                <span className="text-[28px] font-bold tracking-[0.3em] text-[#0F172A] font-mono">
+                  {successPin}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(successPin);
+                  setPinCopied(true);
+                  setTimeout(() => setPinCopied(false), 2000);
+                }}
+                className="shrink-0 w-10 h-10 rounded-[12px] bg-[#E7F0FF] text-[#2563EB] flex items-center justify-center hover:bg-[#DBEAFE] transition-colors"
+                title="Salin PIN"
+              >
+                {pinCopied ? (
+                  <Check size={16} strokeWidth={2} />
+                ) : (
+                  <Copy size={16} strokeWidth={1.5} />
+                )}
+              </button>
+            </div>
+
+            {pinCopied && (
+              <p className="text-[12px] font-medium text-[#059669]">
+                PIN disalin ke clipboard!
+              </p>
+            )}
+
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                setSuccessPin(null);
+                onSuccess();
+              }}
+            >
+              Saya Sudah Simpan PIN — Ke Login
+            </Button>
+          </motion.div>
+        )}
 
         {/* Login link */}
-        <p className="text-center text-[13px] text-[#94A3B8]">
-          Sudah punya akun?{' '}
-          <button
-            type="button"
-            onClick={onBack}
-            className="font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors"
-          >
-            Masuk di sini
-          </button>
-        </p>
+        {!successPin && (
+          <p className="text-center text-[13px] text-[#94A3B8]">
+            Sudah punya akun?{' '}
+            <button
+              type="button"
+              onClick={onBack}
+              className="font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors"
+            >
+              Masuk di sini
+            </button>
+          </p>
+        )}
       </motion.div>
     </div>
   );

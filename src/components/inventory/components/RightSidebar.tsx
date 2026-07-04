@@ -47,7 +47,7 @@ export default function RightSidebar({
         <button className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white/20 border border-white/30 rounded-lg text-[10px] font-semibold">
           <Sparkles size={12} /> Tanya AI
         </button>
-        <div className="absolute -right-2 -bottom-2 text-5xl opacity-20">🤖</div>
+        <Sparkles className="absolute -right-2 -bottom-2 w-10 h-10 opacity-20" />
       </div>
 
       {/* Distribusi Kategori */}
