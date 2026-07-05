@@ -235,128 +235,136 @@ export default function Dashboard({
       </div>
 
       {/* ═══════════════════════════════════════════════
-          TAB CONTENT
+          TAB CONTENT — 2 zona: KIRI (konten tab) + KANAN (sidebar tetap)
+          Panel kanan TIDAK berubah saat pindah tab
           ═══════════════════════════════════════════════ */}
-      <AnimatePresence mode="wait">
-        {/* ── OVERVIEW ────────────────────────────── */}
-        {activeTab === 'overview' && (
-          <motion.div
-            key="overview"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="grid grid-cols-[1fr_340px] gap-5 max-[1180px]:grid-cols-1">
-              {/* LEFT COLUMN */}
-              <div className="flex flex-col gap-5 min-w-0">
-                {/* STAT CARDS ROW */}
-                <StatCards
-                  sales={sales}
-                  ingredients={ingredients}
-                  globalDateRange={dateRange}
-                />
-
-                {/* TWO COL: Sales Chart + Menu Terlaris */}
-                <div className="grid grid-cols-[1fr_1fr] gap-5 max-[760px]:grid-cols-1">
-                  <SalesChart chartData={chartData} dateRangeLabel={dateLabel} isHourly={dateRange.preset === 'today'} />
-                  <MenuTerlaris sales={filteredSales} dateRangeLabel={dateLabel} />
-                </div>
-
-                {/* TWO COL: Inventory Insight + Perlu Restock */}
-                <div className="grid grid-cols-[1fr_1fr] gap-5 max-[760px]:grid-cols-1">
-                  <InventoryInsight
+      <div className="grid grid-cols-[1fr_340px] gap-5 max-[1180px]:grid-cols-1">
+        {/* ─── LEFT: Tab Content (switches) ──────────── */}
+        <div className="min-w-0">
+          <AnimatePresence mode="wait">
+            {/* ── OVERVIEW ────────────────────────────── */}
+            {activeTab === 'overview' && (
+              <motion.div
+                key="overview"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex flex-col gap-5">
+                  {/* STAT CARDS ROW */}
+                  <StatCards
+                    sales={sales}
                     ingredients={ingredients}
-                    movements={filteredMovements}
-                    criticalCount={criticalCount}
-                    stockValue={stockValue}
-                    dateRangeLabel={dateLabel}
-                    onNavigate={onNavigate}
+                    globalDateRange={dateRange}
                   />
-                  <ShoppingList
-                    items={criticalItems}
-                    totalCount={criticalCount}
-                    onNavigate={onNavigate}
-                  />
+
+                  {/* TWO COL: Sales Chart + Menu Terlaris */}
+                  <div className="grid grid-cols-[1fr_1fr] gap-5 max-[760px]:grid-cols-1">
+                    <SalesChart chartData={chartData} dateRangeLabel={dateLabel} isHourly={dateRange.preset === 'today'} />
+                    <MenuTerlaris sales={filteredSales} dateRangeLabel={dateLabel} />
+                  </div>
+
+                  {/* TWO COL: Inventory Insight + Perlu Restock */}
+                  <div className="grid grid-cols-[1fr_1fr] gap-5 max-[760px]:grid-cols-1">
+                    <InventoryInsight
+                      ingredients={ingredients}
+                      movements={filteredMovements}
+                      criticalCount={criticalCount}
+                      stockValue={stockValue}
+                      dateRangeLabel={dateLabel}
+                      onNavigate={onNavigate}
+                    />
+                    <ShoppingList
+                      items={criticalItems}
+                      totalCount={criticalCount}
+                      onNavigate={onNavigate}
+                    />
+                  </div>
                 </div>
+              </motion.div>
+            )}
 
+            {/* ── TREND ───────────────────────────────── */}
+            {activeTab === 'trend' && (
+              <motion.div
+                key="trend"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+              >
+                <TabTren
+                  sales={sales}
+                  filteredSales={filteredSales}
+                  dateRangeLabel={dateLabel}
+                  dateRange={dateRange.preset}
+                  startDate={startDate}
+                  endDate={endDate}
+                />
+              </motion.div>
+            )}
 
-              </div>
+            {/* ── BREAKDOWN ───────────────────────────── */}
+            {activeTab === 'breakdown' && (
+              <motion.div
+                key="breakdown"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+              >
+                <TabBreakdown sales={filteredSales} dateRangeLabel={dateLabel} />
+              </motion.div>
+            )}
 
-              {/* RIGHT SIDEBAR */}
-              <div className="max-[1180px]:col-span-1 overflow-visible">
-                <RightSidebar
-                  sales={filteredSales}
+            {/* ── ALERTS ──────────────────────────────── */}
+            {activeTab === 'alerts' && (
+              <motion.div
+                key="alerts"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+              >
+                <TabAlerts
                   ingredients={ingredients}
-                  movements={filteredMovements}
-                  criticalCount={criticalCount}
-                  stockValue={stockValue}
-                  totalOmset={filteredStats.totalOmset}
-                  totalTx={filteredStats.totalTx}
+                  sales={filteredSales}
+                  dateRangeLabel={dateLabel}
                   onNavigate={onNavigate}
                 />
-              </div>
-            </div>
-          </motion.div>
-        )}
+              </motion.div>
+            )}
 
-        {/* ── TREND ───────────────────────────────── */}
-        {activeTab === 'trend' && (
-          <motion.div
-            key="trend"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-          >
-            <TabTren sales={filteredSales} dateRangeLabel={dateLabel} dateRange={dateRange.preset} />
-          </motion.div>
-        )}
+            {/* ── LAPORAN ─────────────────────────────── */}
+            {activeTab === 'laporan' && (
+              <motion.div
+                key="laporan"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+              >
+                <TabLaporan sales={filteredSales} dateRangeLabel={dateLabel} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-        {/* ── BREAKDOWN ───────────────────────────── */}
-        {activeTab === 'breakdown' && (
-          <motion.div
-            key="breakdown"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-          >
-            <TabBreakdown sales={filteredSales} dateRangeLabel={dateLabel} />
-          </motion.div>
-        )}
-
-        {/* ── ALERTS ──────────────────────────────── */}
-        {activeTab === 'alerts' && (
-          <motion.div
-            key="alerts"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-          >
-            <TabAlerts
-              ingredients={ingredients}
-              sales={filteredSales}
-              dateRangeLabel={dateLabel}
-              onNavigate={onNavigate}
-            />
-          </motion.div>
-        )}
-
-        {/* ── LAPORAN ─────────────────────────────── */}
-        {activeTab === 'laporan' && (
-          <motion.div
-            key="laporan"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-          >
-            <TabLaporan sales={filteredSales} dateRangeLabel={dateLabel} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* ─── RIGHT: Sidebar (SELALU VISIBLE, tidak re-render saat ganti tab) ─── */}
+        <div className="max-[1180px]:col-span-1 overflow-visible">
+          <RightSidebar
+            sales={filteredSales}
+            ingredients={ingredients}
+            movements={filteredMovements}
+            criticalCount={criticalCount}
+            stockValue={stockValue}
+            totalOmset={filteredStats.totalOmset}
+            totalTx={filteredStats.totalTx}
+            onNavigate={onNavigate}
+          />
+        </div>
+      </div>
     </div>
   );
 }
