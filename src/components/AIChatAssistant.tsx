@@ -14,6 +14,7 @@ import {
   Paperclip
 } from 'lucide-react';
 import { Ingredient, RecipeWithDetails } from '../types';
+import { apiFetch } from '../utils/api';
 
 interface AIChatAssistantProps {
   ingredients: Ingredient[];
@@ -96,29 +97,15 @@ export default function AIChatAssistant({ ingredients, recipes, onRefreshData, e
     }
   }, [messages, loading, isOpen]);
 
-  const rawApiBaseUrl = ((import.meta as any).env.VITE_API_URL || '').replace(/\/$/, '');
-  const normalizeApiBaseUrl = (url: string) => {
-    if (!url) return '';
-    if (/^https?:\/\//.test(url)) return url.replace(/\/$/, '');
-    return `https://${url.replace(/\/$/, '')}`;
-  };
-  const apiBaseUrl = normalizeApiBaseUrl(rawApiBaseUrl);
-  const resolveApiUrl = (url: string) => url.startsWith('http') ? url : (apiBaseUrl ? `${apiBaseUrl}${url}` : url);
-
   const handleSendMessage = async (textToSend: string) => {
-    const authToken = typeof window !== 'undefined' ? localStorage.getItem('restoflow_session_id') : null;
     if (!textToSend.trim() || loading) return;
     const userMsg: Message = { role: 'user', text: textToSend };
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setLoading(true);
     try {
-      const response = await fetch(resolveApiUrl('/api/gemini/chat'), {
+      const response = await apiFetch('/api/gemini/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
-        },
         body: JSON.stringify({ message: textToSend, history: messages })
       });
       if (!response.ok) throw new Error('Gagal menghubungi asisten AI.');

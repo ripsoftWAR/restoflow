@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import type { Sale, Ingredient, MovementLog } from '../../../types';
 import { formatIDRCompact } from './utils';
+import { apiFetch } from '../../../utils/api';
 
 /* ═══════════════════════════════════════════════════════════════
    InsightHariIni — Shared insight component
@@ -69,17 +70,6 @@ export default function InsightHariIni({
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [insightResponses, setInsightResponses] = useState<Record<number, string>>({});
   const [insightLoading, setInsightLoading] = useState<Record<number, boolean>>({});
-
-  const rawApiBaseUrl = ((import.meta as any).env?.VITE_API_URL || '').replace(/\/$/, '');
-  const normalizeApiBaseUrl = (url: string) => {
-    if (!url) return '';
-    if (/^https?:\/\//.test(url)) return url.replace(/\/$/, '');
-    return `https://${url.replace(/\/$/, '')}`;
-  };
-  const apiBaseUrl = normalizeApiBaseUrl(rawApiBaseUrl);
-  const resolveApiUrl = useCallback((url: string) =>
-    url.startsWith('http') ? url : (apiBaseUrl ? `${apiBaseUrl}${url}` : url),
-  [apiBaseUrl]);
 
   /* ── Compute insights from real data ──────── */
   const insights: InsightItem[] = useMemo(() => {
@@ -215,15 +205,10 @@ export default function InsightHariIni({
     setInsightLoading(prev => ({ ...prev, [idx]: true }));
     const insight = insights[idx];
     const localResponse = generateLocalResponse(insight);
-    const authToken = typeof window !== 'undefined' ? localStorage.getItem('restoflow_session_id') : null;
 
     try {
-      const response = await fetch(resolveApiUrl('/api/gemini/chat/quick-summary'), {
+      const response = await apiFetch('/api/gemini/chat/quick-summary', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
         body: JSON.stringify({
           context: `Analisis spesifik: ${insight.title}. ${insight.detail}. Berikan rekomendasi singkat sebagai business advisor.`,
         }),
@@ -245,7 +230,7 @@ export default function InsightHariIni({
     } finally {
       setInsightLoading(prev => ({ ...prev, [idx]: false }));
     }
-  }, [expandedIdx, insightResponses, insights, resolveApiUrl]);
+  }, [expandedIdx, insightResponses, insights]);
 
   const renderAiText = (text: string) => {
     return text.split('\n').map((line, idx) => {

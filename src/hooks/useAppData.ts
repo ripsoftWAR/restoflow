@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { makeApiFetch, resolveApiUrl } from '../utils/api';
+import { makeApiFetch, resolveApiUrl, getAuthToken, setAuthToken, removeAuthToken } from '../utils/api';
 import { Ingredient, DashboardStats, RecipeWithDetails, Sale, MovementLog, AuthSession } from '../types';
 
 export function useAppData() {
@@ -46,7 +46,7 @@ export function useAppData() {
   // ─── Restore session on mount ──────────────────────────────────────────────
   useEffect(() => {
     const restoreSession = async () => {
-      const storedToken = localStorage.getItem('restoflow_session_id');
+      const storedToken = getAuthToken();
       if (!storedToken) { setAuthChecked(true); setLoading(false); return; }
 
       setSessionId(storedToken);
@@ -56,7 +56,7 @@ export function useAppData() {
           headers: { 'Authorization': `Bearer ${storedToken}` },
         });
         if (!res.ok) {
-          localStorage.removeItem('restoflow_session_id');
+          removeAuthToken();
           setSessionId(null);
           setAuthChecked(true);
           setLoading(false);
@@ -67,7 +67,7 @@ export function useAppData() {
         setAuthChecked(true);
       } catch (err) {
         console.error('Session restore failed:', err);
-        localStorage.removeItem('restoflow_session_id');
+        removeAuthToken();
         setAuthChecked(true);
       } finally {
         setLoading(false);
@@ -88,7 +88,7 @@ export function useAppData() {
   const handleAuthSuccess = (session: AuthSession) => {
     setAuthSession(session);
     setSessionId(session.token);
-    localStorage.setItem('restoflow_session_id', session.token);
+    setAuthToken(session.token);
   };
 
   const handleLogout = async () => {
@@ -102,7 +102,7 @@ export function useAppData() {
     } catch (err) {
       console.warn('Logout request failed:', err);
     } finally {
-      localStorage.removeItem('restoflow_session_id');
+      removeAuthToken();
       setSessionId(null);
       setAuthSession(null);
       setStats(null);

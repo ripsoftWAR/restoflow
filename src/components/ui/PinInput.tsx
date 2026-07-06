@@ -122,6 +122,7 @@ export function PinInput({
             autoComplete="one-time-code"
             maxLength={1}
             value={digit}
+            readOnly
             disabled={disabled}
             onKeyDown={(e) => handleKeyDown(idx, e)}
             onFocus={() => handleFocus(idx)}

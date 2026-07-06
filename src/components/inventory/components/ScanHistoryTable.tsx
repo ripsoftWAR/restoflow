@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Clock, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { resolveApiUrl } from '../../../utils/api';
+import { apiFetch } from '../../../utils/api';
 
 /* ═══════════════════════════════════════════════════════════════
    ScanHistoryTable — riwayat scan struk dari GET /api/ocr/history
@@ -52,11 +52,8 @@ export default function ScanHistoryTable() {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('restoflow_session_id');
-      const url = `${resolveApiUrl('/api/ocr/history')}?limit=${PAGE_SIZE}&offset=${offset}`;
-      const res = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const url = `/api/ocr/history?limit=${PAGE_SIZE}&offset=${offset}`;
+      const res = await apiFetch(url);
       if (!res.ok) throw new Error('Gagal memuat riwayat scan');
       const json = await res.json();
       setRecords(json.data || []);

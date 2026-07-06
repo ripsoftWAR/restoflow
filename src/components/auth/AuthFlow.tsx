@@ -5,7 +5,7 @@ import { LoginView } from './LoginView';
 import { UserPickerView } from './UserPickerView';
 import { PinVerificationView } from './PinVerificationView';
 import { RegisterView } from './RegisterView';
-import { resolveApiUrl } from '@/utils/api';
+import { resolveApiUrl, setAuthToken } from '@/utils/api';
 
 // ── Helper: fetch dengan base URL yang benar ──
 const apiFetch = (url: string, options: RequestInit = {}) => {
@@ -127,7 +127,7 @@ export default function AuthFlow({ initialStep = 'landing', onAuthSuccess }: Pro
       if (!res.ok) throw new Error(data?.error || 'PIN salah');
 
       // Save session
-      localStorage.setItem('restoflow_session_id', data.token);
+      setAuthToken(data.token);
 
       onAuthSuccess(data);
     } catch (err: any) {

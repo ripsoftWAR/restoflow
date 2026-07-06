@@ -5,6 +5,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import type { Sale, Ingredient } from '../../types';
+import { apiFetch } from '../../utils/api';
 
 /* ═══════════════════════════════════════════════════════════════
    AIQuickPopover — klik Pilot AI → insight LOKAL langsung muncul
@@ -144,15 +145,6 @@ export default function AIQuickPopover({
     return () => document.removeEventListener('keydown', handler);
   }, [isOpen]);
 
-  const rawApiBaseUrl = ((import.meta as any).env.VITE_API_URL || '').replace(/\/$/, '');
-  const normalizeApiBaseUrl = (url: string) => {
-    if (!url) return '';
-    if (/^https?:\/\//.test(url)) return url.replace(/\/$/, '');
-    return `https://${url.replace(/\/$/, '')}`;
-  };
-  const apiBaseUrl = normalizeApiBaseUrl(rawApiBaseUrl);
-  const resolveApiUrl = (url: string) => url.startsWith('http') ? url : (apiBaseUrl ? `${apiBaseUrl}${url}` : url);
-
   const handleOpen = async () => {
     if (isOpen) {
       setIsOpen(false);
@@ -167,15 +159,10 @@ export default function AIQuickPopover({
     // 🔄 AI fetch di background (tidak blocking tampilan)
     setLoadingAi(true);
     const context = buildContext(sales, ingredients, criticalCount, stockValue, totalOmset, totalTx);
-    const authToken = typeof window !== 'undefined' ? localStorage.getItem('restoflow_session_id') : null;
 
     try {
-      const response = await fetch(resolveApiUrl('/api/gemini/chat/quick-summary'), {
+      const response = await apiFetch('/api/gemini/chat/quick-summary', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
-        },
         body: JSON.stringify({ context })
       });
 

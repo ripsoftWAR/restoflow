@@ -18,7 +18,7 @@ import {
   formatStockWithBase,
 } from '../../../types';
 import { formatIDR } from '../utils/format';
-import { resolveApiUrl } from '../../../utils/api';
+import { resolveApiUrl, apiFetch } from '../../../utils/api';
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -256,10 +256,7 @@ function MiniUsageChart({
   const fetchUsage = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('restoflow_session_id');
-      const res = await fetch(resolveApiUrl(`/api/ingredients/${ingredientId}/usage?days=${days}`), {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await apiFetch(`/api/ingredients/${ingredientId}/usage?days=${days}`);
       if (!res.ok) throw new Error('Failed');
       const json: MiniUsagePoint[] = await res.json();
       setData(json);

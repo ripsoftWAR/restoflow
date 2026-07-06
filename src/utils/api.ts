@@ -47,3 +47,49 @@ export const formatIDR = (num: number) =>
     minimumFractionDigits: 0, 
     maximumFractionDigits: 0,
   }).format(num);
+
+/**
+ * Ambil token auth dari localStorage.
+ * Satu-satunya tempat yang tahu key penyimpanan.
+ * Semua komponen yang butuh auth wajib pakai ini — jangan localStorage langsung.
+ */
+const AUTH_STORAGE_KEY = 'restoflow_session_id';
+
+export const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(AUTH_STORAGE_KEY);
+};
+
+export const setAuthToken = (token: string): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(AUTH_STORAGE_KEY, token);
+};
+
+export const removeAuthToken = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+};
+
+/**
+ * Convenience: fetch dengan auto-inject auth token + resolveApiUrl.
+ * Pengganti fetch() mentah yang rawan lupa header.
+ *
+ * Token di-refresh dari localStorage SETIAP request — aman untuk login/logout.
+ *
+ * @example
+ * const res = await apiFetch('/api/ingredients');
+ * const data = await res.json();
+ */
+export const apiFetch = (url: string, options: RequestInit = {}) => {
+  const headers = new Headers(options.headers || {});
+  const token = getAuthToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (options.body && !(options.body instanceof FormData)) {
+    if (!headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+  }
+  return fetch(resolveApiUrl(url), { ...options, headers });
+};
