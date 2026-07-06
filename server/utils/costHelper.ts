@@ -10,8 +10,9 @@ export const ESTIMATED_UNIT_COSTS: Record<string, number> = {
 };
 
 export function getIngredientEstimatedCost(ing: any): number {
+  const cf = ing.conversion_factor || 1;
   if (ing.unit_price && ing.unit_price > 0) {
-    return ing.stock * ing.unit_price;
+    return (ing.stock / cf) * ing.unit_price;
   }
   const norm = ing.name.toLowerCase();
   let costPerUnit = 30; // default Rp 30 per unit
@@ -21,5 +22,5 @@ export function getIngredientEstimatedCost(ing: any): number {
       break;
     }
   }
-  return ing.stock * costPerUnit;
+  return (ing.stock / cf) * costPerUnit;
 }

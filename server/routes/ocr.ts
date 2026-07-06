@@ -125,11 +125,16 @@ router.post('/scan', async (req, res) => {
 // POST confirm scanned items & adjust stock
 router.post('/confirm', async (req, res) => {
   const restaurantId = req.user!.restaurant_id;
-  const { confirmedItems } = req.body;
+  const { confirmedItems, source } = req.body;
+
+  // Validasi source
+  const scanSource = (source === 'camera' || source === 'upload') ? source : 'upload';
 
   try {
     // Jalankan transaksi manual di PostgreSQL
     await db.query('BEGIN');
+
+    let totalAmount = 0;
 
     for (const item of confirmedItems) {
       let { mappedIngredientId, convertedQuantity, rawName, pricePerUnit, quantity, totalPrice } = item;
@@ -162,6 +167,9 @@ router.post('/confirm', async (req, res) => {
         const finalTotalPrice = totalPrice || ((pricePerUnit || 0) * (quantity || 1));
         const finalBaseUnitPrice = convertedQuantity > 0 ? (finalTotalPrice / convertedQuantity) : 0;
 
+        // Akumulasi total belanja
+        totalAmount += finalTotalPrice;
+
         // Update Stok
         await db.query('UPDATE ingredients SET stock = $1, unit_price = $2 WHERE id = $3 AND restaurant_id = $4', 
           [nextStock, finalBaseUnitPrice, mappedIngredientId, restaurantId]);
@@ -182,12 +190,57 @@ router.post('/confirm', async (req, res) => {
       }
     }
 
+    // Simpan riwayat scan
+    await db.query(
+      `INSERT INTO scan_history (restaurant_id, source, total_amount, items_detected, status, verified_at)
+       VALUES ($1, $2, $3, $4, 'verified', NOW())`,
+      [restaurantId, scanSource, totalAmount, JSON.stringify(confirmedItems)],
+    );
+
     await db.query('COMMIT');
     res.json({ success: true, message: 'Stock successfully increased from receipt scanner' });
   } catch (err: any) {
     await db.query('ROLLBACK');
     console.error('Confirm OCR Error:', err);
     res.status(400).json({ error: err.message });
+  }
+});
+
+// GET riwayat scan struk untuk restoran yang login
+router.get('/history', async (req, res) => {
+  const restaurantId = req.user!.restaurant_id;
+  const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+  try {
+    const result = await db.query(
+      `SELECT id, source, total_amount, status,
+              created_at, verified_at,
+              jsonb_array_length(items_detected) AS item_count
+       FROM scan_history
+       WHERE restaurant_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [restaurantId, limit, offset],
+    );
+
+    const countRes = await db.query(
+      'SELECT COUNT(*)::int AS total FROM scan_history WHERE restaurant_id = $1',
+      [restaurantId],
+    );
+
+    res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        limit,
+        offset,
+        total: countRes.rows[0]?.total || 0,
+      },
+    });
+  } catch (err: any) {
+    console.error('[GET /api/ocr/history] Error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

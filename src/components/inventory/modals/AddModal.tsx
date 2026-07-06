@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BaseUnit } from '../../../types';
 import { Ingredient } from '../../../types';
-import { formatIDR, pricePerBulk, bulkLabel } from '../utils/format';
+import { formatIDR, bulkLabel } from '../utils/format';
 import { inputCls, selectCls } from '../utils/styles';
 import Modal from '../shared/Modal';
 import Field from '../shared/Field';
@@ -41,10 +41,8 @@ export default function AddModal({ ingredients, onClose, onAddIngredient }: AddM
     if (!newName.trim() || !newSupplier.trim()) return;
     setIsSubmitting(true);
     try {
-      // 🔑 Konversi harga: dari per-unit-beli → per-base-unit
-      // Contoh: Rp 50.000/kaleng ÷ 400 gram/kaleng = Rp 125/gram
+      // unit_price disimpan per buy_unit — langsung dari input user
       const rawPrice = parseFloat(newPrice) || 0;
-      const pricePerBaseUnit = effectiveFactor > 0 ? Math.round(rawPrice / effectiveFactor * 1000) / 1000 : Math.round(rawPrice);
 
       await onAddIngredient({
         name: newName,
@@ -53,7 +51,7 @@ export default function AddModal({ ingredients, onClose, onAddIngredient }: AddM
         stock: Math.round(stockInBaseUnit * 1000) / 1000,
         base_unit: newUnit,
         min_stock: parseFloat(newMin) || 0,
-        unit_price: pricePerBaseUnit,
+        unit_price: rawPrice,
         buy_unit: effectiveBuyUnit,
         conversion_factor: effectiveFactor,
       });
@@ -191,12 +189,12 @@ export default function AddModal({ ingredients, onClose, onAddIngredient }: AddM
           </div>
           {isBuyUnitDifferent && effectiveFactor > 0 && (parseFloat(newPrice) || 0) > 0 && (
             <p className="text-[10px] text-slate-400 mt-1">
-              ≈ Rp {formatIDR((parseFloat(newPrice) || 0) / effectiveFactor)} per {newUnit}
+              ≈ Rp {formatIDR(Math.round((parseFloat(newPrice) || 0) / effectiveFactor))} per {newUnit}
             </p>
           )}
-          {!isBuyUnitDifferent && (
+          {!isBuyUnitDifferent && (parseFloat(newPrice) || 0) > 0 && (
             <p className="text-[10px] text-slate-400 mt-1">
-              = Rp {formatIDR(pricePerBulk(parseFloat(newPrice) || 0, newUnit))} per {bulkLabel(newUnit)}
+              ≈ Rp {formatIDR(Math.round((parseFloat(newPrice) || 0) / 1000))} per {bulkLabel(newUnit)}
             </p>
           )}
         </Field>

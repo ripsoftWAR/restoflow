@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Ingredient } from '../../../types';
-import { formatIDR, pricePerBulk, bulkLabel } from '../utils/format';
+import { formatIDR, bulkLabel } from '../utils/format';
 import { inputCls, selectCls } from '../utils/styles';
 import Modal from '../shared/Modal';
 import Field from '../shared/Field';
@@ -24,16 +24,13 @@ export default function EditModal({
   const existingFactor = ingredient.conversion_factor || 1;
   const isBuyUnitDifferent = existingBuyUnit !== ingredient.base_unit;
 
-  // Harga yang tersimpan selalu per base_unit. 
-  // Tampilkan ke user dalam unit beli (kalau ada) supaya user tidak bingung.
-  const priceInBuyUnit = (ingredient.unit_price ?? 0) * existingFactor;
-
+  // unit_price di DB sudah per buy_unit — tampilkan apa adanya
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editName, setEditName] = useState(ingredient.name);
   const [editCategory, setEditCategory] = useState(ingredient.category);
   const [editSupplier, setEditSupplier] = useState(ingredient.supplier);
   const [editMin, setEditMin] = useState(ingredient.min_stock.toString());
-  const [editPrice, setEditPrice] = useState(priceInBuyUnit.toString());
+  const [editPrice, setEditPrice] = useState((ingredient.unit_price ?? 0).toString());
   const [editBuyUnit, setEditBuyUnit] = useState(existingBuyUnit);
   const [editFactor, setEditFactor] = useState(existingFactor.toString());
 
@@ -45,16 +42,15 @@ export default function EditModal({
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // 🔑 Konversi harga: dari per-unit-beli → per-base-unit
+      // unit_price disimpan per buy_unit — langsung dari input user
       const rawPrice = parseFloat(editPrice) || 0;
-      const pricePerBaseUnit = effectiveFactor > 0 ? Math.round(rawPrice / effectiveFactor * 1000) / 1000 : Math.round(rawPrice);
 
       await onEditIngredient(ingredient.id, {
         name: editName,
         category: editCategory,
         supplier: editSupplier,
         min_stock: parseFloat(editMin) || 0,
-        unit_price: pricePerBaseUnit,
+        unit_price: rawPrice,
         buy_unit: effectiveBuyUnit,
         conversion_factor: effectiveFactor,
       });
@@ -164,11 +160,15 @@ export default function EditModal({
           <p className="text-[10px] text-slate-400 -mt-1">
             {showBuySection ? (
               <>
-                ≈ Rp {formatIDR((parseFloat(editPrice) || 0) / effectiveFactor)} per {ingredient.base_unit}
+                ≈ Rp {formatIDR(Math.round((parseFloat(editPrice) || 0) / effectiveFactor))} per {ingredient.base_unit}
                 {' · '}
               </>
-            ) : null}
-            = Rp {formatIDR(pricePerBulk((parseFloat(editPrice) || 0) / effectiveFactor, ingredient.base_unit))} per {bulkLabel(ingredient.base_unit)}
+            ) : (
+              <>
+                ≈ Rp {formatIDR(Math.round((parseFloat(editPrice) || 0) / 1000))} per {bulkLabel(ingredient.base_unit)}
+                {' · '}
+              </>
+            )}
           </p>
         )}
 

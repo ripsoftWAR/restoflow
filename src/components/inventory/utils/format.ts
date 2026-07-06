@@ -15,20 +15,24 @@ export const formatStock = (amount: number, unit: BaseUnit) => {
 export const formatStockRaw = (amount: number) =>
   new Intl.NumberFormat('id-ID').format(amount);
 
-export const pricePerBulk = (unitPrice: number, unit: BaseUnit) =>
-  unit === 'pcs' ? unitPrice : unitPrice * 1000;
-
-export const bulkLabel = (unit: BaseUnit) =>
-  unit === 'gram' ? 'kg' : unit === 'ml' ? 'Liter' : 'pcs';
-
-/** Label satuan singkat untuk header/display */
 export const unitLabel = (unit: BaseUnit) =>
   unit === 'gram' ? 'gram' : unit === 'ml' ? 'ml' : 'pcs';
 
-/** Format harga per unit: "Rp 140/gram" */
-export const formatPricePerUnit = (unitPrice: number, unit: BaseUnit) =>
-  `Rp ${formatIDR(unitPrice)}/${unitLabel(unit)}`;
+/** Label satuan bulk: gram → kg, ml → Liter */
+export const bulkLabel = (unit: BaseUnit) =>
+  unit === 'gram' ? 'kg' : unit === 'ml' ? 'Liter' : 'pcs';
 
-/** Format harga per bulk: "Rp 140.000/kg" */
-export const formatPricePerBulk = (unitPrice: number, unit: BaseUnit) =>
-  unit === 'pcs' ? '—' : `Rp ${formatIDR(pricePerBulk(unitPrice, unit))}/${bulkLabel(unit)}`;
+/** Konversi harga per base_unit → per bulk (×1000 untuk gram→kg, ml→L) */
+export const pricePerBulk = (unitPrice: number, unit: BaseUnit) =>
+  unit === 'pcs' ? unitPrice : unitPrice * 1000;
+
+/** Format harga per buy_unit: "Rp 35.000/kg" — unitPrice sudah per buy_unit */
+export const formatPricePerUnit = (unitPrice: number, buyUnit?: string) =>
+  `Rp ${formatIDR(unitPrice)}/${buyUnit || 'unit'}`;
+
+/** Format harga per base unit: "Rp 35/gram" — referensi satuan kecil */
+export const formatPricePerBulk = (unitPrice: number, baseUnit: BaseUnit, cf: number) => {
+  if (baseUnit === 'pcs' || cf === 1 || cf === 0) return '—';
+  const perBase = unitPrice / cf;
+  return `Rp ${formatIDR(perBase)}/${unitLabel(baseUnit)}`;
+};

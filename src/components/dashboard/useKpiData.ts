@@ -4,6 +4,7 @@ import {
   subMonths, startOfYear, isWithinInterval, format,
 } from 'date-fns';
 import type { Sale, Ingredient } from '../../types';
+import { totalStockValue } from '../../types';
 import type { KpiDataPoint, KpiPeriod, KpiComparePeriod } from './PremiumKPICard';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -231,7 +232,7 @@ function computeStockValuePoints(
   to: Date,
 ): KpiDataPoint[] {
   const totalValue = ingredients.reduce(
-    (sum, ing) => sum + (Number(ing.stock) || 0) * (Number(ing.unit_price) || 0),
+    (sum, ing) => sum + totalStockValue(ing as Ingredient),
     0,
   );
 

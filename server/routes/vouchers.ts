@@ -12,9 +12,9 @@ router.post('/', async (req: Request, res: Response) => {
 
     const query = `
       INSERT INTO vouchers (
-        restaurant_id, code, type, value, min_purchase,
-        is_active, start_at, end_at, max_usage, current_usage
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        restaurant_id, code, type, value, min_purchase, max_discount,
+        is_active, valid_from, valid_until, max_usage, usage_count
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
 
@@ -24,9 +24,10 @@ router.post('/', async (req: Request, res: Response) => {
       body.type,
       Number(body.value),
       Number(body.min_purchase || 0),
+      body.max_discount ? Number(body.max_discount) : null,
       body.is_active === true || body.is_active === 'true',
-      body.start_at || null,
-      body.end_at || null,
+      body.valid_from || null,
+      body.valid_until || null,
       body.max_usage ? Number(body.max_usage) : null,
       0,
     ];
@@ -80,9 +81,9 @@ router.get('/validate', async (req: Request, res: Response) => {
        WHERE restaurant_id = $1
          AND code = $2
          AND is_active = true
-         AND (start_at IS NULL OR start_at <= CURRENT_DATE)
-         AND (end_at   IS NULL OR end_at   >= CURRENT_DATE)
-         AND (max_usage IS NULL OR current_usage < max_usage)
+         AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+         AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
+         AND (max_usage IS NULL OR usage_count < max_usage)
        LIMIT 1`,
       [restaurantId, code]
     );
@@ -110,13 +111,52 @@ router.get('/validate', async (req: Request, res: Response) => {
   }
 });
 
+// ── PATCH /api/vouchers/:id — Edit/toggle voucher ────────────────────────────
+router.patch('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const body = req.body;
+
+    // Build dynamic SET clause
+    const allowedFields = ['code', 'type', 'value', 'min_purchase', 'max_discount', 'is_active', 'valid_from', 'valid_until', 'max_usage'];
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    let paramIdx = 1;
+
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        setClauses.push(`${field} = ${paramIdx}`);
+        values.push(body[field]);
+        paramIdx++;
+      }
+    }
+
+    if (setClauses.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada field yang diupdate' });
+    }
+
+    values.push(id);
+    const query = `UPDATE vouchers SET ${setClauses.join(', ')} WHERE id = ${paramIdx} RETURNING *`;
+    const result = await db.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Voucher tidak ditemukan' });
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error: any) {
+    console.error("PATCH Voucher Error:", error.message);
+    res.status(500).json({ error: "Gagal update voucher", message: error.message });
+  }
+});
+
 // ── PATCH /api/vouchers/:id/use — Tambah current_usage saat transaksi ─────────
 router.patch('/:id/use', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
     await db.query(
-      `UPDATE vouchers SET current_usage = current_usage + 1 WHERE id = $1`,
+      `UPDATE vouchers SET usage_count = usage_count + 1 WHERE id = $1`,
       [id]
     );
 

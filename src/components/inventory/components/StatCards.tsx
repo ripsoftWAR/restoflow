@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, DollarSign, AlertTriangle, Clock } from 'lucide-react';
-import { Ingredient } from '../../../types';
+import { Ingredient, totalStockValue } from '../../../types';
 import { formatIDR } from '../utils/format';
 
 interface StatCardsProps {
@@ -9,7 +9,7 @@ interface StatCardsProps {
 
 export default function StatCards({ ingredients }: StatCardsProps) {
   const totalItem = ingredients.length;
-  const totalNilai = ingredients.reduce((acc, i) => acc + i.stock * i.unit_price, 0);
+  const totalNilai = ingredients.reduce((acc, i) => acc + totalStockValue(i), 0);
   const kritisCount = ingredients.filter(i => i.stock <= i.min_stock).length;
   const akanHabis = ingredients.filter(
     i => i.stock <= i.min_stock * 1.5 && i.stock > i.min_stock

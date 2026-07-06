@@ -6,6 +6,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import type { DashboardStats, Ingredient, MovementLog, RecipeWithDetails, Sale, AuthSession } from '../../types';
+import { totalStockValue } from '../../types';
 
 /* ═══════════════════════════════════════════════════════════════
    COMPONENTS
@@ -16,6 +17,7 @@ import MenuTerlaris from './MenuTerlaris';
 import InventoryInsight from './InventoryInsight';
 import ShoppingList from './ShoppingList';
 import RightSidebar from './RightSidebar';
+import PageLayout from '../layout/PageLayout';
 import TabTren from './TabTren';
 import TabBreakdown from './TabBreakdown';
 import TabAlerts from './TabAlerts';
@@ -133,8 +135,7 @@ export default function Dashboard({
 
   // ── Stock value ─────────────────────────────────────────
   const stockValue = useMemo(() => {
-    return ingredients.reduce((sum, ing) =>
-      sum + (Number(ing.stock) || 0) * (Number(ing.unit_price) || 0), 0);
+    return ingredients.reduce((sum, ing) => sum + totalStockValue(ing as Ingredient), 0);
   }, [ingredients]);
 
   // ── Date label for display (used in chart titles, etc) ──
@@ -238,9 +239,20 @@ export default function Dashboard({
           TAB CONTENT — 2 zona: KIRI (konten tab) + KANAN (sidebar tetap)
           Panel kanan TIDAK berubah saat pindah tab
           ═══════════════════════════════════════════════ */}
-      <div className="grid grid-cols-[1fr_340px] gap-5 max-[1180px]:grid-cols-1">
-        {/* ─── LEFT: Tab Content (switches) ──────────── */}
-        <div className="min-w-0">
+      <PageLayout
+        rightPanel={
+          <RightSidebar
+            sales={filteredSales}
+            ingredients={ingredients}
+            movements={filteredMovements}
+            criticalCount={criticalCount}
+            stockValue={stockValue}
+            totalOmset={filteredStats.totalOmset}
+            totalTx={filteredStats.totalTx}
+            onNavigate={onNavigate}
+          />
+        }
+      >
           <AnimatePresence mode="wait">
             {/* ── OVERVIEW ────────────────────────────── */}
             {activeTab === 'overview' && (
@@ -314,7 +326,7 @@ export default function Dashboard({
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.2 }}
               >
-                <TabBreakdown sales={filteredSales} dateRangeLabel={dateLabel} />
+                <TabBreakdown sales={filteredSales} recipes={recipes} ingredients={ingredients} dateRangeLabel={dateLabel} />
               </motion.div>
             )}
 
@@ -345,26 +357,11 @@ export default function Dashboard({
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.2 }}
               >
-                <TabLaporan sales={filteredSales} dateRangeLabel={dateLabel} />
+                <TabLaporan sales={filteredSales} recipes={recipes} ingredients={ingredients} dateRangeLabel={dateLabel} startDate={startDate} endDate={endDate} />
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-
-        {/* ─── RIGHT: Sidebar (SELALU VISIBLE, tidak re-render saat ganti tab) ─── */}
-        <div className="max-[1180px]:col-span-1 overflow-visible">
-          <RightSidebar
-            sales={filteredSales}
-            ingredients={ingredients}
-            movements={filteredMovements}
-            criticalCount={criticalCount}
-            stockValue={stockValue}
-            totalOmset={filteredStats.totalOmset}
-            totalTx={filteredStats.totalTx}
-            onNavigate={onNavigate}
-          />
-        </div>
-      </div>
+      </PageLayout>
     </div>
   );
 }

@@ -143,7 +143,7 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Hapus log terkait dulu, lalu hapus bahan
-    await db.query('DELETE FROM movement_log WHERE ingredient_id = $1 AND restaurant_id = $2', [id, restaurantId]);
+    await db.query('DELETE FROM stock_movements WHERE ingredient_id = $1 AND restaurant_id = $2', [id, restaurantId]);
     await db.query('DELETE FROM ingredients WHERE id = $1 AND restaurant_id = $2', [id, restaurantId]);
 
     res.json({ success: true, message: `Bahan "${ing.name}" berhasil dihapus.` });
@@ -166,15 +166,65 @@ router.post('/:id/adjust', async (req, res) => {
     if (diff !== 0) {
       await db.query('UPDATE ingredients SET stock = $1 WHERE id = $2 AND restaurant_id = $3', [adjustStockInBaseUnit, id, restaurantId]);
       await db.query(`
-        INSERT INTO movement_log (restaurant_id, ingredient_id, type, amount, balance, notes)
-        VALUES ($1, $2, 'ADJUST', $3, $4, $5)
-      `, [restaurantId, id, diff, adjustStockInBaseUnit, notes || 'Opname Stok Manual']);
+        INSERT INTO stock_movements (restaurant_id, ingredient_id, type, quantity, notes)
+        VALUES ($1, $2, 'ADJUST', $3, $4)
+      `, [restaurantId, id, diff, notes || 'Opname Stok Manual']);
     }
 
     const updated = await db.query('SELECT * FROM ingredients WHERE id = $1 AND restaurant_id = $2', [id, restaurantId]);
     res.json(updated.rows[0]);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// GET /api/ingredients/:id/usage — daily usage aggregation for chart
+router.get('/:id/usage', async (req, res) => {
+  const restaurantId = req.user!.restaurant_id;
+  const { id } = req.params;
+  const days = Math.min(Math.max(Number(req.query.days) || 7, 1), 365);
+
+  try {
+    // Pastikan ingredient ada
+    const ingRes = await db.query(
+      'SELECT id FROM ingredients WHERE id = $1 AND restaurant_id = $2',
+      [id, restaurantId],
+    );
+    if (ingRes.rowCount === 0) {
+      return res.status(404).json({ error: 'Bahan tidak ditemukan' });
+    }
+
+    const result = await db.query(
+      `SELECT
+         gs.date::text AS date,
+         COALESCE(SUM(CASE WHEN m.type = 'in' THEN m.quantity ELSE 0 END), 0)::float AS total_in,
+         COALESCE(SUM(CASE WHEN m.type = 'out' THEN ABS(m.quantity) ELSE 0 END), 0)::float AS total_out
+       FROM generate_series(
+         CURRENT_DATE - ($3::int - 1),
+         CURRENT_DATE,
+         '1 day'::interval
+       ) AS gs(date)
+       LEFT JOIN stock_movements m
+         ON m.ingredient_id = $1::int
+         AND m.restaurant_id = $2::int
+         AND m.type IN ('in', 'out')
+         AND DATE(m.created_at) = gs.date
+       GROUP BY gs.date
+       ORDER BY gs.date ASC`,
+      [id, restaurantId, days],
+    );
+
+    // Pastikan total_in/total_out sebagai number, bukan string
+    const rows = result.rows.map((row: any) => ({
+      date: row.date,
+      total_in: Number(row.total_in),
+      total_out: Number(row.total_out),
+    }));
+
+    res.json(rows);
+  } catch (err: any) {
+    console.error('[GET /api/ingredients/:id/usage] Error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -194,9 +244,9 @@ router.post('/:id/restock', async (req, res) => {
       [nextStock, unitPrice, id, restaurantId]);
 
     await db.query(`
-      INSERT INTO movement_log (restaurant_id, ingredient_id, type, amount, balance, notes, unit_price, total_price)
-      VALUES ($1, $2, 'IN', $3, $4, $5, $6, $7)
-    `, [restaurantId, id, amountInBaseUnit, nextStock, notes || `Restock Cepat: ${ing.name}`, unitPrice, totalPrice]);
+      INSERT INTO stock_movements (restaurant_id, ingredient_id, type, quantity, notes)
+      VALUES ($1, $2, 'in', $3, $4)
+    `, [restaurantId, id, amountInBaseUnit, notes || `Restock Cepat: ${ing.name}`]);
 
     const updated = await db.query('SELECT * FROM ingredients WHERE id = $1 AND restaurant_id = $2', [id, restaurantId]);
     res.json(updated.rows[0]);

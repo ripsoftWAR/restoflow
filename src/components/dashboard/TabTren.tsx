@@ -1,7 +1,7 @@
 import { Fragment, useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  AreaChart, Area, ComposedChart, Line, XAxis, YAxis,
+  Area, ComposedChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { ChevronDown, TrendingUp, TrendingDown } from 'lucide-react';
@@ -15,12 +15,13 @@ type CompareMode = 'none' | 'prevPeriod' | 'lastMonth' | 'lastYear';
 interface MetricConfig {
   key: MetricKey; label: string; color: string;
   format: (v: number) => string;
+  axisId: 'trend' | 'txCount';
 }
 
 const METRICS: MetricConfig[] = [
-  { key: 'omset', label: 'Omset', color: '#2E4FE0', format: (v) => `Rp ${formatIDRCompact(v)}` },
-  { key: 'transaksi', label: 'Transaksi', color: '#6366F1', format: (v) => `${v.toLocaleString('id-ID')} tx` },
-  { key: 'profit', label: 'Keuntungan', color: '#10B981', format: (v) => `Rp ${formatIDRCompact(v)}` },
+  { key: 'omset', label: 'Omset', color: '#2E4FE0', format: (v) => `Rp ${formatIDRCompact(v)}`, axisId: 'trend' },
+  { key: 'transaksi', label: 'Transaksi', color: '#6366F1', format: (v) => `${v.toLocaleString('id-ID')} tx`, axisId: 'txCount' },
+  { key: 'profit', label: 'Keuntungan', color: '#10B981', format: (v) => `Rp ${formatIDRCompact(v)}`, axisId: 'trend' },
 ];
 
 const G_OPTIONS: { value: Granularity; label: string }[] = [
@@ -79,7 +80,6 @@ interface Props {
 
 /* ═══════════════════════════════════════════════
    GranularityDropdown
-   Style: SalesChart "Daily ⌄" dropdown
    ═══════════════════════════════════════════════ */
 function GranularityDropdown({ value, onChange }: { value: Granularity; onChange: (g: Granularity) => void }) {
   const [open, setOpen] = useState(false);
@@ -107,7 +107,6 @@ function GranularityDropdown({ value, onChange }: { value: Granularity; onChange
 
 /* ═══════════════════════════════════════════════
    CompareDropdown
-   Style: PremiumKPICard CompareDropdown
    ═══════════════════════════════════════════════ */
 function CompareDropdown({ value, onChange }: { value: CompareMode; onChange: (c: CompareMode) => void }) {
   const [open, setOpen] = useState(false);
@@ -148,10 +147,8 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
     setActiveMetrics(prev => prev.includes(key) ? prev.filter(k=>k!==key) : [...prev, key]);
   }, []);
 
-  /* ── Chart Data ─────────────────────────────── */
   const chartData = useMemo(() => aggregateByGranularity(filteredSales, granularity, startDate, endDate), [filteredSales, granularity, startDate, endDate]);
 
-  /* ── Comparison Data ────────────────────────── */
   const compareData = useMemo(() => {
     if (compareMode === 'none') return null;
     const dur = endDate.getTime() - startDate.getTime();
@@ -164,7 +161,6 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
     return aggregateByGranularity(prevSales, granularity, ps, pe);
   }, [sales, compareMode, granularity, startDate, endDate]);
 
-  /* ── Merged chart data (current + comparison) ─ */
   const mergedChartData = useMemo(() => {
     if (!compareData) return chartData;
     const compMap = new Map(compareData.map(c => [c.date, c]));
@@ -179,7 +175,6 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
     });
   }, [chartData, compareData]);
 
-  /* ── Hover handler ──────────────────────────── */
   const handleChartMouseMove = useCallback((e: any) => {
     if (!e?.activeTooltipIndex && e?.activeTooltipIndex !== 0) { setHoverData(null); return; }
     const idx = Number(e.activeTooltipIndex);
@@ -196,11 +191,9 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
 
   const handleChartMouseLeave = useCallback(() => setHoverData(null), []);
 
-  /* ── Heatmap ─────────────────────────────────── */
   const heatmap = useMemo(() => computeHeatmap(filteredSales), [filteredSales]);
   const maxHeat = useMemo(() => Math.max(1, ...heatmap.flat()), [heatmap]);
 
-  /* ── Trending Menus ──────────────────────────── */
   const prevSalesForTrend = useMemo(() => {
     const dur = endDate.getTime() - startDate.getTime();
     const ps = new Date(startDate.getTime() - dur);
@@ -211,16 +204,12 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
 
   const isEmpty = chartData.length === 0;
 
-  /* ═══════════════════════════════════════════════
-     RENDER
-     ═══════════════════════════════════════════════ */
   return (
     <div className="space-y-5">
       {/* ═══════════════════════════════════════════
           SECTION 1: MAIN TREND CHART
           ═══════════════════════════════════════════ */}
       <div className="bg-pp-surface border border-pp-border rounded-pp-lg p-5 hover:border-pp-border-strong transition-colors duration-150">
-        {/* ── Header row ────────────────────────── */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
             <div className="text-[15.5px] font-bold text-pp-text">Tren Performa</div>
@@ -232,7 +221,6 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
           </div>
         </div>
 
-        {/* ── Metric toggle pills ───────────────── */}
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           {METRICS.map(m => {
             const isActive = activeMetrics.includes(m.key);
@@ -255,7 +243,6 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
           })}
         </div>
 
-        {/* ── Chart ─────────────────────────────── */}
         <div ref={chartRef} className="relative h-[300px] -mx-1">
           {isEmpty ? (
             <div className="h-full flex flex-col items-center justify-center gap-2">
@@ -270,35 +257,66 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
                   <defs>
                     {METRICS.map(m => (
                       <linearGradient key={m.key} id={`grad-${m.key}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={m.color} stopOpacity={0.2} />
-                        <stop offset="100%" stopColor={m.color} stopOpacity={0.0} />
+                        <stop offset="0%" stopColor={m.color} stopOpacity={0.35} />
+                        <stop offset="100%" stopColor={m.color} stopOpacity={0.02} />
                       </linearGradient>
                     ))}
+                    <filter id="line-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.10" />
+                    </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEF0F7" />
                   <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#9CA3AF'}} interval="preserveStartEnd" minTickGap={50} dy={8} />
                   <YAxis yAxisId="trend" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#9CA3AF'}} tickFormatter={v => { if(v>=1_000_000) return `${(v/1_000_000).toFixed(1).replace('.',',')}jt`; if(v>=1_000) return `${Math.round(v/1_000)}rb`; return '0'; }} domain={[0,'auto']} width={45} />
+                  <YAxis yAxisId="txCount" hide domain={[0, 'auto']} />
                   <Tooltip content={()=>null} cursor={{stroke:'#D7DCEC',strokeWidth:1,strokeDasharray:'4 4'}} />
+
                   {/* Current period — Area dengan gradient fill */}
                   {activeMetrics.map(key => {
                     const m = METRICS.find(metric => metric.key === key);
                     if (!m) return null;
                     return (
-                      <Area key={m.key} yAxisId="trend" type="monotone" dataKey={m.key} stroke={m.color} strokeWidth={2.5} fillOpacity={1} fill={`url(#grad-${m.key})`} dot={false} activeDot={{r:5,fill:'white',stroke:m.color,strokeWidth:2.5}} isAnimationActive={false} />
+                      <Area
+                        key={m.key}
+                        yAxisId={m.axisId}
+                        type="natural"
+                        dataKey={m.key}
+                        stroke={m.color}
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill={`url(#grad-${m.key})`}
+                        dot={false}
+                        activeDot={{ r: 5, fill: 'white', stroke: m.color, strokeWidth: 2.5, style: { filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.15))' } }}
+                        isAnimationActive={false}
+                        style={{ filter: 'url(#line-shadow)' }}
+                      />
                     );
                   })}
-                  {/* Comparison period — dashed Line, pakai data dari mergedChartData (parent) */}
+
+                  {/* Comparison period — dashed Line */}
                   {compareData && activeMetrics.map(key => {
                     const m = METRICS.find(metric => metric.key === key);
                     if (!m) return null;
                     return (
-                      <Line key={`comp_${m.key}`} yAxisId="trend" type="monotone" dataKey={`comp_${m.key}`} stroke={m.color} strokeWidth={1.5} strokeDasharray="5 5" dot={false} activeDot={false} isAnimationActive={false} opacity={0.5} connectNulls={false} />
+                      <Line
+                        key={`comp_${m.key}`}
+                        yAxisId={m.axisId}
+                        type="natural"
+                        dataKey={`comp_${m.key}`}
+                        stroke={m.color}
+                        strokeWidth={1.5}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        activeDot={false}
+                        isAnimationActive={false}
+                        opacity={0.5}
+                        connectNulls={false}
+                      />
                     );
                   })}
                 </ComposedChart>
               </ResponsiveContainer>
 
-              {/* ── Hover Tooltip ──────────────────── */}
               {hoverData && (
                 <div className="absolute bg-[#1B2436] text-white px-[13px] py-[10px] rounded-[10px] text-[12px] pointer-events-none z-10 transform -translate-x-1/2 -translate-y-[115%]" style={{left:hoverData.x, top:hoverData.y||10}}>
                   <div className="text-[#B9C1D9] text-[11px] mb-[6px]">{hoverData.date}</div>
@@ -322,7 +340,6 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
           SECTION 2: HEATMAP + TRENDING MENUS
           ═══════════════════════════════════════════ */}
       <div className="grid grid-cols-[1fr_1fr] gap-5 max-[860px]:grid-cols-1">
-        {/* ── HEATMAP ────────────────────────────── */}
         <div className="bg-pp-surface border border-pp-border rounded-pp-lg p-5 hover:border-pp-border-strong transition-colors duration-150">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -338,21 +355,18 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
           </div>
           <div className="overflow-x-auto">
             <div className="inline-grid gap-[2px]" style={{gridTemplateColumns:`40px repeat(24,minmax(18px,1fr))`}}>
-              {/* Day labels column + hour headers */}
               <div className="text-[9px] text-pp-text-muted font-medium" />
               {H_LABELS.map(h => <div key={h} className="text-[9px] text-pp-text-muted font-medium text-center">{h}</div>)}
-              {/* Rows */}
               {D_NAMES.map((day, di) => (
                 <Fragment key={di}>
                   <div key={`dl${di}`} className="text-[10px] font-medium text-pp-text-muted flex items-center justify-end pr-1.5">{day}</div>
                   {heatmap[di].map((val, hi) => {
                     const intensity = val / maxHeat;
-                    const r = 37, g = 99, b = 235; // pp-primary #2563EB
+                    const r = 37, g = 99, b = 235;
                     const alpha = Math.max(0.04, intensity * 0.9);
                     const bg = intensity > 0.05 ? `rgba(${r},${g},${b},${alpha.toFixed(2)})` : '#FAFBFC';
                     return (
                       <div key={`h${di}-${hi}`} className="aspect-square rounded-[2px] relative group cursor-default" style={{backgroundColor:bg}} title={`${day} ${H_LABELS[hi]}:00 — ${val} transaksi`}>
-                        {/* Tiny tooltip on hover */}
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-[#1B2436] text-white text-[10px] px-2 py-0.5 rounded whitespace-nowrap z-10 pointer-events-none">
                           {day} {H_LABELS[hi]}:00 · {val} tx
                         </div>
@@ -365,7 +379,6 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
           </div>
         </div>
 
-        {/* ── TRENDING MENUS ─────────────────────── */}
         <div className="bg-pp-surface border border-pp-border rounded-pp-lg p-5 hover:border-pp-border-strong transition-colors duration-150">
           <div className="flex items-center justify-between mb-1">
             <div>
@@ -373,7 +386,6 @@ export default function TabTren({ sales, filteredSales, dateRangeLabel, dateRang
               <div className="text-[12px] text-pp-text-muted mt-0.5">vs periode sebelumnya</div>
             </div>
           </div>
-
           {trendingMenus.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 gap-2">
               <span className="text-[32px]">🍽️</span>

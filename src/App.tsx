@@ -148,9 +148,9 @@ function AppContent(props: any) {
   }, [authSession, rolePrimaryTabs.length, roleSecondaryTabs.length]);
 
   // ─── Main content ──────────────────────────────────────────────────────────
-  const isDashboard = activeTab === 'home';
+  const isSelfPadded = activeTab === 'home' || activeTab === 'sales' || activeTab === 'inventory' || activeTab === 'recipes';
   const Content = () => (
-    <main className={`flex-1 overflow-y-auto ${isDashboard ? '' : 'p-4 md:p-6'}`}>
+    <main className={`flex-1 overflow-y-auto ${isSelfPadded ? '' : 'p-4 md:p-6'}`}>
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
         {activeTab === 'home' && (
           stats
@@ -174,10 +174,17 @@ function AppContent(props: any) {
         {activeTab === 'inventory' && can('inventory.view') && (
           <Inventory
             ingredients={ingredients}
+            sales={sales}
+            movements={movements}
             onAddIngredient={handleAddIngredient}
             onEditIngredient={handleEditIngredient}
             onAdjustStock={handleAdjustStock}
             onDeleteIngredient={handleDeleteIngredient}
+            onScanReceipt={handleScanReceipt}
+            onConfirmReceiptItems={handleConfirmReceiptItems}
+            onRefreshStats={() => fetchAllData(authSession, true)}
+            authSession={authSession}
+            onNavigate={setActiveTab}
           />
         )}
         {activeTab === 'recipes' && can('recipes.view') && (
@@ -194,7 +201,9 @@ function AppContent(props: any) {
             ingredients={ingredients}
             sales={sales}
             onTriggerSale={handleTriggerSale}
-            onRefreshStats={() => fetchAllData(authSession, true)} onNavigateToKasir={() => setActiveTab('kasir')}
+            onRefreshStats={() => fetchAllData(authSession, true)}
+            onNavigateToKasir={() => setActiveTab('kasir')}
+            onNavigate={setActiveTab}
             user={{
               ...authSession.user,
               sessionId: authSession.token

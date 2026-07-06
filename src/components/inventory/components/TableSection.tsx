@@ -205,10 +205,10 @@ export default function TableSection({
                     {/* Harga beli */}
                     <td className="p-3 text-right align-middle">
                       <p className="text-[12.5px] font-medium text-slate-800 font-mono">
-                        {formatPricePerUnit(ing.unit_price, ing.base_unit)}
+                        {formatPricePerUnit(ing.unit_price, ing.buy_unit || ing.base_unit)}
                       </p>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        {formatPricePerBulk(ing.unit_price, ing.base_unit)}
+                        {formatPricePerBulk(ing.unit_price, ing.base_unit, ing.conversion_factor || 1)}
                       </p>
                     </td>
 
