@@ -111,23 +111,17 @@ class AuthService {
 
     if (!response.success || response.data == null) return [];
 
-    // Response bisa berupa List langsung (kalau fromHttpResponse
-    // menerima JSON array tanpa membungkus)
-    if (response.data is List) {
-      return (response.data as List)
-          .map((s) => ShiftData.fromJson(s as Map<String, dynamic>))
-          .toList();
+    // response.data selalu Map<String, dynamic> (lihat ApiResponse.fromHttpResponse)
+    final Map<String, dynamic> data = response.data!;
+    final dynamic rawList = data['data'];
+
+    if (rawList is! List) {
+      return [];
     }
 
-    // ApiResponse.fromHttpResponse() membungkus JSON array non-Map
-    // menjadi {'data': [...]} — cek path ini juga
-    if (response.data is Map && response.data!['data'] is List) {
-      return (response.data!['data'] as List)
-          .map((s) => ShiftData.fromJson(s as Map<String, dynamic>))
-          .toList();
-    }
-
-    return [];
+    return rawList
+        .map((s) => ShiftData.fromJson(s as Map<String, dynamic>))
+        .toList();
   }
 
   /// Logout — tutup sesi

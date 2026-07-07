@@ -13,19 +13,15 @@ class RecipeService {
       throw Exception(response.error ?? 'Gagal memuat menu');
     }
 
-    // Response adalah array langsung (bukan dibungkus {data: [...]})
-    final list = response.data;
-    if (list is! List) {
-      // Coba fallback: cari key 'data' di dalam map
-      if (list is Map && list['data'] is List) {
-        return (list['data'] as List)
-            .map((r) => RecipeItem.fromJson(r as Map<String, dynamic>))
-            .toList();
-      }
+    // response.data selalu Map<String, dynamic> (lihat ApiResponse.fromHttpResponse)
+    final Map<String, dynamic> data = response.data!;
+    final dynamic rawList = data['data'];
+
+    if (rawList is! List) {
       return [];
     }
 
-    return list
+    return rawList
         .map((r) => RecipeItem.fromJson(r as Map<String, dynamic>))
         .toList();
   }
