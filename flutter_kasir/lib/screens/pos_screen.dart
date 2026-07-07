@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/recipe_service.dart';
 import 'cart_screen.dart';
 import 'product_detail_sheet.dart';
 
@@ -42,24 +43,35 @@ class ProductItem {
     required this.category,
     this.desc = '',
   });
+
+  factory ProductItem.fromRecipe(RecipeItem r) {
+    return ProductItem(
+      id: r.id.toString(),
+      name: r.name,
+      price: r.price,
+      emoji: r.emoji,
+      category: r.category,
+      desc: r.desc,
+    );
+  }
 }
 
-const _products = [
-  ProductItem(id: 'es-kopi-susu', name: 'Es Kopi Susu', price: 18000, emoji: '🥤', category: 'Minuman', desc: 'Perpaduan kopi espresso dan susu segar dengan es batu.'),
-  ProductItem(id: 'es-teh', name: 'Es Teh Manis', price: 6000, emoji: '🍹', category: 'Minuman', desc: 'Teh segar dengan rasa manis yang pas.'),
-  ProductItem(id: 'americano', name: 'Americano', price: 16000, emoji: '☕', category: 'Minuman', desc: 'Espresso dengan tambahan air panas, kuat dan pekat.'),
-  ProductItem(id: 'latte', name: 'Latte', price: 20000, emoji: '☕', category: 'Minuman', desc: 'Espresso dengan susu steamed dan foam lembut.'),
-  ProductItem(id: 'cappuccino', name: 'Cappuccino', price: 20000, emoji: '☕', category: 'Minuman', desc: 'Espresso dengan susu dan busa tebal khas Italia.'),
-  ProductItem(id: 'matcha', name: 'Matcha Latte', price: 22000, emoji: '🍵', category: 'Minuman', desc: 'Bubuk matcha premium dengan susu segar.'),
-  ProductItem(id: 'nasi-goreng', name: 'Nasi Goreng', price: 25000, emoji: '🍳', category: 'Makanan', desc: 'Nasi goreng spesial dengan telur dan ayam.'),
-  ProductItem(id: 'chicken-burger', name: 'Chicken Burger', price: 28000, emoji: '🍔', category: 'Makanan', desc: 'Burger ayam crispy dengan sayuran segar.'),
-  ProductItem(id: 'mie-goreng', name: 'Mie Goreng', price: 22000, emoji: '🍜', category: 'Makanan', desc: 'Mie goreng dengan bumbu spesial racikan sendiri.'),
-  ProductItem(id: 'ayam-geprek', name: 'Ayam Geprek', price: 24000, emoji: '🍗', category: 'Makanan', desc: 'Ayam goreng crispy digeprek dengan sambal pedas.'),
-  ProductItem(id: 'kentang', name: 'Kentang Goreng', price: 15000, emoji: '🍟', category: 'Makanan', desc: 'Kentang goreng renyah dengan saus pilihan.'),
-  ProductItem(id: 'sandwich', name: 'Sandwich', price: 20000, emoji: '🥪', category: 'Makanan', desc: 'Roti sandwich isi daging, keju, dan sayuran.'),
+/// Data dummy sebagai fallback — sinkron dengan database (seeder: seed.cjs)
+const _dummyProducts = [
+  // ── Makanan ──
+  ProductItem(id: 'nasi-goreng-spesial', name: 'Nasi Goreng Spesial', price: 28000, emoji: '🍳', category: 'Makanan', desc: 'Nasi goreng spesial dengan 7 bahan pilihan.'),
+  ProductItem(id: 'ayam-goreng-crispy', name: 'Ayam Goreng Crispy', price: 25000, emoji: '🍗', category: 'Makanan', desc: 'Ayam goreng crispy dengan bumbu racikan spesial.'),
+  ProductItem(id: 'steak-sapi',          name: 'Steak Sapi',           price: 65000, emoji: '🥩', category: 'Makanan', desc: 'Steak daging sapi premium, empuk dan juicy.'),
+  ProductItem(id: 'salmon-grill',        name: 'Salmon Grill',         price: 85000, emoji: '🐟', category: 'Makanan', desc: 'Ikan salmon panggang dengan bumbu herb.'),
+  ProductItem(id: 'udang-saus-tiram',    name: 'Udang Saus Tiram',     price: 45000, emoji: '🦐', category: 'Makanan', desc: 'Udang segar dimasak dengan saus tiram gurih.'),
+  ProductItem(id: 'cah-kangkung',        name: 'Cah Kangkung',         price: 18000, emoji: '🥬', category: 'Makanan', desc: 'Tumis kangkung segar dengan bumbu bawang.'),
+  ProductItem(id: 'sup-wortel-kol',      name: 'Sup Wortel Kol',       price: 15000, emoji: '🍲', category: 'Makanan', desc: 'Sup hangat wortel dan kol yang menyegarkan.'),
+  // ── Minuman ──
+  ProductItem(id: 'es-teh-manis',        name: 'Es Teh Manis',         price: 8000,  emoji: '🍹', category: 'Minuman', desc: 'Teh segar dengan gula pilihan, pas manisnya.'),
+  ProductItem(id: 'es-sirup',            name: 'Es Sirup',             price: 10000, emoji: '🧊', category: 'Minuman', desc: 'Sirup rasa buah segar dengan es batu.'),
 ];
 
-const _categories = ['Semua', 'Minuman', 'Makanan', 'Snack', 'Dessert'];
+const _categories = ['Semua', 'Makanan', 'Minuman'];
 
 // ═══════════════════════════════════════════════
 //  POS SCREEN
@@ -75,6 +87,53 @@ class _PosScreenState extends State<PosScreen> {
   final List<CartItem> _cart = [];
   String _selectedCategory = 'Semua';
   final TextEditingController _searchCtrl = TextEditingController();
+  final RecipeService _recipeService = RecipeService();
+
+  List<ProductItem> _products = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecipes();
+  }
+
+  Future<void> _fetchRecipes() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final recipes = await _recipeService.getRecipes();
+      if (!mounted) return;
+
+      setState(() {
+        _products = recipes.map((r) => ProductItem.fromRecipe(r)).toList();
+        _isLoading = false;
+      });
+
+      // Update kategori dinamis dari data
+      _updateCategories();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _products = _dummyProducts;
+        _isLoading = false;
+        _errorMessage = 'Gagal memuat menu dari server. Menampilkan data offline.';
+      });
+    }
+  }
+
+  void _updateCategories() {
+    final cats = <String>{'Semua'};
+    for (final p in _products) {
+      cats.add(p.category);
+    }
+    // Update _categories secara dinamis (tidak bisa karena const, tapi dipakai
+    // di _CategoryChips — akan kita ganti nanti)
+  }
 
   List<ProductItem> get _filtered {
     var list = _products;
@@ -178,6 +237,8 @@ class _PosScreenState extends State<PosScreen> {
   // ═══════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
+    final cats = _getCategories();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFF),
       body: SafeArea(
@@ -187,10 +248,40 @@ class _PosScreenState extends State<PosScreen> {
             _SearchRow(controller: _searchCtrl, onChanged: (_) => setState(() {})),
             _CategoryChips(
               selected: _selectedCategory,
+              categories: cats,
               onSelect: (c) => setState(() => _selectedCategory = c),
             ),
+            // Error banner
+            if (_errorMessage != null)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3CD),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFFC107)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.wifi_off, size: 14, color: Color(0xFF856404)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF856404)),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: _fetchRecipes,
+                      child: const Text('Coba Lagi',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF856404))),
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
-              child: _buildProductList(),
+              child: _isLoading ? _buildLoading() : _buildProductList(),
             ),
             if (_cart.isNotEmpty)
               _CartBar(
@@ -201,6 +292,28 @@ class _PosScreenState extends State<PosScreen> {
             const _BottomNav(),
           ],
         ),
+      ),
+    );
+  }
+
+  List<String> _getCategories() {
+    final cats = <String>{'Semua'};
+    for (final p in _products) {
+      cats.add(p.category);
+    }
+    return cats.toList();
+  }
+
+  Widget _buildLoading() {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(color: Color(0xFF2563EB), strokeWidth: 2),
+          SizedBox(height: 12),
+          Text('Memuat menu...',
+              style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+        ],
       ),
     );
   }
@@ -389,8 +502,9 @@ class _SearchRow extends StatelessWidget {
 // ═══════════════════════════════════════════════
 class _CategoryChips extends StatelessWidget {
   final String selected;
+  final List<String> categories;
   final ValueChanged<String> onSelect;
-  const _CategoryChips({required this.selected, required this.onSelect});
+  const _CategoryChips({required this.selected, required this.categories, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
@@ -401,7 +515,7 @@ class _CategoryChips extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         child: Row(
-          children: _categories.map((cat) {
+          children: categories.map((cat) {
             final isActive = cat == selected;
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
