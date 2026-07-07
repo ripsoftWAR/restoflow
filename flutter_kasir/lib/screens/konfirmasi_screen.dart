@@ -257,9 +257,11 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+      ),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      border: const Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -468,11 +470,11 @@ class _ReceiptCard extends StatelessWidget {
                 // Header
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       flex: 3,
                       child: Text(
                         'ITEM (${cart.length})',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF6B7280),
@@ -480,7 +482,7 @@ class _ReceiptCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       width: 40,
                       child: Text(
                         'Qty',

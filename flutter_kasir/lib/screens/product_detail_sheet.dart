@@ -41,7 +41,7 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
   int _selectedSizeIdx = 0;
   final _noteCtrl = TextEditingController();
 
-  final List<_Addon> _addons = const [
+  final List<_Addon> _addons = [
     _Addon(name: 'Extra Shot Espresso', price: 5000),
     _Addon(name: 'Susu Oat', price: 6000),
     _Addon(name: 'Syrup Caramel', price: 4000),
