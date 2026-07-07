@@ -153,16 +153,38 @@ async function seed() {
   }
   console.log('   Total:', added, 'bahan baru');
 
-  // 3. Recipes
+  // 3. Recipes (normalized schema: recipes + recipe_ingredients)
   console.log('\n🍳 Menambah recipes...');
   const er = await db.query('SELECT COUNT(*) AS cnt FROM recipes WHERE restaurant_id = $1', [RESTAURANT_ID]);
   if (er.rows[0].cnt <= 1) {
     for (const recipe of RECIPES) {
+      // Insert ke tabel recipes (header)
+      const rRes = await db.query(
+        'INSERT INTO recipes (restaurant_id, name, category, price) VALUES ($1,$2,$3,$4) ON CONFLICT (restaurant_id, name) DO NOTHING RETURNING id',
+        [RESTAURANT_ID, recipe.menu_name, recipe.category, recipe.price]
+      );
+      let recipeId;
+      if (rRes.rows.length > 0) {
+        recipeId = rRes.rows[0].id;
+      } else {
+        // Already exists, get the id
+        const existing = await db.query(
+          'SELECT id FROM recipes WHERE name = $1 AND restaurant_id = $2',
+          [recipe.menu_name, RESTAURANT_ID]
+        );
+        recipeId = existing.rows[0]?.id;
+      }
+
+      if (!recipeId) { console.log('   SKIP', recipe.menu_name, '(gagal insert)'); continue; }
+
+      // Insert BOM items ke recipe_ingredients
       for (const ri of recipe.ingredients) {
         const ingId = ingredientMap.get(ri.name.toLowerCase());
         if (!ingId) continue;
-        await db.query('INSERT INTO recipes (restaurant_id,menu_name,ingredient_id,amount,category,price) VALUES ($1,$2,$3,$4,$5,$6)',
-          [RESTAURANT_ID, recipe.menu_name, ingId, ri.amount, recipe.category, recipe.price]);
+        await db.query(
+          'INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity) VALUES ($1,$2,$3) ON CONFLICT (recipe_id, ingredient_id) DO NOTHING',
+          [recipeId, ingId, ri.amount]
+        );
       }
       console.log('   OK', recipe.menu_name);
     }
@@ -172,7 +194,13 @@ async function seed() {
   const allIngs = await db.query('SELECT id,name,stock FROM ingredients WHERE restaurant_id=$1', [RESTAURANT_ID]);
   const ingById = {}; allIngs.rows.forEach(r => ingById[r.id] = r);
 
-  const recipeRows = await db.query('SELECT id,menu_name,ingredient_id,amount FROM recipes WHERE restaurant_id=$1', [RESTAURANT_ID]);
+  const recipeRows = await db.query(
+    `SELECT r.name AS menu_name, ri.ingredient_id, ri.quantity AS amount
+     FROM recipes r
+     JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+     WHERE r.restaurant_id = $1`,
+    [RESTAURANT_ID]
+  );
   const recipeByMenu = {};
   recipeRows.rows.forEach(r => { if (!recipeByMenu[r.menu_name]) recipeByMenu[r.menu_name] = []; recipeByMenu[r.menu_name].push(r); });
 
@@ -234,7 +262,7 @@ async function seed() {
   // Summary
   const cnt = await db.query('SELECT COUNT(*) FROM ingredients WHERE restaurant_id=$1', [RESTAURANT_ID]);
   const mov = await db.query('SELECT COUNT(*) FROM stock_movements WHERE restaurant_id=$1', [RESTAURANT_ID]);
-  const rec = await db.query('SELECT COUNT(DISTINCT menu_name) FROM recipes WHERE restaurant_id=$1', [RESTAURANT_ID]);
+  const rec = await db.query('SELECT COUNT(*) FROM recipes WHERE restaurant_id=$1', [RESTAURANT_ID]);
   console.log('\n============================================');
   console.log('  ✅ SEED SELESAI');
   console.log('  📦 Bahan   :', cnt.rows[0].count, 'item');

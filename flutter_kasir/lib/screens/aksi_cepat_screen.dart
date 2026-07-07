@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'pos_screen.dart';
 
 class AksiCepatScreen extends StatelessWidget {
   final VoidCallback onBack;
@@ -41,7 +42,23 @@ class AksiCepatScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        _ActionItem(icon: Icons.shopping_cart, label: 'Mulai Penjualan', sub: 'POS', color: const Color(0xFF2563EB), bgColor: const Color(0xFFEFF6FF), onTap: () => _showComingSoon(context, 'Mulai Penjualan')),
+                        _ActionItem(icon: Icons.shopping_cart, label: 'Mulai Penjualan', sub: 'POS', color: const Color(0xFF2563EB), bgColor: const Color(0xFFEFF6FF), onTap: () {
+                          Navigator.of(context).push(
+                            PageRouteBuilder(
+                              pageBuilder: (_, __, ___) => const PosScreen(),
+                              transitionsBuilder: (_, anim, __, child) {
+                                return SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(1, 0),
+                                    end: Offset.zero,
+                                  ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+                                  child: child,
+                                );
+                              },
+                              transitionDuration: const Duration(milliseconds: 300),
+                            ),
+                          );
+                        }),
                         _ActionItem(icon: Icons.history, label: 'Riwayat Transaksi', sub: 'Lihat Semua', color: const Color(0xFF9333EA), bgColor: const Color(0xFFF3E8FF), onTap: () => _showComingSoon(context, 'Riwayat Transaksi')),
                         _ActionItem(icon: Icons.assignment_return_outlined, label: 'Retur', sub: 'Retur Penjualan', color: const Color(0xFFEA580C), bgColor: const Color(0xFFFFF7ED), onTap: () => _showComingSoon(context, 'Retur')),
                         _ActionItem(icon: Icons.local_offer_outlined, label: 'Voucher', sub: 'Kelola Voucher', color: const Color(0xFFEF4444), bgColor: const Color(0xFFFEF2F2), onTap: () => _showComingSoon(context, 'Voucher')),

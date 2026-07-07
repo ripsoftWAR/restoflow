@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
-import { Printer, ShoppingCart, Package, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Printer, ShoppingCart, Package, AlertTriangle, RefreshCw, WifiOff } from 'lucide-react';
+import { apiFetch } from '../../../utils/api';
 import type { Ingredient } from '../../../types';
 
 const formatIDR = (n: number) =>
@@ -7,7 +8,9 @@ const formatIDR = (n: number) =>
 
 /* ═══════════════════════════════════════════════════════════════
    RekomendasiBelanja — tab restock recommendation
-   Grid card 3 kolom dengan data real dari ingredients
+   Fetch dari backend API /api/ingredients/rekomendasi,
+   fallback ke client-side jika API gagal.
+   Grid card 3 kolom.
    ═══════════════════════════════════════════════════════════════ */
 
 interface Props {
@@ -21,10 +24,54 @@ interface RestockItem {
   minStock: number;
   buyQty: number;
   estCost: number;
+  status?: 'habis' | 'kritis' | 'akan_habis';
 }
 
-const THRESHOLD_MULTIPLIER = 1.3; // stok < min_stock * 1.3 masuk rekomendasi
-const RESTOCK_FACTOR = 1.5; // beli sampai 1.5 × min_stock
+interface RekomendasiResponse {
+  items: RestockItem[];
+  grandTotal: number;
+  criticalCount: number;
+  totalItems: number;
+}
+
+const THRESHOLD_MULTIPLIER = 1.3;
+const RESTOCK_FACTOR = 1.5;
+
+/* ── Client-side fallback logic ── */
+function computeClientSide(ingredients: Ingredient[]): RestockItem[] {
+  return ingredients
+    .filter((ing) => {
+      const stock = Number(ing.stock) || 0;
+      const min = Number(ing.min_stock) || 0;
+      if (min <= 0) return false;
+      return stock < min * THRESHOLD_MULTIPLIER;
+    })
+    .map((ing) => {
+      const currentStock = Number(ing.stock) || 0;
+      const minStock = Number(ing.min_stock) || 0;
+      const targetStock = Math.round(minStock * RESTOCK_FACTOR * 10) / 10;
+      const buyQty = Math.max(
+        Math.round(minStock * 0.5 * 10) / 10,
+        Math.round((targetStock - currentStock) * 10) / 10,
+      );
+      const unitPrice = Number(ing.unit_price) || 0;
+      const conversionFactor = Number(ing.conversion_factor) || 1;
+      return {
+        ingredient: ing,
+        currentStock,
+        minStock,
+        buyQty: Math.max(0, buyQty),
+        estCost: (buyQty / conversionFactor) * unitPrice,
+        status: currentStock <= 0 ? 'habis' : currentStock <= minStock ? 'kritis' : 'akan_habis',
+      } as RestockItem;
+    })
+    .sort((a, b) => {
+      const aCrit = a.currentStock <= a.minStock ? 0 : 1;
+      const bCrit = b.currentStock <= b.minStock ? 0 : 1;
+      if (aCrit !== bCrit) return aCrit - bCrit;
+      return b.estCost - a.estCost;
+    });
+}
 
 function StatusBadge({ current, min }: { current: number; min: number }) {
   if (current <= 0) {
@@ -52,44 +99,53 @@ function StatusBadge({ current, min }: { current: number; min: number }) {
 }
 
 export default function RekomendasiBelanja({ ingredients, onNavigate }: Props) {
-  const items: RestockItem[] = useMemo(() => {
-    return ingredients
-      .filter((ing) => {
-        const stock = Number(ing.stock) || 0;
-        const min = Number(ing.min_stock) || 0;
-        if (min <= 0) return false;
-        return stock < min * THRESHOLD_MULTIPLIER;
-      })
-      .map((ing) => {
-        const currentStock = Number(ing.stock) || 0;
-        const minStock = Number(ing.min_stock) || 0;
-        const targetStock = Math.round(minStock * RESTOCK_FACTOR * 10) / 10;
-        const buyQty = Math.max(
-          Math.round(minStock * 0.5 * 10) / 10,
-          Math.round((targetStock - currentStock) * 10) / 10,
-        );
-        const unitPrice = Number(ing.unit_price) || 0;
-        return {
-          ingredient: ing,
-          currentStock,
-          minStock,
-          buyQty: Math.max(0, buyQty),
-          estCost: buyQty * unitPrice,
-        };
-      })
-      .sort((a, b) => {
-        const aCrit = a.currentStock <= a.minStock ? 0 : 1;
-        const bCrit = b.currentStock <= b.minStock ? 0 : 1;
-        if (aCrit !== bCrit) return aCrit - bCrit;
-        return b.estCost - a.estCost;
-      });
-  }, [ingredients]);
+  const [serverItems, setServerItems] = useState<RestockItem[] | null>(null);
+  const [serverGrandTotal, setServerGrandTotal] = useState<number | null>(null);
+  const [serverCriticalCount, setServerCriticalCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isFromServer, setIsFromServer] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const grandTotal = useMemo(() => items.reduce((s, i) => s + i.estCost, 0), [items]);
-  const criticalCount = items.filter((i) => i.currentStock <= i.minStock).length;
+  /* ── Fetch dari backend ── */
+  const fetchRekomendasi = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch('/api/ingredients/rekomendasi');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: RekomendasiResponse = await res.json();
+      setServerItems(data.items);
+      setServerGrandTotal(data.grandTotal);
+      setServerCriticalCount(data.criticalCount);
+      setIsFromServer(true);
+    } catch (err: any) {
+      console.warn('[RekomendasiBelanja] Gagal fetch API, fallback ke client-side:', err.message);
+      setError(err.message);
+      setServerItems(null);
+      setServerGrandTotal(null);
+      setServerCriticalCount(null);
+      setIsFromServer(false);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRekomendasi();
+  }, [fetchRekomendasi]);
+
+  /* ── Client-side fallback ── */
+  const clientItems = useMemo(() => computeClientSide(ingredients), [ingredients]);
+  const clientGrandTotal = useMemo(() => clientItems.reduce((s, i) => s + i.estCost, 0), [clientItems]);
+  const clientCriticalCount = useMemo(() => clientItems.filter(i => i.currentStock <= i.minStock).length, [clientItems]);
+
+  /* ── Final data (server first, fallback client) ── */
+  const items = isFromServer && serverItems ? serverItems : clientItems;
+  const grandTotal = isFromServer && serverGrandTotal !== null ? serverGrandTotal : clientGrandTotal;
+  const criticalCount = isFromServer && serverCriticalCount !== null ? serverCriticalCount : clientCriticalCount;
 
   /* ── Print struk belanja ── */
-  const handlePrint = () => {
+  const handlePrint = useCallback(() => {
     const now = new Date();
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
@@ -144,7 +200,17 @@ export default function RekomendasiBelanja({ ingredients, onNavigate }: Props) {
     `);
     win.document.close();
     setTimeout(() => win.print(), 400);
-  };
+  }, [items, grandTotal]);
+
+  /* ── Loading state ── */
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+        <div className="w-10 h-10 rounded-full border-[3px] border-pp-border border-t-pp-primary animate-spin mb-4" />
+        <p className="text-sm font-medium text-pp-text-muted">Memuat rekomendasi belanja...</p>
+      </div>
+    );
+  }
 
   /* ── Empty state ── */
   if (items.length === 0) {
@@ -172,13 +238,31 @@ export default function RekomendasiBelanja({ ingredients, onNavigate }: Props) {
             Disusun otomatis berdasarkan stok kritis dan pola pemakaian.
           </p>
         </div>
-        <button
-          onClick={handlePrint}
-          className="flex items-center gap-1.5 px-3 py-2 bg-pp-surface border border-pp-border rounded-pp-md text-[12px] font-medium text-pp-text-secondary hover:text-pp-text hover:border-pp-text-muted transition cursor-pointer"
-        >
-          <Printer size={13} strokeWidth={1.8} />
-          Cetak Daftar
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Badge data source */}
+          {!isFromServer && (
+            <span className="inline-flex items-center gap-1 text-[10px] text-pp-warning bg-pp-warning-soft px-2 py-1 rounded-pp-xs font-medium">
+              <WifiOff size={10} />
+              Offline
+            </span>
+          )}
+          {/* Refresh button */}
+          <button
+            onClick={fetchRekomendasi}
+            disabled={loading}
+            className="flex items-center gap-1 px-2.5 py-2 bg-pp-surface border border-pp-border rounded-pp-md text-[11px] text-pp-text-muted hover:text-pp-primary hover:border-pp-primary/30 transition cursor-pointer disabled:opacity-50"
+            title="Refresh rekomendasi"
+          >
+            <RefreshCw size={12} strokeWidth={2} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-1.5 px-3 py-2 bg-pp-surface border border-pp-border rounded-pp-md text-[12px] font-medium text-pp-text-secondary hover:text-pp-text hover:border-pp-text-muted transition cursor-pointer"
+          >
+            <Printer size={13} strokeWidth={1.8} />
+            Cetak Daftar
+          </button>
+        </div>
       </div>
 
       {/* Alert banner */}

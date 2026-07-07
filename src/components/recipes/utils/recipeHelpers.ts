@@ -41,7 +41,11 @@ export const calculateHPP = (
   return recipe.items.reduce((total, item) => {
     const ing = getIngredientById(ingredients, item.ingredient_id);
     if (!ing) return total;
-    return total + item.amount * (ing.unit_price || 0);
+    // Konversi: unit_price per BUY unit → harga per BASE unit
+    const conversion = (ing.conversion_factor && ing.conversion_factor > 0)
+      ? ing.conversion_factor
+      : 1;
+    return total + item.amount * ((ing.unit_price || 0) / conversion);
   }, 0);
 };
 

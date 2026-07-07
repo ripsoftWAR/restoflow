@@ -25,10 +25,15 @@ export const getDishPrice = (
   }
 
   // Priority 2: HPP × 1.5 from recipe items + ingredient unit_price
+  // unit_price disimpan per BUY unit (kg/liter/botol), bukan per base unit (gram/ml).
+  // Konversi: (unit_price / conversion_factor) × item.amount
   if (recipe?.items?.length) {
     const hpp = recipe.items.reduce((sum, item) => {
       const ingredient = ingredients.find(i => i.id === item.ingredient_id);
-      return sum + (item.amount || 0) * (ingredient?.unit_price || 0);
+      const conversion = (ingredient?.conversion_factor && ingredient.conversion_factor > 0)
+        ? ingredient.conversion_factor
+        : 1;
+      return sum + (item.amount || 0) * ((ingredient?.unit_price || 0) / conversion);
     }, 0);
     if (hpp > 0) return Math.max(1000, Math.round(hpp * 1.5));
   }

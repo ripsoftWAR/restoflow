@@ -133,7 +133,10 @@ router.post('/verify-credentials', async (req: Request, res: Response) => {
 router.post('/verify-pin', async (req: Request, res: Response) => {
   const { username, pin, shift_id } = req.body;
 
+  console.log('[verify-pin] Request masuk:', { username, pinLength: String(pin).length, shift_id });
+
   if (!username || !pin) {
+    console.log('[verify-pin] ❌ Username atau PIN kosong');
     return res.status(400).json({ error: 'Username dan PIN wajib diisi' });
   }
 
@@ -145,17 +148,24 @@ router.post('/verify-pin', async (req: Request, res: Response) => {
     const user = userSearch.rows[0];
 
     if (!user) {
+      console.log('[verify-pin] ❌ User tidak ditemukan:', username);
       return res.status(401).json({ error: 'Akun tidak ditemukan atau dinonaktifkan' });
     }
 
+    console.log('[verify-pin] User ditemukan:', { id: user.id, username: user.username, hasPin: !!user.pin, role: user.role });
+
     if (!user.pin) {
+      console.log('[verify-pin] ❌ PIN belum diset untuk user:', user.username);
       return res.status(401).json({ error: 'PIN belum diset. Hubungi pemilik restoran.' });
     }
 
     const isPinValid = bcrypt.compareSync(String(pin), user.pin);
     if (!isPinValid) {
+      console.log('[verify-pin] ❌ PIN tidak cocok untuk user:', user.username, '| PIN input length:', String(pin).length);
       return res.status(401).json({ error: 'PIN salah. Coba lagi.' });
     }
+
+    console.log('[verify-pin] ✅ PIN valid, lanjut buat session...');
 
     const shiftSearch = await db.query(
       'SELECT * FROM shifts WHERE id = $1 AND restaurant_id = $2',

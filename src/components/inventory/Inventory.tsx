@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Filter, Bell, LayoutGrid, Scan, ShoppingCart, ChevronDown, HelpCircle } from 'lucide-react';
+import { Filter, Bell, LayoutGrid, Scan, ShoppingCart, ChevronDown, HelpCircle, Search, Plus } from 'lucide-react';
 import type { Ingredient, AuthSession, Sale, MovementLog } from '../../types';
 import { useInventoryState } from './hooks/useInventoryState';
 
@@ -67,6 +67,7 @@ export default function Inventory({
 }: InventoryProps) {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [dateRange, setDateRange] = useState<DateRangeValue>({ preset: '30d' });
+  const [searchExpanded, setSearchExpanded] = useState(false);
 
   /* ── Inventory state (search, filter, modals) ── */
   const {
@@ -181,48 +182,88 @@ export default function Inventory({
       </div>
 
       {/* ═══════════════════════════════════════════════
-          TAB BAR — hanya tabs, tanpa search/filter
+          TAB BAR — tabs di ujung kiri, search+plus sejajar kanan col-span-6
           ═══════════════════════════════════════════════ */}
-      <div className="flex items-center border-b border-[#E9ECF5] mb-5">
-        <div className="flex gap-[22px]">
-          {TABS.map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-[7px] px-0.5 pb-3 text-[14px] font-medium border-b-[2px] transition-colors cursor-pointer ${
-                  activeTab === tab.id
-                    ? 'text-[#2E4FE0] font-semibold border-[#2E4FE0]'
-                    : 'text-[#6B7280] border-transparent hover:text-[#2E4FE0]'
-                }`}
-              >
-                <Icon size={15} strokeWidth={2} />
-                {tab.label}
-              </button>
-            );
-          })}
+      <div className="grid grid-cols-12 gap-5 border-b border-[#E9ECF5] mb-5">
+        {/* col-span-3: tabs di ujung kiri — sejajar sidebar */}
+        <div className="col-span-3 flex items-end">
+          <div className="flex gap-1 whitespace-nowrap">
+            {TABS.map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-[7px] px-0.5 pb-3 text-[13px] font-medium border-b-[2px] transition-colors cursor-pointer flex-shrink-0 ${
+                    activeTab === tab.id
+                      ? 'text-[#2E4FE0] font-semibold border-[#2E4FE0]'
+                      : 'text-[#6B7280] border-transparent hover:text-[#2E4FE0]'
+                  }`}
+                >
+                  <Icon size={15} strokeWidth={2} />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* col-span-6: search + plus di ujung kanan — sejajar kanan detail card */}
+        <div className="col-span-6 flex items-end justify-end flex-shrink-0">
+          <div className="flex items-center gap-1 pb-1">
+            {searchExpanded ? (
+              <div className="relative">
+                <Search size={14} strokeWidth={1.8} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pp-text-placeholder" />
+                <input
+                  type="text"
+                  placeholder="Cari bahan..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  onBlur={() => { if (!search) setSearchExpanded(false); }}
+                  onKeyDown={e => { if (e.key === 'Escape') { setSearch(''); setSearchExpanded(false); } }}
+                  autoFocus
+                  className="w-[150px] pl-8 pr-3 py-[6px] bg-pp-bg border border-pp-border rounded-pp-md text-[12px] text-pp-text placeholder:text-pp-text-placeholder focus:outline-none focus:ring-2 focus:ring-pp-primary/20 focus:border-pp-primary transition"
+                />
+              </div>
+            ) : (
+              <button
+                onClick={() => setSearchExpanded(true)}
+                className="w-[30px] h-[30px] flex items-center justify-center rounded-pp-md text-pp-text-muted hover:text-pp-primary hover:bg-pp-primary-soft transition cursor-pointer"
+                title="Cari bahan"
+              >
+                <Search size={16} strokeWidth={1.8} />
+              </button>
+            )}
+            <button
+              onClick={() => openModal('add')}
+              className="w-[30px] h-[30px] flex items-center justify-center rounded-pp-md text-pp-text-muted hover:text-pp-primary hover:bg-pp-primary-soft transition cursor-pointer"
+              title="Tambah bahan baru"
+            >
+              <Plus size={16} strokeWidth={1.8} />
+            </button>
+          </div>
+        </div>
+
+        {/* col-span-3: kosong, sejajar sidebar kanan */}
+        <div className="col-span-3" />
       </div>
 
       {/* ═══════════════════════════════════════════════
           3-COLUMN GRID — KHUSUS INVENTORI
           ═══════════════════════════════════════════════ */}
-      <div className="grid grid-cols-12 gap-5 items-start">
+      <div className="grid grid-cols-12 gap-5">
         {/* ── KOLOM KIRI: Daftar Bahan (col-span-3, ~25%) ── */}
-        <div className="col-span-3">
+        <div className="col-span-3 flex flex-col min-h-0">
           <IngredientListSidebar
             ingredients={ingredients}
             selectedId={selectedId}
             onSelect={handleSelectIngredient}
             search={search}
-            onSearchChange={setSearch}
             activeCategory={activeCategory}
             categories={categories}
             onCategoryChange={setActiveCategory}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
-            onAdd={() => openModal('add')}
             totalCount={ingredients.length}
           />
         </div>

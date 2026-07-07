@@ -60,7 +60,7 @@ router.get('/stats', requireAuth, async (req, res) => {
       `SELECT COALESCE(SUM(
         CASE 
           WHEN m.total_price IS NOT NULL AND m.total_price > 0 THEN m.total_price
-          ELSE COALESCE(i.unit_price, 0) * m.amount
+          ELSE COALESCE(i.unit_price, 0) / NULLIF(i.conversion_factor, 0) * m.amount
         END
       ), 0)::float as daily_expense
        FROM movement_log m

@@ -42,9 +42,14 @@ export default function RecipeBuilder({
   const existingCats = Array.from(new Set(recipes.map(r => r.category || 'Makanan')));
 
   // Live HPP calculation for preview
+  // unit_price disimpan per BUY unit (kg/liter/botol) — harus dikonversi ke base unit
   const liveHPP = recipeLines.reduce((total, line) => {
     const ing = ingredients.find(i => i.id === line.ingredient_id);
-    return total + line.amount * (ing?.unit_price || 0);
+    if (!ing) return total;
+    const conversion = (ing.conversion_factor && ing.conversion_factor > 0)
+      ? ing.conversion_factor
+      : 1;
+    return total + line.amount * ((ing.unit_price || 0) / conversion);
   }, 0);
   const liveMargin = calculateMarginPct(liveHPP, parseFloat(menuPrice) || 0);
 

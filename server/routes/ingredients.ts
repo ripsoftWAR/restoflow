@@ -25,6 +25,79 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════
+// GET /api/ingredients/rekomendasi — rekomendasi belanja otomatis
+// Harus di ATAS route /:id agar tidak bentrok
+// ═══════════════════════════════════════════════════════════════
+router.get('/rekomendasi', async (req, res) => {
+  const restaurantId = req.user!.restaurant_id;
+  const thresholdMul = Math.max(1.0, Math.min(3.0, Number(req.query.threshold_multiplier) || 1.3));
+  const restockFactor = Math.max(1.0, Math.min(5.0, Number(req.query.restock_factor) || 1.5));
+
+  try {
+    const result = await db.query(
+      `SELECT id, name, category, supplier, stock, base_unit, min_stock,
+              unit_price, buy_unit, conversion_factor
+       FROM ingredients
+       WHERE restaurant_id = $1
+         AND min_stock > 0
+         AND stock < (min_stock * $2)
+       ORDER BY
+         CASE WHEN stock <= min_stock THEN 0 ELSE 1 END ASC,
+         (stock::numeric / NULLIF(min_stock, 0)::numeric) ASC`,
+      [restaurantId, thresholdMul]
+    );
+
+    const items = result.rows.map((ing: any) => {
+      const currentStock = Number(ing.stock) || 0;
+      const minStock = Number(ing.min_stock) || 0;
+      const targetStock = Math.round(minStock * restockFactor * 10) / 10;
+      const buyQty = Math.max(
+        Math.round(minStock * 0.5 * 10) / 10,
+        Math.round((targetStock - currentStock) * 10) / 10,
+      );
+      const unitPrice = Number(ing.unit_price) || 0;
+      const conversionFactor = Number(ing.conversion_factor) || 1;
+      const estCost = conversionFactor > 0
+        ? (buyQty / conversionFactor) * unitPrice
+        : buyQty * unitPrice;
+
+      return {
+        ingredient: {
+          id: ing.id,
+          name: ing.name,
+          category: ing.category,
+          supplier: ing.supplier,
+          stock: currentStock,
+          base_unit: ing.base_unit,
+          min_stock: minStock,
+          unit_price: unitPrice,
+          buy_unit: ing.buy_unit,
+          conversion_factor: conversionFactor,
+        },
+        currentStock,
+        minStock,
+        buyQty: Math.max(0, Math.round(buyQty * 10) / 10),
+        estCost: Math.round(estCost * 100) / 100,
+        status: currentStock <= 0 ? 'habis' : currentStock <= minStock ? 'kritis' : 'akan_habis',
+      };
+    });
+
+    const grandTotal = items.reduce((sum, i) => sum + i.estCost, 0);
+    const criticalCount = items.filter(i => i.currentStock <= i.minStock).length;
+
+    res.json({
+      items,
+      grandTotal: Math.round(grandTotal * 100) / 100,
+      criticalCount,
+      totalItems: items.length,
+    });
+  } catch (err: any) {
+    console.error('[GET /api/ingredients/rekomendasi] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST create new ingredient
 router.post('/', async (req, res) => {
   const restaurantId = req.user!.restaurant_id;
@@ -137,7 +210,10 @@ router.delete('/:id', async (req, res) => {
     const ing = ingRes.rows[0];
     if (!ing) return res.status(404).json({ error: 'Bahan tidak ditemukan' });
 
-    const recipeCheck = await db.query('SELECT COUNT(*) FROM recipes WHERE ingredient_id = $1 AND restaurant_id = $2', [id, restaurantId]);
+    const recipeCheck = await db.query(
+      'SELECT COUNT(*) FROM recipe_ingredients WHERE ingredient_id = $1',
+      [id]
+    );
     if (parseInt(recipeCheck.rows[0].count) > 0) {
       return res.status(400).json({ error: `Bahan "${ing.name}" masih digunakan di resep.` });
     }

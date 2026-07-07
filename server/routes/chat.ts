@@ -185,9 +185,12 @@ const executeTool = async (toolName: string, toolInput: any, restaurantId: numbe
 
     if (toolName === 'get_recipes') {
       const res = await db.query(
-        `SELECT r.menu_name, r.category, i.name as ingredient_name, r.amount, i.base_unit
-         FROM recipes r JOIN ingredients i ON r.ingredient_id = i.id
-         WHERE r.restaurant_id = $1 ORDER BY r.menu_name`,
+        `SELECT r.name AS menu_name, r.category, i.name AS ingredient_name, ri.quantity AS amount, i.base_unit
+         FROM recipes r
+         JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+         JOIN ingredients i ON ri.ingredient_id = i.id
+         WHERE r.restaurant_id = $1 AND r.is_active = true
+         ORDER BY r.name`,
         [restaurantId]
       );
       if (!res.rows.length) return { result: 'Belum ada resep terdaftar.', actions };
@@ -247,7 +250,26 @@ const executeTool = async (toolName: string, toolInput: any, restaurantId: numbe
       const ingRes = await selectIngredientsForRestaurant(restaurantId);
       const ingredientsList = ingRes.rows;
 
-      await db.query('DELETE FROM recipes WHERE menu_name = $1 AND restaurant_id = $2', [menu_name, restaurantId]);
+      // Upsert: delete existing recipe_ingredients, then re-insert
+      const existingRecipe = await db.query(
+        'SELECT id FROM recipes WHERE name = $1 AND restaurant_id = $2',
+        [menu_name, restaurantId]
+      );
+      let recipeId: number;
+      if (existingRecipe.rowCount && existingRecipe.rowCount > 0) {
+        recipeId = existingRecipe.rows[0].id;
+        await db.query('DELETE FROM recipe_ingredients WHERE recipe_id = $1', [recipeId]);
+        await db.query(
+          'UPDATE recipes SET category = $1, updated_at = NOW() WHERE id = $2',
+          [category || 'Makanan', recipeId]
+        );
+      } else {
+        const ins = await db.query(
+          'INSERT INTO recipes (restaurant_id, name, category) VALUES ($1,$2,$3) RETURNING id',
+          [restaurantId, menu_name, category || 'Makanan']
+        );
+        recipeId = ins.rows[0].id;
+      }
 
       for (const item of items) {
         let mappedId = findMappedIngredient(item.ingredient_name, ingredientsList);
@@ -257,8 +279,8 @@ const executeTool = async (toolName: string, toolInput: any, restaurantId: numbe
           mappedId = insertIng.rows[0].id;
         }
         await db.query(
-          `INSERT INTO recipes (restaurant_id, menu_name, category, ingredient_id, amount) VALUES ($1, $2, $3, $4, $5)`,
-          [restaurantId, menu_name, category || 'Makanan', mappedId, item.amount]
+          'INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity) VALUES ($1, $2, $3)',
+          [recipeId, mappedId, item.amount]
         );
       }
       actions.push({ type: 'REFRESH_DATA' });

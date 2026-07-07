@@ -48,7 +48,11 @@ function buildHPPMap(
 ): Map<string, number> {
   const ingPriceMap = new Map<number, number>();
   ingredients.forEach(ing => {
-    ingPriceMap.set(ing.id, Number(ing.unit_price) || 0);
+    // Konversi: unit_price per BUY unit → harga per BASE unit
+    const cf = (ing.conversion_factor && ing.conversion_factor > 0)
+      ? Number(ing.conversion_factor)
+      : 1;
+    ingPriceMap.set(ing.id, (Number(ing.unit_price) || 0) / cf);
   });
   const hppMap = new Map<string, number>();
   recipes.forEach(r => {

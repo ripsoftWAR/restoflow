@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Konfirmasi Pembayaran – PilotPOS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f6fa;
+      --white: #ffffff;
+      --blue: #1a3fcb;
+      --blue-light: #e8edff;
+      --green: #16a34a;
+      --green-light: #dcfce7;
+      --red: #dc2626;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --border: #e5e7eb;
+      --border-dashed: #d1d5db;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 4px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* Phone frame */
+    .phone {
+      width: 390px;
+      min-height: 844px;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px 8px;
+      background: var(--white);
+    }
+    .status-bar .time { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .status-bar .icons { display: flex; gap: 6px; align-items: center; }
+    .status-bar .icons svg { width: 16px; height: 16px; fill: var(--text-primary); }
+
+    /* Header */
+    .header {
+      background: var(--white);
+      padding: 8px 16px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .back-btn {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; cursor: pointer;
+      color: var(--text-primary);
+    }
+    .header-title h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+    .header-title p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Main scroll area */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Success banner */
+    .success-banner {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow);
+    }
+    .success-icon {
+      width: 40px; height: 40px;
+      background: var(--green-light);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .success-icon svg { width: 20px; height: 20px; stroke: var(--green); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .success-text h2 { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+    .success-text p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* Receipt card */
+    .receipt-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    /* Store header */
+    .store-header {
+      padding: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      border-bottom: 1px dashed var(--border-dashed);
+    }
+    .store-icon {
+      width: 44px; height: 44px;
+      background: var(--blue-light);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .store-icon svg { width: 22px; height: 22px; stroke: var(--blue); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .store-info h3 { font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: .02em; }
+    .store-info p { font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.5; }
+
+    /* Receipt section label */
+    .receipt-label {
+      text-align: center;
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      border-bottom: 1px dashed var(--border-dashed);
+    }
+
+    /* Meta rows */
+    .meta-section {
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px dashed var(--border-dashed);
+    }
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .meta-row .label { font-size: 12px; color: var(--text-secondary); }
+    .meta-row .value { font-size: 12px; color: var(--text-primary); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+    /* Items section */
+    .items-section {
+      padding: 12px 16px;
+      border-bottom: 1px dashed var(--border-dashed);
+    }
+    .items-header {
+      display: grid;
+      grid-template-columns: 1fr 40px 80px;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .items-header span {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .items-header span:not(:first-child) { text-align: right; }
+    .item-row {
+      display: grid;
+      grid-template-columns: 1fr 40px 80px;
+      gap: 4px;
+      padding: 5px 0;
+    }
+    .item-row .item-name { font-size: 13px; color: var(--text-primary); }
+    .item-row .item-qty { font-size: 13px; color: var(--text-secondary); text-align: right; }
+    .item-row .item-sub { font-size: 13px; color: var(--text-primary); text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* Totals section */
+    .totals-section {
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px dashed var(--border-dashed);
+    }
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .totals-row .t-label { font-size: 13px; color: var(--text-secondary); }
+    .totals-row .t-value { font-size: 13px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .totals-row.discount .t-label { color: var(--green); font-weight: 600; }
+    .totals-row.discount .t-value { color: var(--green); font-weight: 600; }
+    .totals-row.grand-total .t-label { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    .totals-row.grand-total .t-value { font-size: 15px; font-weight: 800; color: var(--text-primary); }
+
+    /* Payment detail */
+    .payment-section {
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px dashed var(--border-dashed);
+    }
+    .payment-row {
+      display: flex;
+      justify-content: space-between;
+    }
+    .payment-row .p-label { font-size: 13px; color: var(--text-secondary); }
+    .payment-row .p-value { font-size: 13px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .payment-row.kembalian .p-label { font-weight: 700; color: var(--text-primary); }
+    .payment-row.kembalian .p-value { font-weight: 800; color: var(--text-primary); font-size: 14px; }
+
+    /* Thank you */
+    .thankyou {
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .thankyou p { font-size: 12px; color: var(--text-muted); }
+    .thankyou .dashes { font-size: 12px; color: var(--text-muted); letter-spacing: .1em; margin-bottom: 2px; }
+
+    /* Summary chips */
+    .summary-chips {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .chip {
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      padding: 10px 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow);
+    }
+    .chip-icon {
+      width: 30px; height: 30px;
+      background: var(--blue-light);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .chip-icon svg { width: 15px; height: 15px; stroke: var(--blue); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .chip-text .chip-label { font-size: 10px; color: var(--text-secondary); }
+    .chip-text .chip-value { font-size: 12px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+    /* Action rows */
+    .action-list {
+      background: var(--white);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .action-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: background .15s;
+      text-decoration: none;
+    }
+    .action-item:not(:last-child) { border-bottom: 1px solid var(--border); }
+    .action-item:hover { background: #f9fafb; }
+    .action-item-icon {
+      width: 38px; height: 38px;
+      background: var(--blue-light);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .action-item-icon svg { width: 18px; height: 18px; stroke: var(--blue); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .action-text { flex: 1; }
+    .action-text h4 { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .action-text p { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+    .action-chevron { color: var(--text-muted); }
+    .action-chevron svg { width: 16px; height: 16px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Bottom buttons */
+    .bottom-buttons {
+      padding: 12px 16px 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: var(--bg);
+    }
+    .btn {
+      height: 48px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .88; }
+    .btn-outline {
+      background: var(--white);
+      color: var(--text-primary);
+      border: 1.5px solid var(--border);
+    }
+    .btn-primary {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    /* Bottom nav */
+    .bottom-nav {
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      padding: 8px 0 20px;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      padding: 4px 0;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+    .nav-item.active { color: var(--blue); }
+    .nav-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-item span { font-size: 10px; font-weight: 500; }
+
+    /* Divider in totals */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 2px 0; }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="time">9:30</span>
+    <div class="icons">
+      <!-- Signal -->
+      <svg viewBox="0 0 24 24"><rect x="2" y="14" width="3" height="7" rx="1"/><rect x="7" y="10" width="3" height="11" rx="1"/><rect x="12" y="6" width="3" height="15" rx="1"/><rect x="17" y="2" width="3" height="19" rx="1"/></svg>
+      <!-- WiFi -->
+      <svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+      <!-- Battery -->
+      <svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="1" y="6" width="18" height="12" rx="2"/><path d="M23 13v-2"/><rect x="3" y="8" width="14" height="8" rx="1" fill="currentColor" stroke="none"/></svg>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <button class="back-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="header-title">
+        <h1>Konfirmasi Pembayaran</h1>
+        <p>Transaksi berhasil diselesaikan</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scrollable content -->
+  <div class="content">
+
+    <!-- Success banner -->
+    <div class="success-banner">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="success-text">
+        <h2>Pembayaran Berhasil</h2>
+        <p>Transaksi telah berhasil diselesaikan</p>
+      </div>
+    </div>
+
+    <!-- Receipt card -->
+    <div class="receipt-card">
+
+      <!-- Store info -->
+      <div class="store-header">
+        <div class="store-icon">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <div class="store-info">
+          <h3>TOKO MAJU JAYA</h3>
+          <p>Jl. Merdeka No. 123, Jakarta Pusat<br>Telp. (021) 1234 5678</p>
+        </div>
+      </div>
+
+      <!-- Receipt label -->
+      <div class="receipt-label">Struk Pembayaran</div>
+
+      <!-- Transaction meta -->
+      <div class="meta-section">
+        <div class="meta-row">
+          <span class="label">No. Transaksi</span>
+          <span class="value">TRX-29062025-0012</span>
+        </div>
+        <div class="meta-row">
+          <span class="label">Tanggal</span>
+          <span class="value">29 Jun 2025, 15:45</span>
+        </div>
+        <div class="meta-row">
+          <span class="label">Kasir</span>
+          <span class="value">Kasir A</span>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div class="items-section">
+        <div class="items-header">
+          <span>ITEM (4)</span>
+          <span>Qty</span>
+          <span>Subtotal</span>
+        </div>
+        <div class="item-row">
+          <span class="item-name">Teh Botol Sosro 450ml</span>
+          <span class="item-qty">1</span>
+          <span class="item-sub">Rp7.000</span>
+        </div>
+        <div class="item-row">
+          <span class="item-name">Indomie Goreng</span>
+          <span class="item-qty">2</span>
+          <span class="item-sub">Rp6.000</span>
+        </div>
+        <div class="item-row">
+          <span class="item-name">Aqua Botol 600ml</span>
+          <span class="item-qty">1</span>
+          <span class="item-sub">Rp4.000</span>
+        </div>
+        <div class="item-row">
+          <span class="item-name">Biskuit Roma Kelapa</span>
+          <span class="item-qty">1</span>
+          <span class="item-sub">Rp4.000</span>
+        </div>
+      </div>
+
+      <!-- Totals -->
+      <div class="totals-section">
+        <div class="totals-row">
+          <span class="t-label">Subtotal</span>
+          <span class="t-value">Rp91.000</span>
+        </div>
+        <div class="totals-row discount">
+          <span class="t-label">Diskon (HEMAT10)</span>
+          <span class="t-value">-Rp9.100</span>
+        </div>
+        <hr class="divider">
+        <div class="totals-row grand-total">
+          <span class="t-label">Total Pembayaran</span>
+          <span class="t-value">Rp81.900</span>
+        </div>
+      </div>
+
+      <!-- Payment details -->
+      <div class="payment-section">
+        <div class="payment-row">
+          <span class="p-label">Metode Pembayaran</span>
+          <span class="p-value">Tunai</span>
+        </div>
+        <div class="payment-row">
+          <span class="p-label">Uang Diterima</span>
+          <span class="p-value">Rp100.000</span>
+        </div>
+        <div class="payment-row kembalian">
+          <span class="p-label">Kembalian</span>
+          <span class="p-value">Rp18.100</span>
+        </div>
+      </div>
+
+      <!-- Thank you -->
+      <div class="thankyou">
+        <p class="dashes">-- TERIMA KASIH --</p>
+        <p>Atas kunjungan Anda</p>
+      </div>
+
+    </div><!-- /receipt-card -->
+
+    <!-- Summary chips -->
+    <div class="summary-chips">
+      <div class="chip">
+        <div class="chip-icon">
+          <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
+        <div class="chip-text">
+          <div class="chip-label">Total Bayar</div>
+          <div class="chip-value">Rp81.900</div>
+        </div>
+      </div>
+      <div class="chip">
+        <div class="chip-icon">
+          <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
+        <div class="chip-text">
+          <div class="chip-label">Metode</div>
+          <div class="chip-value">Tunai</div>
+        </div>
+      </div>
+      <div class="chip">
+        <div class="chip-icon">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="chip-text">
+          <div class="chip-label">Kembalian</div>
+          <div class="chip-value">Rp18.100</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action list -->
+    <div class="action-list">
+      <a class="action-item" href="#">
+        <div class="action-item-icon">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        </div>
+        <div class="action-text">
+          <h4>Cetak Struk</h4>
+          <p>Cetak struk untuk pelanggan</p>
+        </div>
+        <div class="action-chevron">
+          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </a>
+      <a class="action-item" href="#">
+        <div class="action-item-icon">
+          <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </div>
+        <div class="action-text">
+          <h4>Bagikan Struk</h4>
+          <p>Kirim struk ke pelanggan (WhatsApp, Email, dll)</p>
+        </div>
+        <div class="action-chevron">
+          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </a>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- Bottom buttons -->
+  <div class="bottom-buttons">
+    <button class="btn btn-outline">Transaksi Baru</button>
+    <button class="btn btn-primary">Selesai</button>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Dashboard</span>
+    </a>
+    <a class="nav-item active" href="#">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <span>POS</span>
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      <span>Inventory</span>
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Laporan</span>
+    </a>
+    <a class="nav-item" href="#">
+      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/>
+      <span>Lainnya</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

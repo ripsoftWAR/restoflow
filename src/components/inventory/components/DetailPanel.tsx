@@ -3,12 +3,12 @@ import {
   Package, MoreVertical, History, ArrowUpRight,
   ShoppingBag, Coins, TrendingUp, Calendar, Hash,
   ArrowDown, ArrowUp, Settings, Pencil, Trash2,
-  Store, Phone, AlertTriangle, Layers, Truck, BarChart3,
+  Store, Phone, AlertTriangle, Layers, Truck,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Tooltip, ResponsiveContainer,
-  LineChart, Line,
+  ResponsiveContainer,
+  AreaChart, Area, Tooltip,
 } from 'recharts';
 import {
   Ingredient,
@@ -232,26 +232,51 @@ function MovementRow({ m }: { m: MovementLog }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MINI USAGE CHART — line chart mini di header (2 garis: Masuk & Kontribusi)
+   MINI USAGE CHART — area sparkline ala dashboard KPI cards
+   2 area: Masuk (green) + Keluar (pink)
+   Fade kiri-kanan via maskImage
+   
+   CATATAN: Warna pakai hex hardcode (#1D9E75 & #EC4899) karena
+   CSS variable --pp-chart-green belum terdaftar di :root — 
+   Tailwind v4 @theme hanya generate utility class (bg-pp-chart-green),
+   bukan custom property yang bisa di-refer via var().
    ═══════════════════════════════════════════════════════════════ */
+
+/* ── Konstanta warna chart ── */
+const GREEN = '#1D9E75';
+const PINK  = '#EC4899';
+const GREEN_SOFT = 'rgba(29, 158, 117, 0.12)';
+const PINK_SOFT  = 'rgba(236, 72, 153, 0.10)';
 
 interface MiniUsagePoint {
   date: string;
   total_out: number;
   total_in: number;
-  unit: string;
 }
+
+/* ── Gradient ID unik per instance ── */
+let _chartInstanceCounter = 0;
 
 function MiniUsageChart({
   ingredientId,
   globalDays,
+  baseUnit,
+  onStatsChange,
 }: {
   ingredientId: number;
   globalDays: number;
+  baseUnit: string;
+  onStatsChange?: (stats: { totalIn: number; totalOut: number } | null) => void;
 }) {
   const [days, setDays] = useState<7 | 30>(globalDays === 30 ? 30 : 7);
   const [data, setData] = useState<MiniUsagePoint[] | null>(null);
   const [loading, setLoading] = useState(true);
+
+  /* unique gradient IDs — avoid DOM conflicts */
+  const [gradIdIn, gradIdOut] = useMemo(() => {
+    const id = ++_chartInstanceCounter;
+    return [`usage-in-grad-${id}`, `usage-out-grad-${id}`];
+  }, []);
 
   const fetchUsage = useCallback(async () => {
     setLoading(true);
@@ -274,75 +299,157 @@ function MiniUsageChart({
     return data.map(d => ({
       date: new Date(d.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
       Masuk: d.total_in || 0,
-      Kontribusi: d.total_out || 0,
-      _raw: d,
+      Keluar: d.total_out || 0,
     }));
   }, [data]);
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center h-[60px]">
-        <span className="w-4 h-4 border-2 border-pp-primary/20 border-t-pp-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
+  /* ── quick stats ── */
+  const quickStats = useMemo(() => {
+    if (!data || data.length === 0) return null;
+    const totalIn = data.reduce((s, d) => s + (d.total_in || 0), 0);
+    const totalOut = data.reduce((s, d) => s + (d.total_out || 0), 0);
+    return { totalIn, totalOut };
+  }, [data]);
 
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center h-[60px]">
-        <span className="text-[10px] text-pp-text-muted">—</span>
-      </div>
-    );
-  }
+  /* ── notify parent of stats change ── */
+  useEffect(() => {
+    onStatsChange?.(quickStats);
+  }, [quickStats, onStatsChange]);
 
-  return (
-    <div className="flex-1 min-w-0 relative" style={{ height: 60 }}>
-      {/* Toggle 7h / 30h — pojok kanan atas */}
-      <div className="absolute top-0 right-0 z-10 flex items-center bg-pp-bg rounded-pp-xs p-[2px]">
-        {([7, 30] as const).map(d => (
-          <button
-            key={d}
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setDays(d); }}
-            className={`text-[10px] font-semibold px-1.5 py-[2px] rounded-[4px] transition-colors cursor-pointer leading-none ${
-              days === d
-                ? 'bg-pp-surface text-pp-primary shadow-sm'
-                : 'text-pp-text-muted hover:text-pp-text-secondary'
-            }`}
-          >
-            {d}h
-          </button>
+  const hasIn = quickStats && quickStats.totalIn > 0;
+  const hasOut = quickStats && quickStats.totalOut > 0;
+  /* Recharts Area butuh ≥ 2 titik untuk menggambar garis */
+  const canDraw = chartData.length >= 2;
+
+  /* ── Custom tooltip renderer ── */
+  const customTooltip = useCallback(({ active, payload }: any) => {
+    if (!active || !payload || payload.length === 0) return null;
+    return (
+      <div className="bg-gray-900 text-white text-[10px] font-medium px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap leading-relaxed">
+        {payload.map((entry: any, i: number) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: entry.color }} />
+            <span>{entry.name}: {entry.value?.toLocaleString('id-ID')} {baseUnit}</span>
+          </div>
         ))}
       </div>
+    );
+  }, [baseUnit]);
 
-      {/* Chart */}
-      <div
-        className="w-full h-full"
-        style={{
-          maskImage: 'linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)',
-        }}
-      >
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
-            <Line
-              type="monotone"
-              dataKey="Masuk"
-              stroke="var(--pp-chart-green)"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 3, fill: '#fff', stroke: 'var(--pp-chart-green)', strokeWidth: 2 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="Kontribusi"
-              stroke="#EC4899"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 3, fill: '#fff', stroke: '#EC4899', strokeWidth: 2 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+  /* ── CONTAINER: 94px height (was 64, +30px) ── */
+  return (
+    <div className="flex-1 min-w-0 flex flex-col" style={{ height: 94 }}>
+      {/* Top bar: Legend (kiri) + Toggle 7h/30h (kanan) */}
+      <div className="flex items-center justify-between mb-0.5">
+        {/* Legend — kiri */}
+        <div className="flex items-center gap-2.5">
+          {hasIn && (
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: GREEN }} />
+              <span className="text-[9px] font-semibold text-pp-text-muted uppercase tracking-wider">Masuk</span>
+            </div>
+          )}
+          {hasOut && (
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: PINK }} />
+              <span className="text-[9px] font-semibold text-pp-text-muted uppercase tracking-wider">Keluar</span>
+            </div>
+          )}
+          {!hasIn && !hasOut && !loading && (
+            <span className="text-[9px] text-pp-text-placeholder italic">Belum ada data</span>
+          )}
+        </div>
+        {/* Toggle — kanan */}
+        <div className="flex items-center bg-pp-bg rounded-pp-xs p-[2px] flex-shrink-0">
+          {([7, 30] as const).map(d => (
+            <button
+              key={d}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setDays(d); }}
+              className={`text-[10px] font-semibold px-1.5 py-[2px] rounded-[4px] transition-colors cursor-pointer leading-none ${
+                days === d
+                  ? 'bg-pp-surface text-pp-primary shadow-sm'
+                  : 'text-pp-text-muted hover:text-pp-text-secondary'
+              }`}
+            >
+              {d}h
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chart area */}
+      <div className="flex-1 relative" style={{ overflow: 'visible' }}>
+        {/* Loading spinner */}
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center z-20 bg-pp-surface/60 rounded-sm">
+            <span className="w-4 h-4 border-2 border-pp-primary/20 border-t-pp-primary rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* Empty / insufficient data */}
+        {!loading && !canDraw && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <span className="text-[10px] text-pp-text-muted italic">
+              {!data || data.length === 0
+                ? 'Belum ada data pemakaian'
+                : 'Butuh minimal 2 hari data'}
+            </span>
+          </div>
+        )}
+
+        {/* Chart — hanya render kalau data cukup */}
+        {canDraw && (
+          <div
+            className="w-full h-full"
+            style={{
+              maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+            }}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 6, right: 4, bottom: 4, left: 4 }}>
+                <defs>
+                  {/* Gradient Masuk — green */}
+                  <linearGradient id={gradIdIn} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={GREEN} stopOpacity={0.22} />
+                    <stop offset="100%" stopColor={GREEN} stopOpacity={0.0} />
+                  </linearGradient>
+                  {/* Gradient Keluar — pink */}
+                  <linearGradient id={gradIdOut} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={PINK} stopOpacity={0.18} />
+                    <stop offset="100%" stopColor={PINK} stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <Tooltip content={customTooltip} />
+                {hasIn && (
+                  <Area
+                    type="natural"
+                    dataKey="Masuk"
+                    stroke={GREEN}
+                    strokeWidth={1.8}
+                    fill={`url(#${gradIdIn})`}
+                    dot={false}
+                    activeDot={{ r: 3.5, fill: '#fff', stroke: GREEN, strokeWidth: 2 }}
+                    isAnimationActive={false}
+                  />
+                )}
+                {hasOut && (
+                  <Area
+                    type="natural"
+                    dataKey="Keluar"
+                    stroke={PINK}
+                    strokeWidth={1.8}
+                    fill={`url(#${gradIdOut})`}
+                    dot={false}
+                    activeDot={{ r: 3.5, fill: '#fff', stroke: PINK, strokeWidth: 2 }}
+                    isAnimationActive={false}
+                  />
+                )}
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -395,7 +502,7 @@ export default function DetailPanel({
     [ingredientMovements],
   );
 
-  const [infoTab, setInfoTab] = useState<'overview' | 'pergerakan' | 'pembelian' | 'supplier' | 'mutasi'>('overview');
+  const [infoTab, setInfoTab] = useState<'pergerakan' | 'pembelian' | 'supplier' | 'mutasi'>('pergerakan');
 
   const { display: stockDisplay, baseEquivalent } = formatStockWithBase(ingredient);
   const buyPrice = pricePerBuyUnit(ingredient);
@@ -442,12 +549,40 @@ export default function DetailPanel({
 
   /* ── Status determiner ── */
   const isLow = ingredient.stock <= ingredient.min_stock;
-  const daysLeft = ingredient.stock > 0
-    ? Math.max(1, Math.ceil(ingredient.stock / Math.max(0.1, (ingredientMovements
-        .filter(m => m.type === 'OUT')
-        .reduce((s, m) => s + (Number(m.amount) || 0), 0) / Math.max(1, ingredientMovements.filter(m => m.type === 'OUT').length)
-      ))))
-    : 0;
+
+  /* ── Stats dari MiniUsageChart untuk summary row ── */
+  const [usageSummary, setUsageSummary] = useState<{ totalIn: number; totalOut: number } | null>(null);
+  const handleUsageStats = useCallback((stats: { totalIn: number; totalOut: number } | null) => {
+    setUsageSummary(stats);
+  }, []);
+
+  /* ── Fetch daily usage dari API untuk estimasi daysLeft ── */
+  const [usageBasedDaysLeft, setUsageBasedDaysLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchUsageForDaysLeft() {
+      try {
+        const res = await apiFetch(`/api/ingredients/${ingredient.id}/usage?days=30`);
+        if (!res.ok || cancelled) return;
+        const json: { date: string; total_out: number }[] = await res.json();
+        const totalOut = json.reduce((s, d) => s + (Number(d.total_out) || 0), 0);
+        const dayCount = json.length || 1;
+        const avgDaily = totalOut / dayCount;
+        if (avgDaily > 0 && ingredient.stock > 0) {
+          setUsageBasedDaysLeft(Math.ceil(ingredient.stock / avgDaily));
+        } else {
+          setUsageBasedDaysLeft(ingredient.stock > 0 ? null : 0);
+        }
+      } catch {
+        setUsageBasedDaysLeft(null);
+      }
+    }
+    fetchUsageForDaysLeft();
+    return () => { cancelled = true; };
+  }, [ingredient.id, ingredient.stock]);
+
+  const daysLeft = usageBasedDaysLeft;
 
   /* ═══════════════════════════════════════════════════════════════
      RENDER
@@ -510,7 +645,12 @@ export default function DetailPanel({
               </p>
             )}
           </div>
-          <MiniUsageChart ingredientId={ingredient.id} globalDays={globalDays} />
+          <MiniUsageChart
+            ingredientId={ingredient.id}
+            globalDays={globalDays}
+            baseUnit={ingredient.base_unit}
+            onStatsChange={handleUsageStats}
+          />
         </div>
 
         {/* ── PROGRESS BAR ── */}
@@ -582,6 +722,59 @@ export default function DetailPanel({
       <div className="border-b border-pp-border" />
 
       {/* ═══════════════════════════════════════════
+          AI RESTOOK WARNING BANNER
+          ═══════════════════════════════════════════ */}
+      {isLow && daysLeft != null && daysLeft > 0 && (
+        <div className="mx-5 mt-3 bg-pp-warning-soft border border-pp-warning/25 rounded-pp-md px-3.5 py-2.5 flex items-start gap-2.5">
+          <span className="text-[15px] flex-shrink-0 mt-[-1px]">⚠️</span>
+          <div className="min-w-0">
+            <p className="text-[12px] text-pp-text-secondary leading-relaxed">
+              <b className="text-pp-text">{ingredient.name}</b> diperkirakan habis dalam{' '}
+              <span className="text-pp-danger font-bold">{daysLeft} hari</span>
+              {' '}— segera lakukan restock.
+            </p>
+            <p className="text-[10px] text-pp-text-muted mt-0.5">
+              Prediksi berdasarkan rata-rata pemakaian 30 hari terakhir
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════
+          USAGE SUMMARY ROW — Total Masuk / Total Keluar
+          ═══════════════════════════════════════════ */}
+      {usageSummary && (usageSummary.totalIn > 0 || usageSummary.totalOut > 0) && (
+        <div className="grid grid-cols-2 divide-x divide-pp-border border-b border-pp-border">
+          {/* Total Masuk */}
+          <div className="px-6 py-3.5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-pp-xs flex items-center justify-center flex-shrink-0" style={{ background: GREEN_SOFT }}>
+              <ArrowDown size={14} strokeWidth={2.5} style={{ color: GREEN }} />
+            </div>
+            <div>
+              <p className="text-[9px] font-semibold text-pp-text-muted uppercase tracking-wider">Total Masuk</p>
+              <p className="text-[15px] font-bold tabular-nums" style={{ color: GREEN }}>
+                {usageSummary.totalIn.toLocaleString('id-ID')}{' '}
+                <span className="text-[12px] font-medium opacity-70">{ingredient.base_unit}</span>
+              </p>
+            </div>
+          </div>
+          {/* Total Keluar */}
+          <div className="px-6 py-3.5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-pp-xs flex items-center justify-center flex-shrink-0" style={{ background: PINK_SOFT }}>
+              <ArrowUp size={14} strokeWidth={2.5} style={{ color: PINK }} />
+            </div>
+            <div>
+              <p className="text-[9px] font-semibold text-pp-text-muted uppercase tracking-wider">Total Keluar</p>
+              <p className="text-[15px] font-bold tabular-nums" style={{ color: PINK }}>
+                {usageSummary.totalOut.toLocaleString('id-ID')}{' '}
+                <span className="text-[12px] font-medium opacity-70">{ingredient.base_unit}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════
           SECTION 2 — Min Stock + Reorder (2 col)
           ═══════════════════════════════════════════ */}
       <div className="grid grid-cols-2 divide-x divide-pp-border">
@@ -618,12 +811,39 @@ export default function DetailPanel({
       <div className="border-b border-pp-border" />
 
       {/* ═══════════════════════════════════════════
-          TAB SWITCHER — Underline style (5 tabs)
+          INSIGHT STRIP — always visible (was Overview tab)
+          ═══════════════════════════════════════════ */}
+      <div className="px-6 py-3 flex items-center gap-2 text-[12px] text-pp-text-secondary bg-pp-bg/40">
+        <span className="text-[15px]">💡</span>
+        <span>
+          {isLow ? (
+            <>
+              <b className="text-pp-text">{ingredient.name}</b>{' '}
+              {daysLeft != null && daysLeft > 0 ? (
+                <>diperkirakan habis dalam{' '}
+                  <span className="text-pp-danger font-semibold">{daysLeft} hari</span>{' '}
+                </>
+              ) : (
+                <>stok di bawah minimum{' '}</>
+              )}
+              — segera lakukan restock.
+            </>
+          ) : (
+            <>
+              Stok <b className="text-pp-text">{ingredient.name}</b> dalam kondisi{' '}
+              <span className="text-pp-success font-semibold">aman</span> —{' '}
+              {bigNumber} {bigUnit} tersedia.
+            </>
+          )}
+        </span>
+      </div>
+
+      {/* ═══════════════════════════════════════════
+          TAB SWITCHER — Underline style (4 tabs)
           ═══════════════════════════════════════════ */}
       <div className="px-6 pt-3">
         <div className="flex items-center border-b border-pp-border overflow-x-auto no-scrollbar">
           {([
-            { key: 'overview' as const, label: 'Overview', icon: BarChart3 },
             { key: 'pergerakan' as const, label: 'Riwayat Pergerakan', icon: Layers },
             { key: 'pembelian' as const, label: 'Riwayat Pembelian', icon: ShoppingBag },
             { key: 'supplier' as const, label: 'Supplier', icon: Truck },
@@ -667,40 +887,10 @@ export default function DetailPanel({
       </div>
 
       {/* ═══════════════════════════════════════════
-          TAB CONTENT — 5 tabs
+          TAB CONTENT — 4 tabs
           ═══════════════════════════════════════════ */}
       <AnimatePresence mode="wait">
-        {infoTab === 'overview' ? (
-          <motion.div
-            key="overview"
-            initial={{ opacity: 0, y: 2 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -2 }}
-            transition={{ duration: 0.15 }}
-            className="px-6 py-4"
-          >
-            {/* ── Insight strip ── */}
-            <div className="flex items-center gap-2 text-[12px] text-pp-text-secondary">
-              <span className="text-[15px]">💡</span>
-              <span>
-                {isLow ? (
-                  <>
-                    <b className="text-pp-text">{ingredient.name}</b> diperkirakan habis dalam{' '}
-                    <span className="text-pp-danger font-semibold">{daysLeft} hari</span>{' '}
-                    dengan stok di bawah minimum.
-                  </>
-                ) : (
-                  <>
-                    Stok <b className="text-pp-text">{ingredient.name}</b> dalam kondisi{' '}
-                    <span className="text-pp-success font-semibold">aman</span> —{' '}
-                    {bigNumber} {bigUnit} tersedia.
-                  </>
-                )}
-              </span>
-            </div>
-          </motion.div>
-
-        ) : infoTab === 'pergerakan' ? (
+        {infoTab === 'pergerakan' ? (
 
           <motion.div
             key="pergerakan"

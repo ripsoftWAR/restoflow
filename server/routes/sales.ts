@@ -276,10 +276,13 @@ router.post('/', async (req: Request, res: Response) => {
       );
     }
 
-    // ── 4. Deplete stock (hanya untuk resep yg ada di DB) ──
+    // ── 4. Deplete stock (pakai schema normalized: recipes + recipe_ingredients) ──
     for (const item of lineItems) {
       const recipeRes = await db.query(
-        'SELECT * FROM recipes WHERE menu_name = $1 AND restaurant_id = $2',
+        `SELECT ri.ingredient_id, ri.quantity AS amount
+         FROM recipes r
+         JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+         WHERE r.name = $1 AND r.restaurant_id = $2`,
         [item.menu_name, restaurantId],
       );
       const recipeItems = recipeRes.rows;

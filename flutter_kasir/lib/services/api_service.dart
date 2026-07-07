@@ -13,8 +13,8 @@ class ApiService {
 
   /// Change this to your backend URL.
   /// Railway: https://restoflow-production-fee9.up.railway.app
-  /// Lokal:    http://10.0.2.2:8080 (Android emulator)
-  ///           http://localhost:8080  (iOS simulator)
+  /// Lokal:    http://10.0.2.2:3000 (Android emulator)
+  ///           http://localhost:3000  (iOS simulator / web)
   static const String baseUrl = 'https://restoflow-production-fee9.up.railway.app';
 
   String? _token;

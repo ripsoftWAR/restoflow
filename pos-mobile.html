@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>POS Mobile - Mulai Penjualan</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --blue: #2563EB;
+    --blue-light: #EFF6FF;
+    --blue-mid: #DBEAFE;
+    --text-dark: #0F1941;
+    --text-gray: #6B7280;
+    --text-light: #9CA3AF;
+    --bg: #F5F6FA;
+    --white: #FFFFFF;
+    --green: #16A34A;
+    --red: #DC2626;
+    --border: #E5E7EB;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --radius: 14px;
+    --radius-sm: 10px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  /* Phone shell */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+  }
+
+  /* Screens */
+  .screen {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    transform: translateX(30px);
+  }
+  .screen.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(0);
+  }
+  .screen.slide-back {
+    transform: translateX(-30px);
+  }
+
+  /* Status bar */
+  .statusbar {
+    height: 44px;
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-dark);
+    flex-shrink: 0;
+  }
+  .statusbar-right { display: flex; gap: 6px; align-items: center; }
+  .statusbar-right span { font-size: 12px; }
+
+  /* Top nav */
+  .topnav {
+    background: var(--white);
+    padding: 12px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .topnav-row { display: flex; align-items: center; gap: 12px; margin-bottom: 2px; }
+  .back-btn {
+    width: 32px; height: 32px;
+    border: none; background: none;
+    font-size: 22px; color: var(--text-dark);
+    cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .topnav h1 { font-size: 18px; font-weight: 700; color: var(--text-dark); }
+  .topnav p { font-size: 13px; color: var(--text-gray); padding-left: 44px; }
+
+  /* Scrollable content */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .content::-webkit-scrollbar { display: none; }
+
+  /* Bottom nav */
+  .bottomnav {
+    background: var(--white);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 8px 0 20px;
+    flex-shrink: 0;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 4px;
+    font-size: 11px; color: var(--text-light);
+    cursor: pointer; padding: 4px 0; border: none; background: none;
+  }
+  .nav-item.active { color: var(--blue); }
+  .nav-icon { font-size: 20px; line-height: 1; }
+
+  /* ======================== SCREEN 1: PRODUCT LIST ======================== */
+
+  .search-row {
+    display: flex; gap: 10px; padding: 14px 16px 10px;
+    background: var(--white);
+  }
+  .search-box {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border-radius: var(--radius-sm);
+    padding: 10px 14px; border: 1.5px solid var(--border);
+  }
+  .search-box input {
+    border: none; background: none; outline: none;
+    font-size: 14px; color: var(--text-dark); width: 100%;
+  }
+  .search-box input::placeholder { color: var(--text-light); }
+  .search-icon { color: var(--text-light); font-size: 16px; }
+  .scan-icon { font-size: 18px; color: var(--text-gray); }
+  .filter-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px; background: var(--bg);
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 14px; color: var(--text-dark); cursor: pointer; font-weight: 500;
+  }
+
+  .category-row {
+    display: flex; gap: 8px; padding: 0 16px 12px;
+    background: var(--white); overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+  }
+  .category-row::-webkit-scrollbar { display: none; }
+  .cat-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 99px;
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+    cursor: pointer; border: 1.5px solid var(--border); background: var(--white);
+    color: var(--text-dark);
+  }
+  .cat-btn.active { background: var(--blue); color: white; border-color: var(--blue); }
+
+  .section-title {
+    font-size: 15px; font-weight: 700; color: var(--text-dark);
+    padding: 16px 16px 10px;
+  }
+
+  .product-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px; padding: 0 16px 12px;
+  }
+  .product-card {
+    background: var(--white); border-radius: var(--radius-sm);
+    overflow: hidden; cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    transition: transform 0.15s;
+  }
+  .product-card:active { transform: scale(0.97); }
+  .product-img {
+    width: 100%; aspect-ratio: 1;
+    object-fit: cover; background: #f0f0f0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+  }
+  .product-info { padding: 8px 8px 6px; }
+  .product-name { font-size: 12px; font-weight: 600; color: var(--text-dark); margin-bottom: 6px; line-height: 1.3; }
+  .product-price-row { display: flex; align-items: center; justify-content: space-between; }
+  .product-price { font-size: 12px; font-weight: 700; color: var(--blue); }
+  .add-btn {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: var(--blue-light); border: 1.5px solid var(--blue-mid);
+    color: var(--blue); font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+  }
+
+  .cart-bar {
+    position: sticky; bottom: 0;
+    background: var(--white); border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0;
+  }
+  .cart-icon-wrap {
+    width: 48px; height: 48px;
+    background: var(--blue); border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; cursor: pointer; flex-shrink: 0;
+  }
+  .cart-icon-wrap .icon { font-size: 22px; }
+  .cart-badge {
+    position: absolute; top: -6px; right: -6px;
+    background: #EF4444; color: white;
+    border-radius: 99px; font-size: 10px; font-weight: 700;
+    width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+  }
+  .cart-info { flex: 1; }
+  .cart-count { font-size: 13px; font-weight: 600; color: var(--text-dark); }
+  .cart-total { font-size: 14px; font-weight: 700; color: var(--blue); }
+  .view-cart-btn {
+    background: var(--blue); color: white; border: none;
+    padding: 12px 20px; border-radius: 12px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+
+  /* ======================== SCREEN 2: PRODUCT DETAIL (bottom sheet) ======================== */
+
+  #screen-detail {
+    background: rgba(0,0,0,0.4);
+  }
+  .detail-backdrop {
+    flex: 1;
+    cursor: pointer;
+  }
+  .detail-sheet {
+    background: var(--white);
+    border-radius: 24px 24px 0 0;
+    padding-bottom: 20px;
+    max-height: 88%;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .detail-sheet::-webkit-scrollbar { display: none; }
+  .sheet-handle {
+    width: 40px; height: 4px; background: var(--border);
+    border-radius: 99px; margin: 12px auto 16px;
+  }
+  .sheet-close {
+    position: absolute; top: 56px; right: 20px;
+    width: 32px; height: 32px; border-radius: 99px;
+    background: var(--bg); border: none; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .sheet-top {
+    display: flex; gap: 16px; padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sheet-img {
+    width: 110px; height: 110px; border-radius: 14px;
+    background: #f0f0f0; display: flex; align-items: center;
+    justify-content: center; font-size: 52px; flex-shrink: 0;
+  }
+  .sheet-meta { flex: 1; }
+  .sheet-name { font-size: 20px; font-weight: 700; color: var(--text-dark); margin-bottom: 6px; }
+  .sheet-desc { font-size: 13px; color: var(--text-gray); line-height: 1.5; margin-bottom: 10px; }
+  .sheet-price { font-size: 22px; font-weight: 800; color: var(--blue); margin-bottom: 8px; }
+  .sheet-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #FEF3C7; color: #92400E;
+    border-radius: 99px; padding: 4px 10px;
+    font-size: 12px; font-weight: 600;
+  }
+  .qty-row {
+    display: flex; align-items: center; gap: 16px; margin-top: 12px;
+  }
+  .qty-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--bg);
+    font-size: 20px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; color: var(--blue);
+  }
+  .qty-num { font-size: 17px; font-weight: 700; color: var(--text-dark); min-width: 24px; text-align: center; }
+
+  .sheet-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .sheet-section-title { font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px; }
+  .size-options { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .size-opt {
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px; text-align: center; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .size-opt.selected { border-color: var(--blue); background: var(--blue-light); }
+  .size-opt-name { font-size: 13px; font-weight: 600; color: var(--text-dark); }
+  .size-opt-price { font-size: 12px; color: var(--blue); font-weight: 600; margin-top: 2px; }
+  .note-input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-size: 13px; color: var(--text-dark);
+    font-family: inherit; resize: none; outline: none;
+    background: var(--bg);
+  }
+  .note-input:focus { border-color: var(--blue); }
+  .addon-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .addon-item:last-child { border-bottom: none; }
+  .addon-check {
+    width: 20px; height: 20px; border-radius: 6px;
+    border: 2px solid var(--border); background: var(--bg);
+    cursor: pointer; flex-shrink: 0; display: flex;
+    align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .addon-check.checked { background: var(--blue); border-color: var(--blue); }
+  .addon-check.checked::after { content: '✓'; color: white; font-size: 12px; font-weight: 700; }
+  .addon-name { flex: 1; font-size: 14px; color: var(--text-dark); }
+  .addon-price { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+
+  .sheet-footer {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px 0;
+  }
+  .sheet-qty-wrap {
+    display: flex; align-items: center; gap: 12px;
+    border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 10px 14px;
+  }
+  .add-to-cart-btn {
+    flex: 1; background: var(--blue); color: white; border: none;
+    padding: 14px 20px; border-radius: 14px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .add-to-cart-btn span { font-size: 15px; font-weight: 700; }
+
+  /* ======================== SCREEN 3: CART ======================== */
+
+  .cart-header-action {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 13px; color: var(--text-gray); cursor: pointer;
+    background: var(--white); margin-left: auto;
+  }
+
+  .customer-row {
+    background: var(--white); margin: 12px 16px;
+    border-radius: var(--radius); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer; border: 1.5px solid var(--border);
+  }
+  .customer-avatar {
+    width: 38px; height: 38px; border-radius: 99px;
+    background: var(--blue-light); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .customer-label { font-size: 12px; color: var(--text-gray); }
+  .customer-name { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+  .customer-arrow { margin-left: auto; color: var(--text-light); font-size: 18px; }
+
+  .cart-items { padding: 0 16px; }
+  .cart-item {
+    background: var(--white); border-radius: var(--radius);
+    padding: 14px; margin-bottom: 10px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .cart-item-img {
+    width: 60px; height: 60px; border-radius: 10px;
+    background: #f0f0f0; display: flex; align-items: center;
+    justify-content: center; font-size: 28px; flex-shrink: 0;
+  }
+  .cart-item-body { flex: 1; }
+  .cart-item-name { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+  .cart-item-sub { font-size: 12px; color: var(--text-gray); margin-bottom: 6px; }
+  .cart-item-price { font-size: 14px; font-weight: 700; color: var(--blue); margin-bottom: 8px; }
+  .cart-qty-row { display: flex; align-items: center; gap: 10px; }
+  .cq-btn {
+    width: 28px; height: 28px; border-radius: 8px;
+    border: 1.5px solid var(--border); background: var(--bg);
+    font-size: 16px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; color: var(--blue);
+  }
+  .cq-num { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+  .cart-item-total { font-size: 15px; font-weight: 700; color: var(--text-dark); margin-left: auto; }
+  .delete-btn { color: var(--text-light); font-size: 18px; cursor: pointer; background: none; border: none; }
+
+  .price-summary {
+    background: var(--white); border-radius: var(--radius);
+    margin: 0 16px 12px; padding: 16px;
+  }
+  .price-row {
+    display: flex; justify-content: space-between;
+    font-size: 14px; margin-bottom: 10px;
+  }
+  .price-row .label { color: var(--text-gray); }
+  .price-row .value { font-weight: 600; color: var(--text-dark); }
+  .price-row .discount { color: var(--green); font-weight: 700; }
+  .price-divider { height: 1px; background: var(--border); margin: 12px 0; }
+  .price-total-row {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .price-total-label { font-size: 16px; font-weight: 700; color: var(--text-dark); }
+  .price-total-value { font-size: 20px; font-weight: 800; color: var(--blue); }
+
+  .note-row {
+    background: var(--white); border-radius: var(--radius);
+    margin: 0 16px 12px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border: 1.5px dashed var(--border);
+  }
+  .note-row input {
+    border: none; background: none; outline: none;
+    font-size: 13px; color: var(--text-gray); width: 100%; font-family: inherit;
+  }
+  .note-char { font-size: 12px; color: var(--text-light); white-space: nowrap; }
+
+  .cart-footer {
+    padding: 12px 16px 0;
+    display: flex; gap: 10px;
+  }
+  .voucher-btn {
+    flex: 1; border: 1.5px solid var(--blue); background: var(--white);
+    color: var(--blue); border-radius: 14px; padding: 14px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .checkout-btn {
+    flex: 1.5; background: var(--blue); color: white; border: none;
+    border-radius: 14px; padding: 14px; font-size: 14px;
+    font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+
+  /* ======================== SCREEN 4: PAYMENT ======================== */
+
+  .payment-content { padding: 16px; }
+  .pay-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 18px; margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .pay-card-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 14px;
+  }
+  .pay-card-title .icon { font-size: 20px; }
+  .pay-row {
+    display: flex; justify-content: space-between;
+    font-size: 14px; margin-bottom: 10px;
+  }
+  .pay-row .label { color: var(--text-gray); }
+  .pay-row .val { font-weight: 600; color: var(--text-dark); }
+  .pay-row .discount-val { color: var(--green); font-weight: 700; }
+  .pay-divider { height: 1px; background: var(--border); margin: 12px 0; }
+  .pay-total-row {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .pay-total-label { font-size: 15px; font-weight: 700; }
+  .pay-total-val { font-size: 20px; font-weight: 800; color: var(--text-dark); }
+
+  .voucher-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .voucher-icon { font-size: 22px; color: var(--blue); }
+  .voucher-info { flex: 1; }
+  .voucher-label { font-size: 12px; color: var(--text-gray); }
+  .voucher-chip {
+    display: inline-block; background: #D1FAE5; color: var(--green);
+    border-radius: 6px; padding: 2px 8px; font-size: 12px;
+    font-weight: 700; margin-top: 2px;
+  }
+  .voucher-discount { font-size: 13px; color: var(--text-gray); margin-left: 6px; }
+  .change-voucher-btn {
+    border: 1.5px solid var(--border); background: var(--white);
+    border-radius: 8px; padding: 6px 12px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    color: var(--text-dark);
+  }
+
+  .method-title { font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px; }
+  .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .method-opt {
+    border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+    background: var(--white); transition: all 0.15s;
+  }
+  .method-opt.selected { border-color: var(--blue); background: var(--blue-light); }
+  .method-opt .m-icon { font-size: 22px; }
+  .method-opt .m-info { }
+  .method-opt .m-name { font-size: 13px; font-weight: 600; color: var(--text-dark); }
+  .method-opt .m-sub { font-size: 11px; color: var(--text-gray); margin-top: 2px; }
+  .method-radio {
+    width: 18px; height: 18px; border-radius: 99px;
+    border: 2px solid var(--border); margin-left: auto; flex-shrink: 0;
+  }
+  .method-opt.selected .method-radio {
+    border-color: var(--blue); background: var(--blue);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .method-opt.selected .method-radio::after {
+    content: ''; width: 6px; height: 6px;
+    background: white; border-radius: 99px;
+  }
+
+  .cash-section { margin-top: 14px; }
+  .cash-title { font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px; }
+  .cash-row { display: flex; gap: 12px; }
+  .cash-total { flex: 1; }
+  .cash-total-label { font-size: 12px; color: var(--text-gray); }
+  .cash-total-val { font-size: 20px; font-weight: 800; color: var(--blue); }
+  .cash-input-wrap { flex: 1; }
+  .cash-input-label { font-size: 12px; color: var(--text-gray); margin-bottom: 4px; }
+  .cash-input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; font-size: 15px; font-weight: 700;
+    color: var(--text-dark); background: var(--bg);
+    outline: none; font-family: inherit;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .cash-change-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #F0FDF4; border-radius: 10px; padding: 12px 14px;
+    margin-top: 12px;
+  }
+  .cash-change-label { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+  .cash-change-val { font-size: 18px; font-weight: 800; color: var(--green); }
+  .cash-presets { display: flex; gap: 8px; margin-top: 10px; }
+  .preset-btn {
+    flex: 1; padding: 10px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; background: var(--white); color: var(--text-dark);
+    text-align: center;
+  }
+  .preset-btn.selected { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
+
+  .summary-final {
+    background: var(--white); border-radius: var(--radius);
+    padding: 16px; margin-top: 14px;
+  }
+  .summary-final-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px; font-weight: 700; margin-bottom: 12px;
+  }
+  .summary-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .summary-cell { }
+  .summary-cell-label { font-size: 12px; color: var(--text-gray); }
+  .summary-cell-val { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+
+  .confirm-btn {
+    width: 100%; background: var(--blue); color: white;
+    border: none; border-radius: 16px; padding: 16px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 16px;
+  }
+
+  /* ======================== SUCCESS OVERLAY ======================== */
+  .success-overlay {
+    display: none;
+    position: absolute; inset: 0;
+    background: var(--white);
+    flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100; padding: 40px;
+  }
+  .success-overlay.show { display: flex; }
+  .success-icon {
+    width: 100px; height: 100px; border-radius: 99px;
+    background: #D1FAE5; display: flex; align-items: center;
+    justify-content: center; font-size: 50px; margin-bottom: 24px;
+  }
+  .success-title { font-size: 24px; font-weight: 800; color: var(--text-dark); margin-bottom: 10px; text-align: center; }
+  .success-sub { font-size: 15px; color: var(--text-gray); text-align: center; margin-bottom: 32px; }
+  .success-amount { font-size: 32px; font-weight: 900; color: var(--blue); margin-bottom: 8px; }
+  .success-detail { font-size: 14px; color: var(--text-gray); margin-bottom: 40px; text-align: center; }
+  .success-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .print-btn {
+    width: 100%; border: 2px solid var(--blue); background: var(--white);
+    color: var(--blue); border-radius: 14px; padding: 14px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .new-order-btn {
+    width: 100%; background: var(--blue); color: white;
+    border: none; border-radius: 14px; padding: 14px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+
+  /* Animations */
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .detail-sheet { animation: slideUp 0.3s ease; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- ===================== SCREEN 1: PRODUCT LIST ===================== -->
+  <div id="screen-products" class="screen active">
+    <!-- Status Bar -->
+    <div class="statusbar">
+      <span>9:30</span>
+      <div class="statusbar-right">
+        <span>📶</span><span>📡</span><span>🔋</span>
+      </div>
+    </div>
+    <!-- Top Nav -->
+    <div class="topnav">
+      <div class="topnav-row">
+        <button class="back-btn">←</button>
+        <h1>POS / Mulai Penjualan</h1>
+      </div>
+      <p>Pilih produk untuk dijual</p>
+    </div>
+
+    <!-- Search + Filter -->
+    <div class="search-row">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="Cari produk atau scan barcode">
+        <span class="scan-icon">⬜</span>
+      </div>
+      <button class="filter-btn">🔽 Filter</button>
+    </div>
+
+    <!-- Categories -->
+    <div class="category-row">
+      <button class="cat-btn active">Semua</button>
+      <button class="cat-btn">☕ Minuman</button>
+      <button class="cat-btn">🍔 Makanan</button>
+      <button class="cat-btn">🧁 Snack</button>
+      <button class="cat-btn">🍮 Dessert</button>
+    </div>
+
+    <!-- Content -->
+    <div class="content" id="products-content">
+      <div class="section-title">Minuman</div>
+      <div class="product-grid">
+        <div class="product-card" onclick="openDetail('es-kopi-susu')">
+          <div class="product-img">🥤</div>
+          <div class="product-info">
+            <div class="product-name">Es Kopi Susu</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp18.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Es Kopi Susu', 18000, '☕')">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="product-card" onclick="openDetail('es-teh')">
+          <div class="product-img">🍹</div>
+          <div class="product-info">
+            <div class="product-name">Es Teh Manis</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp6.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Es Teh Manis', 6000, '🍵')">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="product-card" onclick="openDetail('americano')">
+          <div class="product-img">☕</div>
+          <div class="product-info">
+            <div class="product-name">Americano</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp16.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Americano', 16000, '☕')">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="product-img">☕</div>
+          <div class="product-info">
+            <div class="product-name">Latte</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp20.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Latte', 20000, '☕')">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="product-img">☕</div>
+          <div class="product-info">
+            <div class="product-name">Cappuccino</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp20.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Cappuccino', 20000, '☕')">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="product-img">🍵</div>
+          <div class="product-info">
+            <div class="product-name">Matcha Latte</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp22.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Matcha Latte', 22000, '🍵')">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Makanan</div>
+      <div class="product-grid">
+        <div class="product-card">
+          <div class="product-img">🍳</div>
+          <div class="product-info">
+            <div class="product-name">Nasi Goreng</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp25.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Nasi Goreng', 25000, '🍳')">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="product-img">🍔</div>
+          <div class="product-info">
+            <div class="product-name">Chicken Burger</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp28.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Chicken Burger', 28000, '🍔')">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="product-img">🍜</div>
+          <div class="product-info">
+            <div class="product-name">Mie Goreng</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp22.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Mie Goreng', 22000, '🍜')">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="product-img">🍗</div>
+          <div class="product-info">
+            <div class="product-name">Ayam Geprek</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp24.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Ayam Geprek', 24000, '🍗')">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="product-img">🍟</div>
+          <div class="product-info">
+            <div class="product-name">Kentang Goreng</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp15.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Kentang Goreng', 15000, '🍟')">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="product-img">🥪</div>
+          <div class="product-info">
+            <div class="product-name">Sandwich</div>
+            <div class="product-price-row">
+              <span class="product-price">Rp20.000</span>
+              <button class="add-btn" onclick="event.stopPropagation(); addToCart('Sandwich', 20000, '🥪')">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="height: 80px;"></div>
+    </div>
+
+    <!-- Cart Bar -->
+    <div class="cart-bar" id="cart-bar" style="display: none;">
+      <div class="cart-icon-wrap" onclick="goToCart()">
+        <span class="icon">🛒</span>
+        <div class="cart-badge" id="cart-badge">0</div>
+      </div>
+      <div class="cart-info">
+        <div class="cart-count" id="cart-count">0 Item</div>
+        <div class="cart-total" id="cart-total">Rp0</div>
+      </div>
+      <button class="view-cart-btn" onclick="goToCart()">Lihat Keranjang ›</button>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottomnav">
+      <button class="nav-item"><span class="nav-icon">🏠</span>Dashboard</button>
+      <button class="nav-item active"><span class="nav-icon">🛒</span>POS</button>
+      <button class="nav-item"><span class="nav-icon">📦</span>Inventory</button>
+      <button class="nav-item"><span class="nav-icon">📊</span>Laporan</button>
+      <button class="nav-item"><span class="nav-icon">•••</span>Lainnya</button>
+    </div>
+  </div>
+
+  <!-- ===================== SCREEN 2: PRODUCT DETAIL ===================== -->
+  <div id="screen-detail" class="screen">
+    <!-- Blurred BG overlay with products list visible -->
+    <div class="detail-backdrop" onclick="closeDetail()"></div>
+    <div class="detail-sheet">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" onclick="closeDetail()">✕</button>
+
+      <div class="sheet-top">
+        <div class="sheet-img" id="detail-img">🥤</div>
+        <div class="sheet-meta">
+          <div class="sheet-name" id="detail-name">Es Kopi Susu</div>
+          <div class="sheet-desc" id="detail-desc">Perpaduan kopi espresso dan susu segar dengan es batu.</div>
+          <div class="sheet-price" id="detail-price">Rp18.000</div>
+          <span class="sheet-badge">⭐ Minuman Favorit</span>
+          <div class="qty-row">
+            <button class="qty-btn" onclick="changeDetailQty(-1)">−</button>
+            <span class="qty-num" id="detail-qty">1</span>
+            <button class="qty-btn" onclick="changeDetailQty(1)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sheet-section">
+        <div class="sheet-section-title">Ukurah</div>
+        <div class="size-options">
+          <div class="size-opt selected" onclick="selectSize(this, 0)">
+            <div class="size-opt-name">Reguler</div>
+            <div class="size-opt-price" id="size-base">Rp18.000</div>
+          </div>
+          <div class="size-opt" onclick="selectSize(this, 4000)">
+            <div class="size-opt-name">Large</div>
+            <div class="size-opt-price">Rp22.000</div>
+          </div>
+          <div class="size-opt" onclick="selectSize(this, 8000)">
+            <div class="size-opt-name">Extra Large</div>
+            <div class="size-opt-price">Rp26.000</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sheet-section">
+        <div class="sheet-section-title">Catatan <span style="color: var(--text-light); font-weight:400">(opsional)</span></div>
+        <textarea class="note-input" rows="2" placeholder="Contoh: Kurangi gula, tanpa es, dll" maxlength="50"></textarea>
+      </div>
+
+      <div class="sheet-section">
+        <div class="sheet-section-title">Tambahan <span style="color: var(--text-light); font-weight:400">(opsional)</span></div>
+        <div class="addon-item">
+          <div class="addon-check" onclick="toggleAddon(this)"></div>
+          <span class="addon-name">Extra Shot Espresso</span>
+          <span class="addon-price">+Rp5.000</span>
+        </div>
+        <div class="addon-item">
+          <div class="addon-check" onclick="toggleAddon(this)"></div>
+          <span class="addon-name">Susu Oat</span>
+          <span class="addon-price">+Rp6.000</span>
+        </div>
+        <div class="addon-item">
+          <div class="addon-check" onclick="toggleAddon(this)"></div>
+          <span class="addon-name">Syrup Caramel</span>
+          <span class="addon-price">+Rp4.000</span>
+        </div>
+        <div class="addon-item">
+          <div class="addon-check" onclick="toggleAddon(this)"></div>
+          <span class="addon-name">Whipped Cream</span>
+          <span class="addon-price">+Rp5.000</span>
+        </div>
+      </div>
+
+      <div class="sheet-footer">
+        <div class="sheet-qty-wrap">
+          <button class="qty-btn" onclick="changeDetailQty(-1)" style="border:none;background:none;width:24px;height:24px;">−</button>
+          <span class="qty-num" id="detail-qty2">1</span>
+          <button class="qty-btn" onclick="changeDetailQty(1)" style="border:none;background:none;width:24px;height:24px;">+</button>
+        </div>
+        <button class="add-to-cart-btn" onclick="addFromDetail()">
+          <span>🛒 Tambah ke Keranjang</span>
+          <span id="detail-add-price">Rp18.000</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== SCREEN 3: CART ===================== -->
+  <div id="screen-cart" class="screen">
+    <div class="statusbar">
+      <span>9:30</span>
+      <div class="statusbar-right"><span>📶</span><span>📡</span><span>🔋</span></div>
+    </div>
+    <div class="topnav">
+      <div class="topnav-row">
+        <button class="back-btn" onclick="goTo('products')">←</button>
+        <h1>Keranjang</h1>
+        <button class="cart-header-action" onclick="clearCart()">🗑 Kosongkan</button>
+      </div>
+      <p>Periksa pesanan sebelum bayar</p>
+    </div>
+
+    <div class="content">
+      <!-- Customer -->
+      <div class="customer-row">
+        <div class="customer-avatar">👤</div>
+        <div>
+          <div class="customer-label">Pelanggan</div>
+          <div class="customer-name">Pilih pelanggan (opsional)</div>
+        </div>
+        <span class="customer-arrow">›</span>
+      </div>
+
+      <!-- Cart Items -->
+      <div class="cart-items" id="cart-items-list">
+        <!-- dynamically filled -->
+      </div>
+
+      <!-- Price Summary -->
+      <div class="price-summary">
+        <div class="price-row">
+          <span class="label">Subtotal</span>
+          <span class="value" id="cart-subtotal">Rp0</span>
+        </div>
+        <div class="price-row">
+          <span class="label">Diskon</span>
+          <span class="discount" id="cart-discount">-Rp5.000</span>
+        </div>
+        <div class="price-row">
+          <span class="label">Pajak (10%)</span>
+          <span class="value" id="cart-tax">Rp0</span>
+        </div>
+        <div class="price-divider"></div>
+        <div class="price-total-row">
+          <span class="price-total-label">Total</span>
+          <span class="price-total-value" id="cart-total-val">Rp0</span>
+        </div>
+      </div>
+
+      <!-- Note -->
+      <div class="note-row">
+        <span>📝</span>
+        <input type="text" placeholder="Catatan untuk pesanan (opsional)" maxlength="100">
+        <span class="note-char">0/100</span>
+      </div>
+
+      <!-- Footer actions -->
+      <div class="cart-footer">
+        <button class="voucher-btn">🏷 Voucher / Diskon</button>
+        <button class="checkout-btn" onclick="goTo('payment')">Lanjut ke Pembayaran ›</button>
+      </div>
+      <div style="height: 16px;"></div>
+    </div>
+
+    <div class="bottomnav">
+      <button class="nav-item"><span class="nav-icon">🏠</span>Dashboard</button>
+      <button class="nav-item active"><span class="nav-icon">🛒</span>POS</button>
+      <button class="nav-item"><span class="nav-icon">📦</span>Inventory</button>
+      <button class="nav-item"><span class="nav-icon">📊</span>Laporan</button>
+      <button class="nav-item"><span class="nav-icon">•••</span>Lainnya</button>
+    </div>
+  </div>
+
+  <!-- ===================== SCREEN 4: PAYMENT ===================== -->
+  <div id="screen-payment" class="screen">
+    <div class="statusbar">
+      <span>9:30</span>
+      <div class="statusbar-right"><span>📶</span><span>📡</span><span>🔋</span></div>
+    </div>
+    <div class="topnav">
+      <div class="topnav-row">
+        <button class="back-btn" onclick="goTo('cart')">←</button>
+        <h1>Pembayaran</h1>
+      </div>
+      <p>Selesaikan pembayaran transaksi</p>
+    </div>
+
+    <div class="content">
+      <div class="payment-content">
+        <!-- Transaction Summary -->
+        <div class="pay-card">
+          <div class="pay-card-title"><span class="icon">📋</span> Ringkasan Transaksi</div>
+          <div class="pay-row">
+            <span class="label">Total Item</span>
+            <span class="val" id="pay-item-count">0 Item</span>
+          </div>
+          <div class="pay-row">
+            <span class="label">Subtotal</span>
+            <span class="val" id="pay-subtotal">Rp0</span>
+          </div>
+          <div class="pay-row">
+            <span class="label">Diskon <span style="color:var(--green); font-size:12px;">(HEMAT10)</span></span>
+            <span class="discount-val" id="pay-discount">-Rp0</span>
+          </div>
+          <div class="pay-divider"></div>
+          <div class="pay-total-row">
+            <span class="pay-total-label">Total yang harus dibayar</span>
+            <span class="pay-total-val" id="pay-total">Rp0</span>
+          </div>
+        </div>
+
+        <!-- Voucher -->
+        <div class="voucher-card">
+          <span class="voucher-icon">🎟</span>
+          <div class="voucher-info">
+            <div class="voucher-label">Voucher Digunakan</div>
+            <div>
+              <span class="voucher-chip">HEMAT10</span>
+              <span class="voucher-discount">Diskon 10%</span>
+            </div>
+          </div>
+          <button class="change-voucher-btn">Ubah Voucher</button>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="pay-card">
+          <div class="method-title">Pilih Metode Pembayaran</div>
+          <div class="method-grid">
+            <div class="method-opt selected" onclick="selectMethod(this)">
+              <span class="m-icon">💵</span>
+              <div class="m-info">
+                <div class="m-name">Tunai</div>
+                <div class="m-sub">Bayar dengan uang tunai</div>
+              </div>
+              <div class="method-radio"></div>
+            </div>
+            <div class="method-opt" onclick="selectMethod(this)">
+              <span class="m-icon">⬜</span>
+              <div class="m-info">
+                <div class="m-name">QRIS</div>
+                <div class="m-sub">Scan kode QR</div>
+              </div>
+              <div class="method-radio"></div>
+            </div>
+            <div class="method-opt" onclick="selectMethod(this)">
+              <span class="m-icon">💳</span>
+              <div class="m-info">
+                <div class="m-name">Kartu Debit/Kredit</div>
+                <div class="m-sub">Bayar dengan kartu</div>
+              </div>
+              <div class="method-radio"></div>
+            </div>
+            <div class="method-opt" onclick="selectMethod(this)">
+              <span class="m-icon">👛</span>
+              <div class="m-info">
+                <div class="m-name">E-Wallet</div>
+                <div class="m-sub">OVO, GoPay, DANA</div>
+              </div>
+              <div class="method-radio"></div>
+            </div>
+            <div class="method-opt" onclick="selectMethod(this)">
+              <span class="m-icon">🏦</span>
+              <div class="m-info">
+                <div class="m-name">Transfer Bank</div>
+                <div class="m-sub">Transfer via bank</div>
+              </div>
+              <div class="method-radio"></div>
+            </div>
+            <div class="method-opt" onclick="selectMethod(this)">
+              <span class="m-icon">•••</span>
+              <div class="m-info">
+                <div class="m-name">Lainnya</div>
+                <div class="m-sub">Metode lainnya</div>
+              </div>
+              <div class="method-radio"></div>
+            </div>
+          </div>
+
+          <!-- Cash input section -->
+          <div class="cash-section">
+            <div class="cash-title">Pembayaran Tunai</div>
+            <div class="cash-row">
+              <div class="cash-total">
+                <div class="cash-total-label">Total Pembayaran</div>
+                <div class="cash-total-val" id="cash-display">Rp0</div>
+              </div>
+              <div class="cash-input-wrap">
+                <div class="cash-input-label">Uang Diterima</div>
+                <div class="cash-input">
+                  <span id="received-display">Rp100.000</span>
+                  <span style="color: var(--text-light);">✕</span>
+                </div>
+              </div>
+            </div>
+            <div class="cash-change-row">
+              <span class="cash-change-label">Kembalian</span>
+              <span class="cash-change-val" id="change-display">Rp0</span>
+            </div>
+            <div class="cash-presets">
+              <button class="preset-btn" onclick="selectPreset(this, 90000)">Rp90.000</button>
+              <button class="preset-btn selected" onclick="selectPreset(this, 100000)">Rp100.000</button>
+              <button class="preset-btn" onclick="selectPreset(this, 150000)">Rp150.000</button>
+              <button class="preset-btn" onclick="selectPreset(this, 200000)">Rp200.000</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Final Summary -->
+        <div class="summary-final">
+          <div class="summary-final-title"><span>📋</span> Ringkasan Akhir</div>
+          <div class="summary-grid">
+            <div class="summary-cell">
+              <div class="summary-cell-label">Total Pembayaran</div>
+              <div class="summary-cell-val" id="final-total">Rp0</div>
+            </div>
+            <div class="summary-cell">
+              <div class="summary-cell-label">Metode Pembayaran</div>
+              <div class="summary-cell-val">Tunai</div>
+            </div>
+            <div class="summary-cell" style="margin-top: 10px;">
+              <div class="summary-cell-label">Uang Diterima</div>
+              <div class="summary-cell-val" id="final-received">Rp100.000</div>
+            </div>
+            <div class="summary-cell" style="margin-top: 10px;">
+              <div class="summary-cell-label">Kembalian</div>
+              <div class="summary-cell-val" id="final-change">Rp0</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="confirm-btn" onclick="confirmPayment()">✅ Konfirmasi Pembayaran</button>
+        <div style="height: 16px;"></div>
+      </div>
+    </div>
+
+    <div class="bottomnav">
+      <button class="nav-item"><span class="nav-icon">🏠</span>Dashboard</button>
+      <button class="nav-item active"><span class="nav-icon">🛒</span>POS</button>
+      <button class="nav-item"><span class="nav-icon">📦</span>Inventory</button>
+      <button class="nav-item"><span class="nav-icon">📊</span>Laporan</button>
+      <button class="nav-item"><span class="nav-icon">•••</span>Lainnya</button>
+    </div>
+  </div>
+
+  <!-- Success Overlay -->
+  <div class="success-overlay" id="success-overlay">
+    <div class="success-icon">✅</div>
+    <div class="success-title">Pembayaran Berhasil!</div>
+    <div class="success-sub">Transaksi telah selesai diproses</div>
+    <div class="success-amount" id="success-amount">Rp0</div>
+    <div class="success-detail" id="success-detail">Kembalian: Rp0 · Metode: Tunai</div>
+    <div class="success-actions">
+      <button class="print-btn">🖨 Cetak Struk</button>
+      <button class="new-order-btn" onclick="newOrder()">+ Pesanan Baru</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ======================== STATE ========================
+  let cart = [];
+  let detailProduct = null;
+  let detailQty = 1;
+  let detailBasePrice = 18000;
+  let sizeExtra = 0;
+  let currentScreen = 'products';
+  let receivedAmount = 100000;
+
+  const DISCOUNT_FIXED = 5000;
+  const TAX_RATE = 0.1;
+
+  // ======================== NAVIGATION ========================
+  function goTo(screen) {
+    const prev = document.getElementById('screen-' + currentScreen);
+    const next = document.getElementById('screen-' + screen);
+
+    prev.classList.remove('active');
+    prev.classList.add('slide-back');
+    setTimeout(() => prev.classList.remove('slide-back'), 300);
+
+    next.classList.add('active');
+    currentScreen = screen;
+
+    if (screen === 'cart') renderCart();
+    if (screen === 'payment') renderPayment();
+  }
+
+  function goToCart() {
+    if (cart.length === 0) return;
+    goTo('cart');
+  }
+
+  // ======================== PRODUCT DETAIL ========================
+  const products = {
+    'es-kopi-susu': { name: 'Es Kopi Susu', desc: 'Perpaduan kopi espresso dan susu segar dengan es batu.', price: 18000, icon: '🥤' },
+    'es-teh':       { name: 'Es Teh Manis', desc: 'Teh segar dengan rasa manis yang pas.', price: 6000, icon: '🍵' },
+    'americano':    { name: 'Americano', desc: 'Espresso dengan tambahan air panas, kuat dan pekat.', price: 16000, icon: '☕' },
+  };
+
+  function openDetail(id) {
+    const p = products[id] || products['es-kopi-susu'];
+    detailProduct = p;
+    detailQty = 1;
+    detailBasePrice = p.price;
+    sizeExtra = 0;
+
+    document.getElementById('detail-img').textContent = p.icon;
+    document.getElementById('detail-name').textContent = p.name;
+    document.getElementById('detail-desc').textContent = p.desc;
+    document.getElementById('detail-price').textContent = 'Rp' + p.price.toLocaleString('id');
+    document.getElementById('size-base').textContent = 'Rp' + p.price.toLocaleString('id');
+    updateDetailQty();
+
+    // Reset selections
+    document.querySelectorAll('.size-opt').forEach((el, i) => {
+      el.classList.toggle('selected', i === 0);
+    });
+    document.querySelectorAll('.addon-check').forEach(el => el.classList.remove('checked'));
+
+    const screen = document.getElementById('screen-detail');
+    screen.style.cssText = '';
+    screen.classList.add('active');
+    currentScreen = 'detail';
+  }
+
+  function closeDetail() {
+    document.getElementById('screen-detail').classList.remove('active');
+    currentScreen = 'products';
+  }
+
+  function changeDetailQty(delta) {
+    detailQty = Math.max(1, detailQty + delta);
+    updateDetailQty();
+  }
+
+  function updateDetailQty() {
+    const total = (detailBasePrice + sizeExtra) * detailQty;
+    document.getElementById('detail-qty').textContent = detailQty;
+    document.getElementById('detail-qty2').textContent = detailQty;
+    document.getElementById('detail-add-price').textContent = 'Rp' + total.toLocaleString('id');
+  }
+
+  function selectSize(el, extra) {
+    document.querySelectorAll('.size-opt').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    sizeExtra = extra;
+    updateDetailQty();
+  }
+
+  function toggleAddon(el) {
+    el.classList.toggle('checked');
+  }
+
+  function addFromDetail() {
+    if (!detailProduct) return;
+    const price = detailBasePrice + sizeExtra;
+    addToCartItem(detailProduct.name, price, detailProduct.icon, detailQty);
+    closeDetail();
+  }
+
+  // ======================== CART LOGIC ========================
+  function addToCart(name, price, icon) {
+    addToCartItem(name, price, icon, 1);
+  }
+
+  function addToCartItem(name, price, icon, qty) {
+    const existing = cart.find(i => i.name === name && i.price === price);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      cart.push({ name, price, icon, qty, sub: 'Reguler' });
+    }
+    updateCartBar();
+  }
+
+  function updateCartBar() {
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const count = cart.reduce((s, i) => s + i.qty, 0);
+    const bar = document.getElementById('cart-bar');
+    bar.style.display = count > 0 ? 'flex' : 'none';
+    document.getElementById('cart-badge').textContent = count;
+    document.getElementById('cart-count').textContent = count + ' Item';
+    document.getElementById('cart-total').textContent = 'Rp' + total.toLocaleString('id');
+  }
+
+  function clearCart() {
+    cart = [];
+    updateCartBar();
+    renderCart();
+  }
+
+  function renderCart() {
+    const list = document.getElementById('cart-items-list');
+    list.innerHTML = cart.map((item, idx) => `
+      <div class="cart-item">
+        <div class="cart-item-img">${item.icon}</div>
+        <div class="cart-item-body">
+          <div class="cart-item-name">${item.name}</div>
+          <div class="cart-item-sub">${item.sub}</div>
+          <div class="cart-item-price">Rp${item.price.toLocaleString('id')}</div>
+          <div class="cart-qty-row">
+            <button class="cq-btn" onclick="changeCartQty(${idx}, -1)">−</button>
+            <span class="cq-num">${item.qty}</span>
+            <button class="cq-btn" onclick="changeCartQty(${idx}, 1)">+</button>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+          <button class="delete-btn" onclick="removeFromCart(${idx})">🗑</button>
+          <span class="cart-item-total">Rp${(item.price * item.qty).toLocaleString('id')}</span>
+        </div>
+      </div>
+    `).join('');
+
+    const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const tax = Math.round((subtotal - DISCOUNT_FIXED) * TAX_RATE);
+    const total = subtotal - DISCOUNT_FIXED + tax;
+
+    document.getElementById('cart-subtotal').textContent = 'Rp' + subtotal.toLocaleString('id');
+    document.getElementById('cart-tax').textContent = 'Rp' + tax.toLocaleString('id');
+    document.getElementById('cart-total-val').textContent = 'Rp' + total.toLocaleString('id');
+  }
+
+  function changeCartQty(idx, delta) {
+    cart[idx].qty = Math.max(1, cart[idx].qty + delta);
+    updateCartBar();
+    renderCart();
+  }
+
+  function removeFromCart(idx) {
+    cart.splice(idx, 1);
+    updateCartBar();
+    renderCart();
+  }
+
+  // ======================== PAYMENT LOGIC ========================
+  function renderPayment() {
+    const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const count = cart.reduce((s, i) => s + i.qty, 0);
+    const discount10 = Math.round(subtotal * 0.1);
+    const total = subtotal - discount10;
+
+    document.getElementById('pay-item-count').textContent = count + ' Item';
+    document.getElementById('pay-subtotal').textContent = 'Rp' + subtotal.toLocaleString('id');
+    document.getElementById('pay-discount').textContent = '-Rp' + discount10.toLocaleString('id');
+    document.getElementById('pay-total').textContent = 'Rp' + total.toLocaleString('id');
+    document.getElementById('cash-display').textContent = 'Rp' + total.toLocaleString('id');
+    document.getElementById('final-total').textContent = 'Rp' + total.toLocaleString('id');
+
+    updateCash(total);
+  }
+
+  function updateCash(total) {
+    const change = Math.max(0, receivedAmount - total);
+    document.getElementById('received-display').textContent = 'Rp' + receivedAmount.toLocaleString('id');
+    document.getElementById('change-display').textContent = 'Rp' + change.toLocaleString('id');
+    document.getElementById('final-received').textContent = 'Rp' + receivedAmount.toLocaleString('id');
+    document.getElementById('final-change').textContent = 'Rp' + change.toLocaleString('id');
+  }
+
+  function selectPreset(el, amount) {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    receivedAmount = amount;
+
+    const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const discount10 = Math.round(subtotal * 0.1);
+    const total = subtotal - discount10;
+    updateCash(total);
+  }
+
+  function selectMethod(el) {
+    document.querySelectorAll('.method-opt').forEach(m => m.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function confirmPayment() {
+    const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const discount10 = Math.round(subtotal * 0.1);
+    const total = subtotal - discount10;
+    const change = Math.max(0, receivedAmount - total);
+
+    document.getElementById('success-amount').textContent = 'Rp' + total.toLocaleString('id');
+    document.getElementById('success-detail').textContent =
+      'Kembalian: Rp' + change.toLocaleString('id') + ' · Metode: Tunai';
+
+    document.getElementById('success-overlay').classList.add('show');
+  }
+
+  function newOrder() {
+    cart = [];
+    receivedAmount = 100000;
+    document.getElementById('success-overlay').classList.remove('show');
+    updateCartBar();
+
+    // Go back to products
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-products').classList.add('active');
+    currentScreen = 'products';
+  }
+
+  // Init with some cart items to demo
+  cart = [
+    { name: 'Es Kopi Susu', price: 18000, icon: '🥤', qty: 2, sub: 'Reguler' },
+    { name: 'Mie Goreng', price: 22000, icon: '🍜', qty: 1, sub: 'Reguler' },
+    { name: 'Chicken Burger', price: 28000, icon: '🍔', qty: 1, sub: 'Reguler' },
+  ];
+  updateCartBar();
+</script>
+</body>
+</html>

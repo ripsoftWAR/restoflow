@@ -1,7 +1,21 @@
 // API.ts
 
 const rawApiUrl = (import.meta as any).env.VITE_API_URL || '';
-export const API_URL = rawApiUrl ? rawApiUrl.replace(/\/$/, '') : '';
+
+/**
+ * Auto-detect API base URL:
+ *   1. Pakai VITE_API_URL kalau diset (production di Vercel/Railway)
+ *   2. Fallback ke http://localhost:3000 saat development
+ *   3. Fallback ke path relatif (same origin)
+ */
+const detectApiBase = (): string => {
+  if (rawApiUrl) return rawApiUrl.replace(/\/$/, '');
+  // Vite injects import.meta.env.DEV = true saat `npm run dev`
+  if ((import.meta as any).env.DEV) return 'http://localhost:3000';
+  return '';
+};
+
+const API_BASE = detectApiBase();
 
 const normalizeApiUrl = (url: string) => {
   if (!url) return '';
@@ -11,7 +25,7 @@ const normalizeApiUrl = (url: string) => {
 
 export const resolveApiUrl = (url: string) => {
   if (url.startsWith('http')) return url;
-  const safeApiUrl = API_URL ? normalizeApiUrl(API_URL) : '';
+  const safeApiUrl = API_BASE ? normalizeApiUrl(API_BASE) : '';
   return safeApiUrl ? `${safeApiUrl}${url}` : url;
 };
 

@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Search, Plus } from 'lucide-react';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
 import type { Ingredient } from '../../../types';
 import { formatStockWithBase } from '../../../types';
 
@@ -28,13 +28,11 @@ interface Props {
   selectedId: number | null;
   onSelect: (id: number) => void;
   search: string;
-  onSearchChange: (s: string) => void;
   activeCategory: string;
   categories: string[];
   onCategoryChange: (cat: string) => void;
   statusFilter: string;
   onStatusFilterChange: (s: string) => void;
-  onAdd: () => void;
   totalCount: number;
 }
 
@@ -48,11 +46,25 @@ function StatusDot({ ing }: { ing: Ingredient }) {
 
 export default function IngredientListSidebar({
   ingredients, selectedId, onSelect,
-  search, onSearchChange,
+  search,
   activeCategory, categories, onCategoryChange,
   statusFilter, onStatusFilterChange,
-  onAdd, totalCount,
+  totalCount,
 }: Props) {
+  /* ── Filter popover state + click-outside ── */
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    if (filterOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [filterOpen]);
+
   const filtered = useMemo(() => {
     return ingredients.filter(ing => {
       const matchSearch = ing.name.toLowerCase().includes(search.toLowerCase());
@@ -66,61 +78,64 @@ export default function IngredientListSidebar({
   }, [ingredients, search, activeCategory, statusFilter]);
 
   return (
-    <div className="bg-pp-surface border border-pp-border rounded-pp-lg overflow-hidden flex flex-col h-full max-h-[calc(100vh-210px)]">
-      {/* ── Search + Add ── */}
-      <div className="p-3 border-b border-pp-border space-y-2.5">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 min-w-0">
-            <Search size={13} strokeWidth={1.8} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-pp-text-placeholder" />
-            <input
-              type="text"
-              placeholder="Cari bahan..."
-              value={search}
-              onChange={e => onSearchChange(e.target.value)}
-              className="w-full pl-8 pr-2.5 py-[6px] bg-pp-bg border border-pp-border rounded-pp-md text-[12px] text-pp-text placeholder:text-pp-text-placeholder focus:outline-none focus:ring-2 focus:ring-pp-primary/20 focus:border-pp-primary transition"
-            />
-          </div>
-          <button
-            onClick={onAdd}
-            className="flex items-center justify-center w-8 h-8 bg-pp-primary text-white rounded-pp-md hover:bg-pp-primary-hover transition flex-shrink-0 cursor-pointer"
-            title="Tambah Bahan"
-          >
-            <Plus size={15} strokeWidth={2} />
-          </button>
-        </div>
-
-        {/* ── Category chips ── */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar">
+    <div className="bg-pp-surface border border-pp-border rounded-pp-lg overflow-hidden flex flex-col max-h-[calc(100vh-130px)]">
+      {/* ── Header: Category tabs row ── */}
+      <div className="px-3 pt-3 border-b border-pp-border">
+        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
           {categories.slice(0, 6).map(cat => (
             <button
               key={cat}
               onClick={() => onCategoryChange(cat)}
-              className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all cursor-pointer border whitespace-nowrap ${
+              className={`text-[11px] font-medium pb-[7px] border-b-[2px] transition-colors cursor-pointer whitespace-nowrap ${
                 activeCategory === cat
-                  ? 'bg-pp-primary text-white border-transparent shadow-sm'
-                  : 'border-pp-border text-pp-text-muted hover:text-pp-text-secondary hover:border-pp-text-muted'
+                  ? 'text-pp-primary font-semibold border-pp-primary'
+                  : 'text-pp-text-muted border-transparent hover:text-pp-text-secondary'
               }`}
             >
               {cat.replace('Semua Bahan', 'Semua')}
             </button>
           ))}
         </div>
+      </div>
 
-        {/* ── Status filter + count ── */}
-        <div className="flex items-center justify-between">
-          <select
-            value={statusFilter}
-            onChange={e => onStatusFilterChange(e.target.value)}
-            className="px-2 py-1 bg-pp-bg border border-pp-border rounded-pp-xs text-[11px] text-pp-text-muted focus:outline-none focus:ring-1 focus:ring-pp-primary/20 cursor-pointer"
+      {/* ── Sub-header: Filter icon + count ── */}
+      <div className="flex items-center justify-between px-3 py-2">
+        <div className="relative" ref={filterRef}>
+          <button
+            onClick={() => setFilterOpen(prev => !prev)}
+            className={`w-[26px] h-[26px] flex items-center justify-center rounded-pp-sm transition cursor-pointer ${
+              statusFilter !== 'Semua'
+                ? 'text-pp-primary bg-pp-primary-soft'
+                : 'text-pp-text-muted hover:text-pp-text-secondary hover:bg-pp-bg'
+            }`}
+            title={`Filter: ${statusFilter}`}
           >
-            <option value="Semua">Semua Status</option>
-            <option value="Aman">Stok Aman</option>
-            <option value="Kritis">Stok Kritis</option>
-          </select>
-          <span className="text-[10px] text-pp-text-muted tabular-nums">
-            {filtered.length}/{totalCount}
-          </span>
+            <SlidersHorizontal size={13} strokeWidth={1.8} />
+          </button>
+
+          {/* Filter popover */}
+          {filterOpen && (
+            <div className="absolute top-full left-0 mt-1 bg-pp-surface border border-pp-border rounded-pp-md shadow-md py-1 z-50 min-w-[120px]">
+              {['Semua', 'Aman', 'Kritis'].map(opt => (
+                <button
+                  key={opt}
+                  onClick={() => { onStatusFilterChange(opt); setFilterOpen(false); }}
+                  className={`w-full text-left px-3 py-[6px] text-[11px] transition cursor-pointer ${
+                    statusFilter === opt
+                      ? 'text-pp-primary font-semibold bg-pp-primary-soft'
+                      : 'text-pp-text-secondary hover:bg-pp-bg'
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        <span className="text-[10px] text-pp-text-muted tabular-nums">
+          {filtered.length}/{totalCount}
+        </span>
       </div>
 
       {/* ── List ── */}
@@ -162,7 +177,7 @@ export default function IngredientListSidebar({
 
                 {/* Name + stock */}
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[12px] font-semibold truncate leading-tight ${
+                  <p className={`text-base font-semibold truncate leading-tight ${
                     isSelected ? 'text-pp-primary' : 'text-pp-text'
                   }`}>
                     {ing.name}

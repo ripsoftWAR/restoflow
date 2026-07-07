@@ -9,6 +9,8 @@ import 'screens/pilih_user_screen.dart';
 import 'screens/pin_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/aksi_cepat_screen.dart';
+import 'screens/pos_screen.dart';
+import 'screens/sync_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,8 +76,9 @@ class _MainNavigatorState extends State<MainNavigator> {
   static const int LOGIN = 1;
   static const int PILIH_USER = 2;
   static const int PIN = 3;
-  static const int DASHBOARD = 4;
-  static const int AKSI_CEPAT = 5;
+  static const int SYNC = 4;
+  static const int DASHBOARD = 5;
+  static const int AKSI_CEPAT = 6;
 
   @override
   void initState() {
@@ -139,8 +142,8 @@ class _MainNavigatorState extends State<MainNavigator> {
             // Already handled in initState delayed
           }),
 
-          // 1 - Login (password-based → langsung dashboard)
-          LoginScreen(onLogin: () => _navigateTo(DASHBOARD)),
+          // 1 - Login (password-based → sync dulu, lalu dashboard)
+          LoginScreen(onLogin: () => _navigateTo(SYNC)),
 
           // 2 - Pilih User (quick PIN login)
           PilihUserScreen(
@@ -149,24 +152,34 @@ class _MainNavigatorState extends State<MainNavigator> {
           ),
 
           // 3 - PIN
-          PinScreen(onSuccess: () => _navigateTo(DASHBOARD)),
+          PinScreen(onSuccess: () => _navigateTo(SYNC)),
 
-          // 4 - Dashboard
+          // 4 - Sync
+          SyncScreen(onDone: () => _navigateTo(DASHBOARD)),
+
+          // 5 - Dashboard
           DashboardScreen(
             onAksiCepat: () => _navigateTo(AKSI_CEPAT),
             onPOS: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Mode POS akan tersedia di versi berikutnya'),
-                  backgroundColor: const Color(0xFF2563EB),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              Navigator.of(context).push(
+                PageRouteBuilder(
+                  pageBuilder: (_, __, ___) => const PosScreen(),
+                  transitionsBuilder: (_, anim, __, child) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(1, 0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+                      child: child,
+                    );
+                  },
+                  transitionDuration: const Duration(milliseconds: 300),
                 ),
               );
             },
           ),
 
-          // 5 - Aksi Cepat
+          // 6 - Aksi Cepat
           AksiCepatScreen(onBack: () => _navigateTo(DASHBOARD)),
         ],
       ),
