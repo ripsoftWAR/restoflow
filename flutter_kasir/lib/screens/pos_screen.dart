@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/recipe_service.dart';
+import '../services/cache_service.dart';
+import '../main.dart' show cacheService;
 import 'cart_screen.dart';
 import 'product_detail_sheet.dart';
 
@@ -106,22 +108,39 @@ class _PosScreenState extends State<PosScreen> {
     });
 
     try {
+      // 1️⃣ Coba API dulu
       final recipes = await _recipeService.getRecipes();
       if (!mounted) return;
+
+      // Simpan ke cache lokal (auto-update setiap sukses)
+      await cacheService.saveRecipes(recipes);
 
       setState(() {
         _products = recipes.map((r) => ProductItem.fromRecipe(r)).toList();
         _isLoading = false;
       });
-
-      // Update kategori dinamis dari data
-      _updateCategories();
     } catch (e) {
+      // 2️⃣ API gagal → coba cache Hive
+      if (!mounted) return;
+
+      final cached = cacheService.loadRecipes();
+      if (cached != null && cached.isNotEmpty) {
+        final lastSync = cacheService.getLastSyncFormatted();
+        setState(() {
+          _products = cached.map((r) => ProductItem.fromRecipe(r)).toList();
+          _isLoading = false;
+          _errorMessage = '⚠️ Offline — data terakhir: $lastSync. '
+              'Transaksi tetap bisa dilanjutkan.';
+        });
+        return;
+      }
+
+      // 3️⃣ Cache juga kosong → fallback dummy (last resort)
       if (!mounted) return;
       setState(() {
         _products = _dummyProducts;
         _isLoading = false;
-        _errorMessage = 'Gagal memuat menu dari server. Menampilkan data offline.';
+        _errorMessage = 'Gagal memuat menu dari server. Menampilkan data offline bawaan.';
       });
     }
   }

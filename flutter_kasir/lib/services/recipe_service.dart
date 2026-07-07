@@ -79,6 +79,22 @@ class RecipeItem {
     );
   }
 
+  /// Serialize ke Map untuk disimpan di Hive cache.
+  Map<String, dynamic> toJson() {
+    return {
+      'recipe_id': id,
+      'menu_name': name,
+      'price': price,
+      'category': category,
+      'emoji': emoji,
+      'description': desc,
+      'items': ingredients.map((i) => i.toJson()).toList(),
+      'spice_level_option': hasSpiceOption ? 1 : 0,
+      'sugar_level_option': hasSugarOption ? 1 : 0,
+      'custom_options': customOptions,
+    };
+  }
+
   /// Emoji mapping berdasarkan kategori + nama
   static String _emojiFor(String name, String category) {
     final lower = name.toLowerCase();
@@ -139,5 +155,15 @@ class RecipeIngredientItem {
       ingredientName: json['ingredient_name']?.toString() ?? '',
       baseUnit: json['base_unit']?.toString() ?? 'gram',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'ingredient_id': ingredientId,
+      'amount': amount,
+      'ingredient_name': ingredientName,
+      'base_unit': baseUnit,
+    };
   }
 }

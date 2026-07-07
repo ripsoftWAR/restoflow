@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'providers/app_state.dart';
+import 'services/cache_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/pilih_user_screen.dart';
@@ -12,8 +14,16 @@ import 'screens/aksi_cepat_screen.dart';
 import 'screens/pos_screen.dart';
 import 'screens/sync_screen.dart';
 
-void main() {
+/// Global cache service instance — di-init sekali di main().
+final cacheService = CacheService();
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Init Hive
+  await Hive.initFlutter();
+  await cacheService.init();
+
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
