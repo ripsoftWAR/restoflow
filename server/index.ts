@@ -44,8 +44,9 @@ if (!process.env.JWT_REFRESH_SECRET) {
 // 1. KONFIGURASI CORS
 // ==========================================
 const allowedOrigins = [
-  'http://localhost:5173',           // Frontend Lokal (Vite)
-  'http://localhost:3000',           // Local backend itself
+  'http://localhost:5173',
+  'http://localhost:3000',
+  /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/, 
 ];
 
 // Tambahkan origin dari environment variable (production)
@@ -70,7 +71,10 @@ app.use(cors({
       return callback(null, true);
     }
     
-    if (allowedOrigins.includes(origin)) {
+    const isAllowed = allowedOrigins.some((o) =>
+      typeof o === 'string' ? o === origin : (o as RegExp).test(origin)
+    );
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.error(`[CORS Error] Origin ${origin} tidak diizinkan.`);
