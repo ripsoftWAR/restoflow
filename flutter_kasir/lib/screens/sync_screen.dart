@@ -35,7 +35,9 @@ class _SyncScreenState extends State<SyncScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<AppState>().resetSync();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppState>().resetSync();
+    });
     _startSync();
   }
 

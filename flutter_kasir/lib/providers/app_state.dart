@@ -72,6 +72,15 @@ class AppState extends ChangeNotifier {
   DashboardStats? _dashboardStats;
   DashboardStats? get dashboardStats => _dashboardStats;
 
+  String _dashboardPeriod = 'today';
+  String get dashboardPeriod => _dashboardPeriod;
+
+  void setDashboardPeriod(String period) {
+    _dashboardPeriod = period;
+    notifyListeners();
+    fetchDashboardData();
+  }
+
   final List<TransactionItem> _recentTransactions = [];
   List<TransactionItem> get recentTransactions => _recentTransactions;
 
@@ -251,7 +260,7 @@ class AppState extends ChangeNotifier {
     try {
       // Fetch stats + recent transactions in parallel
       final results = await Future.wait([
-        _dashboard.getStats(),
+        _dashboard.getStats(period: _dashboardPeriod),
         _dashboard.getRecentTransactions(limit: 5),
       ]);
 
@@ -264,8 +273,8 @@ class AppState extends ChangeNotifier {
       }
 
       notifyListeners();
-    } catch (_) {
-      // Silently fail — dashboard will show demo data
+    } catch (e) {
+      debugPrint('[Dashboard] fetchDashboardData error: $e');
     }
   }
 
@@ -343,9 +352,10 @@ class AppState extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    // Fetch shifts yang tersedia untuk user ini
-    final hasShifts = await fetchShifts(user.seed);
-    return hasShifts;
+    // Fetch shifts (non-blocking — doPinLogin sudah ada fallback shift_id=1)
+    await fetchShifts(user.seed);
+    // Tetap return true meskipun shift kosong — doPinLogin() sudah ada fallback shift_id = 1
+    return true;
   }
 
   void navigateTo(int screen) {

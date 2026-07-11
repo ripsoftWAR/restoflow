@@ -10,6 +10,36 @@ const router = Router();
 router.get('/stats', requireAuth, async (req, res) => {
   const restaurantId = req.user!.restaurant_id;
 
+  // ── DATE FILTER (query param) ──
+  const period = req.query.period as string | undefined;
+  const startDateRaw = req.query.start_date as string | undefined;
+  const endDateRaw   = req.query.end_date   as string | undefined;
+
+  let salesDateCondition: string;
+  let movementDateCondition: string;
+  let trendCondition: string;
+  const dateParams: any[] = [];
+
+  if (startDateRaw && endDateRaw) {
+    salesDateCondition    = 'AND created_at::date BETWEEN $2::date AND $3::date';
+    movementDateCondition = 'AND m.created_at::date BETWEEN $2::date AND $3::date';
+    trendCondition        = 'AND created_at >= $2::date AND created_at <= $3::date';
+    dateParams.push(startDateRaw, endDateRaw);
+  } else if (period === '7days') {
+    salesDateCondition    = "AND created_at::date BETWEEN CURRENT_DATE - INTERVAL '6 days' AND CURRENT_DATE";
+    movementDateCondition = "AND m.created_at::date BETWEEN CURRENT_DATE - INTERVAL '6 days' AND CURRENT_DATE";
+    trendCondition        = "AND created_at >= CURRENT_DATE - INTERVAL '6 days'";
+  } else if (period === '30days') {
+    salesDateCondition    = "AND created_at::date BETWEEN CURRENT_DATE - INTERVAL '29 days' AND CURRENT_DATE";
+    movementDateCondition = "AND m.created_at::date BETWEEN CURRENT_DATE - INTERVAL '29 days' AND CURRENT_DATE";
+    trendCondition        = "AND created_at >= CURRENT_DATE - INTERVAL '29 days'";
+  } else {
+    // default: hari ini
+    salesDateCondition    = 'AND created_at::date = CURRENT_DATE';
+    movementDateCondition = 'AND m.created_at::date = CURRENT_DATE';
+    trendCondition        = "AND created_at >= CURRENT_DATE - INTERVAL '6 days'";
+  }
+
   try {
     // Fetch ingredients untuk perhitungan stok + kategori
     const ingRes = await db.query(
@@ -44,8 +74,8 @@ router.get('/stats', requireAuth, async (req, res) => {
          COUNT(*)::int as total_transactions
        FROM sales 
        WHERE restaurant_id = $1 
-         AND created_at::date = CURRENT_DATE`,
-      [restaurantId]
+         ${salesDateCondition}`,
+      [restaurantId, ...dateParams]
     );
 
     const today = todayResult.rows[0];
@@ -67,8 +97,8 @@ router.get('/stats', requireAuth, async (req, res) => {
        LEFT JOIN ingredients i ON i.id = m.ingredient_id AND i.restaurant_id = m.restaurant_id
        WHERE m.restaurant_id = $1 
          AND m.type = 'IN' 
-         AND m.created_at::date = CURRENT_DATE`,
-      [restaurantId]
+         ${movementDateCondition}`,
+      [restaurantId, ...dateParams]
     );
     const dailyExpense = expenseResult.rows[0].daily_expense || 0;
 
@@ -86,10 +116,10 @@ router.get('/stats', requireAuth, async (req, res) => {
               COALESCE(SUM(total_price), 0)::float as amount
        FROM sales 
        WHERE restaurant_id = $1 
-         AND created_at >= CURRENT_DATE - INTERVAL '6 days'
+         ${trendCondition}
        GROUP BY created_at::date
        ORDER BY date`,
-      [restaurantId]
+      [restaurantId, ...dateParams]
     );
     const salesTrend = trendResult.rows;
 
@@ -99,10 +129,10 @@ router.get('/stats', requireAuth, async (req, res) => {
               COALESCE(SUM(quantity), 0)::int as quantity
        FROM sales 
        WHERE restaurant_id = $1 
-         AND created_at >= CURRENT_DATE - INTERVAL '6 days'
+         ${trendCondition}
        GROUP BY created_at::date, menu_name
        ORDER BY date`,
-      [restaurantId]
+      [restaurantId, ...dateParams]
     );
     const usageTrend = usageResult.rows;
 

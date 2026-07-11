@@ -63,7 +63,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchData() async {
     final appState = context.read<AppState>();
-    if (!appState.isLoggedIn) return;
+    if (!appState.isLoggedIn) {
+      if (mounted) setState(() => _loadState = _LoadState.empty);
+      return;
+    }
     if (mounted) setState(() => _loadState = _LoadState.loading);
     try {
       await appState.fetchDashboardData();
@@ -124,6 +127,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (_shiftRemaining != null)
           _ShiftBanner(remaining: _shiftRemaining!),
         if (_shiftRemaining != null) const SizedBox(height: 16),
+        _PeriodFilter(
+          selected: appState.dashboardPeriod,
+          onChanged: (p) => context.read<AppState>().setDashboardPeriod(p),
+        ),
+        const SizedBox(height: 12),
         _buildSalesCard(stats),
         const SizedBox(height: 20),
         _QuickActionsRow(
@@ -145,6 +153,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildSalesCard(DashboardStats? stats) {
+    if (_loadState == _LoadState.loading && stats != null) {
+      return _SalesCard(stats: stats);
+    }
     switch (_loadState) {
       case _LoadState.loading:
         return _SalesCardSkeleton();
@@ -263,28 +274,98 @@ class _Header extends StatelessWidget {
           Semantics(
             label: 'Foto profil',
             child: ClipOval(
-              child: Image.network(
-                user.avatarUrl,
-                width: 48, height: 48,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 48, height: 48,
-                  color: const Color(0xFFE2E8F0),
-                  child: const Icon(Icons.person, color: Color(0xFF94A3B8), size: 24),
-                ),
-                loadingBuilder: (_, child, event) {
-                  if (event == null) return child;
-                  return Container(
-                    width: 48, height: 48,
-                    color: const Color(0xFFF1F5F9),
-                    child: const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-                  );
-                },
-              ),
+              child: _AvatarFallback(name: authUser?.nama ?? user.name, size: 48),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  AVATAR FALLBACK (inisial — ganti Image.network SVG)
+// ═══════════════════════════════════════════════
+class _AvatarFallback extends StatelessWidget {
+  final String name;
+  final double size;
+  const _AvatarFallback({required this.name, required this.size});
+
+  Color _colorFromName(String n) {
+    const colors = [
+      Color(0xFF2563EB), Color(0xFF9333EA), Color(0xFF16A34A),
+      Color(0xFFEA580C), Color(0xFFD97706), Color(0xFFDB2777),
+    ];
+    return colors[n.codeUnits.fold(0, (a, b) => a + b) % colors.length];
+  }
+
+  String _initials(String n) {
+    final parts = n.trim().split(' ');
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return n.isNotEmpty ? n[0].toUpperCase() : '?';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _colorFromName(name);
+    return Container(
+      width: size, height: size,
+      decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
+      child: Center(
+        child: Text(
+          _initials(name),
+          style: TextStyle(fontSize: size * 0.35, fontWeight: FontWeight.w700, color: color),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  PERIOD FILTER (chip: Hari Ini / 7 Hari / 30 Hari)
+// ═══════════════════════════════════════════════
+class _PeriodFilter extends StatelessWidget {
+  final String selected;
+  final ValueChanged<String> onChanged;
+  const _PeriodFilter({required this.selected, required this.onChanged});
+
+  static const _options = [
+    ('today', 'Hari Ini'),
+    ('7days', '7 Hari'),
+    ('30days', '30 Hari'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: _options.map((opt) {
+        final (value, label) = opt;
+        final isActive = selected == value;
+        return Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: GestureDetector(
+            onTap: () => onChanged(value),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: isActive ? const Color(0xFF2563EB) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isActive ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? Colors.white : const Color(0xFF64748B),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

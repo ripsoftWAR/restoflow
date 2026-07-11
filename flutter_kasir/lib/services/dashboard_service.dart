@@ -6,8 +6,8 @@ class DashboardService {
   final ApiService _api = ApiService();
 
   /// Ambil statistik dashboard (requires Pemilik role)
-  Future<DashboardStats?> getStats() async {
-    final response = await _api.get('/api/dashboard/stats');
+  Future<DashboardStats?> getStats({String period = 'today'}) async {
+    final response = await _api.get('/api/dashboard/stats?period=$period');
 
     if (!response.success || response.data == null) return null;
 
@@ -29,7 +29,7 @@ class DashboardService {
         invoiceId: s['invoice_id'] ?? s['id']?.toString() ?? '-',
         time: _formatTime(s['created_at']),
         type: s['type'] ?? s['menu_name'] ?? 'Dine In',
-        amount: (s['total_price'] ?? s['amount'] ?? 0).toDouble(),
+        amount: _toDouble(s['total_price'] ?? s['amount'] ?? 0),
         status: s['status'] ?? 'Selesai',
       );
     }).toList();
@@ -74,12 +74,12 @@ class DashboardStats {
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
     return DashboardStats(
       totalValue: _toDouble(json['totalValue']),
-      totalItems: json['totalItems'] ?? 0,
+      totalItems: (json['totalItems'] ?? 0) is int ? json['totalItems'] ?? 0 : int.tryParse(json['totalItems'].toString()) ?? 0,
       totalSalesByDay: _toDouble(json['totalSalesByDay']),
       qrisSalesByDay: _toDouble(json['qrisSalesByDay']),
       cashSalesByDay: _toDouble(json['cashSalesByDay']),
-      totalItemsSoldByDay: json['totalItemsSoldByDay'] ?? 0,
-      totalTransactionsByDay: json['totalTransactionsByDay'] ?? 0,
+      totalItemsSoldByDay: (json['totalItemsSoldByDay'] ?? 0) is int ? json['totalItemsSoldByDay'] ?? 0 : int.tryParse(json['totalItemsSoldByDay'].toString()) ?? 0,
+      totalTransactionsByDay: (json['totalTransactionsByDay'] ?? 0) is int ? json['totalTransactionsByDay'] ?? 0 : int.tryParse(json['totalTransactionsByDay'].toString()) ?? 0,
       criticalStockItems: CriticalStockItems.fromJson(
         json['criticalStockItems'] ?? {},
       ),
@@ -96,7 +96,7 @@ class CriticalStockItems {
 
   factory CriticalStockItems.fromJson(Map<String, dynamic> json) {
     return CriticalStockItems(
-      count: json['count'] ?? 0,
+      count: (json['count'] ?? 0) is int ? json['count'] ?? 0 : int.tryParse(json['count'].toString()) ?? 0,
       items: json['items'] ?? [],
     );
   }
