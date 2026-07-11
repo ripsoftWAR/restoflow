@@ -114,7 +114,19 @@ class AppState extends ChangeNotifier {
   }
 
   // ═══════════════════════════════════════
-  //  LOGIN FLOW
+  //  LOGIN FLOW (2-Step)
+  // ═══════════════════════════════════════
+  //
+  // Step 1: verifyCredentials(username, password)
+  //   - Memverifikasi username + password
+  //   - TIDAK membuat session / token
+  //   - Mengembalikan daftar user restoran + shift
+  //   - Navigasi ke PilihUserScreen
+  //
+  // Step 2: doPinLogin() → verifyPin(username, pin, shiftId)
+  //   - Verifikasi PIN 6 digit
+  //   - Membuat session + JWT token
+  //   - Navigasi ke Sync → Dashboard
   // ═══════════════════════════════════════
 
   void setLoginUsername(String val) {
@@ -134,16 +146,11 @@ class AppState extends ChangeNotifier {
     return _availableShifts.isNotEmpty;
   }
 
-  /// Login dengan password
+  /// STEP 1: Verifikasi username + password (NO session created).
+  /// Mengembalikan daftar user restoran untuk PilihUserScreen.
   Future<bool> doLogin() async {
     if (_loginUsername.isEmpty || _loginPassword.isEmpty) {
       _errorMessage = 'Username dan password wajib diisi';
-      notifyListeners();
-      return false;
-    }
-
-    if (_availableShifts.isEmpty) {
-      _errorMessage = 'Shift tidak tersedia. Cek username.';
       notifyListeners();
       return false;
     }
@@ -152,47 +159,55 @@ class AppState extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    // Gunakan shift pertama yang tersedia
-    final shift = _availableShifts.first;
-
-    final result = await _auth.login(_loginUsername, _loginPassword, shift.id);
+    // Step 1: Verify credentials — hanya cek username+password, TIDAK bikin session
+    final response = await _auth.verifyCredentials(_loginUsername, _loginPassword);
 
     _isLoading = false;
 
-    if (result.isSuccess) {
-      _authUser = result.user;
-      _activeShift = result.shift;
-      _sessionId = result.sessionId;
-      _isLoggedIn = true;
-      _errorMessage = null;
-
-      // Set selectedUser dari data backend agar dashboard tampil benar
-      if (result.user != null) {
-        _selectedUser = PilotUser(
-          name: result.user!.nama,
-          role: result.user!.role,
-          shift: result.shift?.displayTime ?? '',
-          seed: result.user!.username,
-          roleColor: _roleColorFromString(result.user!.role),
-        );
-      }
-
-      notifyListeners();
-
-      // Fetch dashboard data di background
-      fetchDashboardData();
-
-      return true;
-    } else {
-      _errorMessage = result.error;
+    if (response == null) {
+      _errorMessage = 'Username atau password salah';
       notifyListeners();
       return false;
     }
+
+    // Simpan data user yang login (untuk referensi)
+    _authUser = UserAuthData(
+      id: response['user_id'] ?? 0,
+      username: response['username'] ?? _loginUsername,
+      role: response['role'] ?? 'Kasir',
+      nama: response['nama'] ?? _loginUsername,
+      restaurantId: response['restaurant_id'] ?? 0,
+    );
+
+    // Simpan daftar shift dari response
+    _availableShifts = (response['shifts'] as List? ?? [])
+        .map((s) => ShiftData.fromJson(s as Map<String, dynamic>))
+        .toList();
+
+    // Simpan daftar user restoran untuk PilihUserScreen
+    final rawUsers = response['users'] as List? ?? [];
+    _users = rawUsers.map<PilotUser>((u) {
+      final m = u as Map<String, dynamic>;
+      final role = m['role']?.toString() ?? 'Kasir';
+      return PilotUser(
+        id: m['id'] ?? 0,
+        name: m['nama']?.toString() ?? m['username']?.toString() ?? '-',
+        role: role,
+        shift: '',
+        seed: m['username']?.toString() ?? role,
+        roleColor: _roleColorFromString(role),
+      );
+    }).toList();
+
+    _errorMessage = _users.isEmpty ? 'Tidak ada pengguna aktif di restoran ini' : null;
+    notifyListeners();
+    return _users.isNotEmpty;
   }
 
   String _roleColorFromString(String role) {
     switch (role.toLowerCase()) {
       case 'manager':
+      case 'pemilik':
       case 'owner':
         return 'orange';
       case 'supervisor':
@@ -205,7 +220,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Login dengan PIN (setelah pilih user)
+  /// STEP 2: Verifikasi PIN + buat session + dapatkan JWT.
+  /// Dipanggil dari PinScreen setelah user memasukkan 6 digit PIN.
   Future<bool> doPinLogin() async {
     if (_pin.length < 6) return false;
 
@@ -213,7 +229,7 @@ class AppState extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final result = await _auth.loginWithPin(
+    final result = await _auth.verifyPin(
       _loginUsername,
       _pin,
       _availableShifts.isNotEmpty ? _availableShifts.first.id : 1,
@@ -226,8 +242,23 @@ class AppState extends ChangeNotifier {
       _activeShift = result.shift;
       _sessionId = result.sessionId;
       _isLoggedIn = true;
+
+      // Set selectedUser untuk dashboard
+      if (result.user != null) {
+        _selectedUser = PilotUser(
+          name: result.user!.nama,
+          role: result.user!.role,
+          shift: result.shift?.displayTime ?? '',
+          seed: result.user!.username,
+          roleColor: _roleColorFromString(result.user!.role),
+        );
+      }
+
       clearPin();
       notifyListeners();
+
+      // Fetch dashboard data di background
+      fetchDashboardData();
       return true;
     } else {
       _errorMessage = result.error;
@@ -278,36 +309,37 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Fetch daftar user dari backend untuk PilihUserScreen
+  /// Fetch daftar user aktif dari backend untuk PilihUserScreen
+  /// Endpoint: GET /api/auth/restaurant-users (bisa diakses role apapun)
   Future<void> fetchUsers() async {
     if (!_isLoggedIn) return;
 
     _usersLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
-      final response = await _api.get('/api/users');
-      if (response.success && response.data != null) {
-        final list = response.data!['data'] as List? ?? [];
-        _users = list.map<PilotUser>((u) {
-          final role = u['role']?.toString() ?? 'Kasir';
-          return PilotUser(
-            id: u['id'] ?? 0,
-            name: u['nama']?.toString() ?? u['username']?.toString() ?? '-',
-            role: role,
-            shift: '', // shift per user tidak ada di response
-            seed: u['username']?.toString() ?? role,
-            roleColor: _roleColorFromString(role),
-          );
-        }).toList();
+      final rawUsers = await _auth.getActiveUsers();
 
-        // Fallback ke demo users kalau backend kosong
-        if (_users.isEmpty) _users = demoUsers;
-      } else {
-        _users = demoUsers;
+      _users = rawUsers.map<PilotUser>((u) {
+        final role = u['role']?.toString() ?? 'Kasir';
+        return PilotUser(
+          id: u['id'] ?? 0,
+          name: u['nama']?.toString() ?? u['username']?.toString() ?? '-',
+          role: role,
+          shift: '', // shift dikelola terpisah via login
+          seed: u['username']?.toString() ?? role,
+          roleColor: _roleColorFromString(role),
+        );
+      }).toList();
+
+      if (_users.isEmpty) {
+        _errorMessage = 'Tidak ada pengguna aktif di restoran ini';
       }
-    } catch (_) {
-      _users = demoUsers;
+    } catch (e) {
+      _errorMessage = 'Gagal memuat data pengguna. Periksa koneksi internet.';
+      _users = [];
+      debugPrint('[fetchUsers] Error: $e');
     }
 
     _usersLoading = false;

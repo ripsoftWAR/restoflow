@@ -38,16 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
     appState.setLoginUsername(username);
     appState.setLoginPassword(password);
 
-    // 1. Fetch shifts dulu
-    final hasShifts = await appState.fetchShifts(username);
-
-    if (!hasShifts) {
-      setState(() => _isSubmitting = false);
-      _showError('Username tidak ditemukan atau belum ada shift tersedia');
-      return;
-    }
-
-    // 2. Login
+    // Login Step 1: verify-credentials (mengembalikan shifts + users langsung)
     final success = await appState.doLogin();
 
     if (!mounted) return;
@@ -56,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success) {
       widget.onLogin();
     } else {
-      _showError(appState.errorMessage ?? 'Login gagal');
+      _showError(appState.errorMessage ?? 'Login gagal. Cek username dan password.');
     }
   }
 

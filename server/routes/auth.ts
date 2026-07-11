@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import db from '../db/database';
 import { generateToken, verifyToken, generateRefreshToken, generateTokenFamily, verifyRefreshToken } from '../utils/jwt';
+import { requireAuth } from '../utils/authMiddleware.js';
 
 const router = Router();
 
@@ -725,6 +726,37 @@ router.post('/refresh', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('Refresh token error:', err);
     res.status(500).json({ error: 'Gagal memperbarui token' });
+  }
+});
+
+/**
+ * GET /api/auth/restaurant-users
+ * Mengembalikan daftar user aktif di restoran yang sama.
+ * Bisa diakses oleh role apapun (tidak perlu Pemilik).
+ * Digunakan oleh Flutter untuk PilihUserScreen.
+ */
+router.get('/restaurant-users', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const restaurantId = req.user?.restaurant_id;
+
+    const usersResult = await db.query(
+      `SELECT u.id, u.username, u.nama, u.role, u.is_active, u.last_login
+       FROM users u
+       WHERE u.restaurant_id = $1 AND u.is_active = true
+       ORDER BY 
+         CASE u.role WHEN 'Pemilik' THEN 0 WHEN 'Manajer' THEN 1 WHEN 'Supervisor' THEN 2 ELSE 3 END,
+         u.nama ASC`,
+      [restaurantId]
+    );
+
+    res.json({
+      success: true,
+      data: usersResult.rows,
+    });
+
+  } catch (err) {
+    console.error('Get restaurant users error:', err);
+    res.status(500).json({ error: 'Gagal mengambil data pengguna' });
   }
 });
 

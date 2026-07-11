@@ -257,8 +257,38 @@ class PilihUserScreen extends StatelessWidget {
                         padding: EdgeInsets.symmetric(vertical: 32),
                         child: Center(child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF2563EB))),
                       ),
-                    // Empty state
-                    if (!appState.usersLoading && appState.users.isEmpty)
+                    // Error message
+                    if (!appState.usersLoading && appState.errorMessage != null && appState.users.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFFECACA)),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.cloud_off, color: Color(0xFFEF4444), size: 32),
+                              const SizedBox(height: 8),
+                              Text(
+                                appState.errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13),
+                              ),
+                              const SizedBox(height: 12),
+                              TextButton.icon(
+                                onPressed: () => appState.fetchUsers(),
+                                icon: const Icon(Icons.refresh, size: 16),
+                                label: const Text('Coba Lagi'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    // Empty state (backend return empty list)
+                    if (!appState.usersLoading && appState.errorMessage == null && appState.users.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 32),
                         child: Center(
@@ -391,7 +421,25 @@ class _UserCard extends StatelessWidget {
             Stack(
               children: [
                 ClipOval(
-                  child: Image.network(user.avatarUrl, width: 48, height: 48),
+                  child: (user.avatarUrl.isEmpty || user.avatarUrl.contains('.svg'))
+                      ? Container(
+                          width: 48,
+                          height: 48,
+                          color: const Color(0xFFEFF6FF),
+                          child: const Icon(Icons.person, color: Color(0xFF2563EB), size: 26),
+                        )
+                      : Image.network(
+                          user.avatarUrl,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 48,
+                            height: 48,
+                            color: const Color(0xFFEFF6FF),
+                            child: const Icon(Icons.person, color: Color(0xFF2563EB), size: 26),
+                          ),
+                        ),
                 ),
                 Positioned(
                   bottom: 0, right: 0,
@@ -440,7 +488,14 @@ class _InfoRow extends StatelessWidget {
       children: [
         Icon(icon, size: 12, color: const Color(0xFF94A3B8)),
         const SizedBox(width: 4),
-        Text(text, style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+        Flexible(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
       ],
     );
   }

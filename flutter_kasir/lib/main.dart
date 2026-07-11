@@ -126,11 +126,20 @@ class _MainNavigatorState extends State<MainNavigator> {
 
   void _navigateTo(int page) {
     if (!mounted) return;
-    _pageController.animateToPage(
-      page,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOut,
-    );
+    final current = _currentPage;
+    final diff = (page - current).abs();
+
+    // Kalau lompat lebih dari 1 halaman, pake jumpToPage biar ga keliatan scroll
+    // melewati halaman di antaranya (efek "loncat").
+    if (diff > 1) {
+      _pageController.jumpToPage(page);
+    } else {
+      _pageController.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
     setState(() => _currentPage = page);
   }
 
@@ -152,8 +161,8 @@ class _MainNavigatorState extends State<MainNavigator> {
             // Already handled in initState delayed
           }),
 
-          // 1 - Login (password-based → sync dulu, lalu dashboard)
-          LoginScreen(onLogin: () => _navigateTo(SYNC)),
+          // 1 - Login (password-based → Step 1: verify credentials → ke PilihUser)
+          LoginScreen(onLogin: () => _navigateTo(PILIH_USER)),
 
           // 2 - Pilih User (quick PIN login)
           PilihUserScreen(

@@ -124,6 +124,58 @@ class AuthService {
         .toList();
   }
 
+  /// Step 1 dari 2-step login: Verifikasi username + password SAJA.
+  /// TIDAK membuat session. Mengembalikan data user, daftar user, dan shift.
+  Future<Map<String, dynamic>?> verifyCredentials(String username, String password) async {
+    username = username.trim();
+    final response = await _api.post('/api/auth/verify-credentials', body: {
+      'username': username,
+      'password': password,
+    });
+
+    if (!response.success) return null;
+    return response.data;
+  }
+
+  /// Step 2 dari 2-step login: Verifikasi PIN + buat session + dapatkan JWT.
+  Future<AuthResult> verifyPin(String username, String pin, int shiftId) async {
+    username = username.trim();
+    final response = await _api.post('/api/auth/verify-pin', body: {
+      'username': username,
+      'pin': pin,
+      'shift_id': shiftId,
+    });
+
+    if (!response.success) {
+      return AuthResult(error: response.error ?? 'Verifikasi PIN gagal');
+    }
+
+    final data = response.data!;
+    await _api.setTokens(data['token'], data['refresh_token']);
+
+    return AuthResult(
+      token: data['token'],
+      refreshToken: data['refresh_token'],
+      sessionId: data['session_id'],
+      user: UserAuthData.fromJson(data['user']),
+      shift: ShiftData.fromJson(data['shift']),
+      features: (data['features'] as List?)
+          ?.map((f) => FeatureFlag.fromJson(f))
+          .toList() ?? [],
+    );
+  }
+
+  /// Ambil daftar user aktif di restoran yang sama (untuk PilihUserScreen)
+  /// Endpoint: GET /api/auth/restaurant-users
+  Future<List<Map<String, dynamic>>> getActiveUsers() async {
+    final response = await _api.get('/api/auth/restaurant-users');
+
+    if (!response.success || response.data == null) return [];
+
+    final list = response.data!['data'] as List? ?? [];
+    return list.map((u) => u as Map<String, dynamic>).toList();
+  }
+
   /// Logout — tutup sesi
   Future<void> logout({int? sessionId}) async {
     await _api.post('/api/auth/logout', body: {
